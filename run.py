@@ -1,13 +1,14 @@
 """
 ClippedAI — Local CLI
-Invokes the Modal pipeline and downloads clips to output/
+Downloads video locally (yt-dlp has browser cookies), uploads to Modal for processing.
 """
 
-import modal
 import json
 import os
 import sys
 import re
+import subprocess
+import tempfile
 
 
 def sanitize_filename(name: str) -> str:
@@ -17,6 +18,80 @@ def sanitize_filename(name: str) -> str:
     return name[:50] if name else "untitled"
 
 
+def download_locally(url: str) -> tuple:
+    """
+    Download video on this machine using yt-dlp.
+    Works because local machine has browser cookie access (no bot detection).
+
+    Returns: (video_bytes, title)
+    """
+    from config import YTDLP_FORMAT, MAX_VIDEO_DURATION
+
+    tmp_dir = tempfile.mkdtemp(prefix="clipped_")
+    video_path = os.path.join(tmp_dir, "source.mp4")
+
+    # Get metadata
+    meta_cmd = ["yt-dlp", "--dump-json", "--no-download", url]
+    print("  📥 Fetching video metadata...")
+    result = subprocess.run(meta_cmd, capture_output=True, text=True, timeout=60)
+    if result.returncode != 0:
+        raise RuntimeError(f"yt-dlp metadata failed: {result.stderr[:500]}")
+
+    meta = json.loads(result.stdout)
+    duration = meta.get("duration", 0)
+    title = meta.get("title", "Untitled")
+
+    if duration > MAX_VIDEO_DURATION:
+        raise ValueError(f"Video too long: {duration/3600:.1f}h (max 4h)")
+
+    print(f"  📥 Downloading: {title} ({duration:.0f}s)")
+
+    # Download
+    dl_cmd = [
+        "yt-dlp",
+        "-f", YTDLP_FORMAT,
+        "--merge-output-format", "mp4",
+        "-o", video_path,
+        "--no-playlist",
+        "--retries", "3",
+        url,
+    ]
+    result = subprocess.run(dl_cmd, capture_output=True, text=True, timeout=600)
+    if result.returncode != 0:
+        raise RuntimeError(f"yt-dlp download failed: {result.stderr[:500]}")
+
+    if not os.path.exists(video_path):
+        raise FileNotFoundError("Downloaded file not found")
+
+    with open(video_path, "rb") as f:
+        video_bytes = f.read()
+
+    # Cleanup
+    try:
+        os.remove(video_path)
+        os.rmdir(tmp_dir)
+    except OSError:
+        pass
+
+    size_mb = len(video_bytes) / (1024 * 1024)
+    print(f"  ✅ Downloaded: {size_mb:.1f} MB")
+    return video_bytes, title
+
+
+def load_local_file(file_path: str) -> tuple:
+    """Load a local video file."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    with open(file_path, "rb") as f:
+        video_bytes = f.read()
+
+    title = os.path.splitext(os.path.basename(file_path))[0]
+    size_mb = len(video_bytes) / (1024 * 1024)
+    print(f"  📂 Loaded local file: {title} ({size_mb:.1f} MB)")
+    return video_bytes, title
+
+
 def main():
     print()
     print("🎬 ClippedAI — Core Clipping Pipeline")
@@ -24,12 +99,12 @@ def main():
 
     # Get input
     if len(sys.argv) > 1:
-        url = sys.argv[1]
+        source = sys.argv[1]
     else:
-        url = input("\nYouTube URL: ").strip()
+        source = input("\nYouTube URL or local file path: ").strip()
 
-    if not url:
-        print("❌ No URL provided")
+    if not source:
+        print("❌ No source provided")
         sys.exit(1)
 
     # Parse optional args
@@ -46,21 +121,32 @@ def main():
 
     if len(sys.argv) > 3:
         min_duration = int(sys.argv[3])
-
     if len(sys.argv) > 4:
         max_duration = int(sys.argv[4])
 
-    print(f"\n🚀 Processing on Modal (A10G GPU)...")
-    print(f"   URL: {url}")
+    # Determine source type
+    is_url = source.startswith("http://") or source.startswith("https://")
+
+    if is_url:
+        print(f"\n📥 Downloading video locally (bypasses YouTube bot detection)...")
+        video_bytes, title = download_locally(source)
+    else:
+        video_bytes, title = load_local_file(source)
+
+    size_mb = len(video_bytes) / (1024 * 1024)
+    print(f"\n🚀 Uploading {size_mb:.1f} MB to Modal (A10G GPU)...")
+    print(f"   Title: {title}")
     print(f"   Max clips: {max_clips}")
     print(f"   Duration range: {min_duration}–{max_duration}s")
-    print(f"   This may take 2-5 minutes...\n")
+    print(f"   Processing may take 2-5 minutes...\n")
 
     # Call Modal function
     try:
+        import modal
         process_video = modal.Function.from_name("clipped-ai", "process_video")
         result = process_video.remote(
-            youtube_url=url,
+            video_bytes=video_bytes,
+            video_title=title,
             max_clips=max_clips,
             min_clip_duration=min_duration,
             max_clip_duration=max_duration,
@@ -74,9 +160,8 @@ def main():
         sys.exit(1)
 
     if not result.get("clips"):
-        print("\n⚠️ No clips were generated. The video may be:")
-        print("  - Too short")
-        print("  - Geo-blocked or private")
+        print("\n⚠️  No clips were generated. The video may be:")
+        print("  - Too short for the minimum clip duration")
         print("  - Lacking interesting moments")
         sys.exit(0)
 
@@ -89,7 +174,7 @@ def main():
             os.remove(os.path.join("output", f))
 
     # Save clips
-    print(f"\n📥 Downloading {len(result['clips'])} clips...\n")
+    print(f"\n📥 Saving {len(result['clips'])} clips...\n")
     for i, clip in enumerate(result["clips"]):
         safe_title = sanitize_filename(clip["title"])
         filename = f"clip_{i+1:02d}_{safe_title}.mp4"
@@ -104,7 +189,8 @@ def main():
         print(f"  💾 {filename}")
         print(f"     {duration:.0f}s | score: {score:.2f} | {size_mb:.1f} MB")
         if clip.get("reasoning"):
-            print(f"     💡 {clip['reasoning'][:80]}...")
+            reason = clip["reasoning"][:80]
+            print(f"     💡 {reason}...")
 
     # Save metadata (without video bytes)
     meta = {
