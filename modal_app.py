@@ -64,7 +64,7 @@ def process_video(
     video_title: str = "Untitled",
     max_clips: int = 5,
     min_clip_duration: int = 15,
-    max_clip_duration: int = 90,
+    max_clip_duration: int = 60,
 ) -> dict:
     """
     Full pipeline: video bytes → rendered clips with metadata.

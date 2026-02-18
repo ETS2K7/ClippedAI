@@ -184,6 +184,7 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
     )
 
     # Call Cerebras API
+    print(f"  🔗 Calling Cerebras API (model={CEREBRAS_MODEL})...")
     try:
         response = httpx.post(
             CEREBRAS_API_URL,
@@ -199,27 +200,50 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
                 ],
                 "temperature": CEREBRAS_TEMPERATURE,
                 "max_tokens": CEREBRAS_MAX_TOKENS,
+                "response_format": {"type": "json_object"},
             },
-            timeout=60.0,
+            timeout=90.0,
         )
-        response.raise_for_status()
+        if response.status_code != 200:
+            print(f"  ❌ Cerebras HTTP {response.status_code}: {response.text[:500]}")
+            return _fallback_ranking(candidates, max_clips)
     except Exception as e:
-        print(f"  ⚠️ Cerebras API error: {e} — falling back to composite scoring")
+        print(f"  ❌ Cerebras API error: {type(e).__name__}: {e}")
         return _fallback_ranking(candidates, max_clips)
 
     # Parse response
     try:
         data = response.json()
         content = data["choices"][0]["message"]["content"]
+        print(f"  📝 LLM response received ({len(content)} chars)")
 
-        # Extract JSON from response (may be wrapped in markdown)
-        json_match = re.search(r'\[.*\]', content, re.DOTALL)
-        if not json_match:
-            raise ValueError("No JSON array found in response")
+        # Extract JSON from response (may be wrapped in markdown or object)
+        # Try parsing as direct JSON first
+        try:
+            parsed = json.loads(content)
+            # If it's a dict with a "clips" or "rankings" key, extract the array
+            if isinstance(parsed, dict):
+                for key in ("clips", "rankings", "candidates", "results"):
+                    if key in parsed and isinstance(parsed[key], list):
+                        rankings = parsed[key]
+                        break
+                else:
+                    raise ValueError("JSON object has no recognizable array key")
+            elif isinstance(parsed, list):
+                rankings = parsed
+            else:
+                raise ValueError(f"Unexpected JSON type: {type(parsed)}")
+        except json.JSONDecodeError:
+            # Fallback: extract JSON array from response text
+            json_match = re.search(r'\[.*\]', content, re.DOTALL)
+            if not json_match:
+                raise ValueError(f"No JSON array found in response: {content[:200]}")
+            rankings = json.loads(json_match.group())
 
-        rankings = json.loads(json_match.group())
+        print(f"  ✅ Parsed {len(rankings)} rankings from LLM")
     except Exception as e:
-        print(f"  ⚠️ Failed to parse LLM response: {e} — falling back")
+        print(f"  ❌ Failed to parse LLM response: {type(e).__name__}: {e}")
+        print(f"     Raw content: {content[:300] if 'content' in dir() else 'N/A'}")
         return _fallback_ranking(candidates, max_clips)
 
     # Merge LLM rankings with candidate data

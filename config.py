@@ -20,7 +20,7 @@ AUDIO_HOP_LENGTH = 8000
 PEAK_STD_MULTIPLIER = 2.0
 
 # ──────────────────── Candidate Generation ────────────────────
-WINDOW_SIZES = [30, 45, 60, 90]  # seconds
+WINDOW_SIZES = [15, 30, 45, 60]  # seconds (focused on viral retention)
 WINDOW_STEP_RATIO = 0.5
 CANDIDATE_MULTIPLIER = 3  # 3× max_clips
 OVERLAP_THRESHOLD = 0.5
@@ -41,7 +41,7 @@ VIRAL_KEYWORDS = [
 ]
 
 # ──────────────────── LLM (Cerebras) ────────────────────
-CEREBRAS_MODEL = "llama-3.3-70b"
+CEREBRAS_MODEL = "llama3.1-8b"
 CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
 CEREBRAS_TEMPERATURE = 0.3
 CEREBRAS_MAX_TOKENS = 4000
@@ -83,7 +83,7 @@ CAPTION_MARGIN_BOTTOM = 250  # Pixels from bottom
 OUTPUT_WIDTH = 1080
 OUTPUT_HEIGHT = 1920
 VIDEO_CODEC = "libx264"
-VIDEO_CRF = 18
+VIDEO_CRF = 23
 VIDEO_PRESET = "medium"
 AUDIO_CODEC = "aac"
 AUDIO_BITRATE = "192k"

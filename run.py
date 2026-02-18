@@ -110,7 +110,7 @@ def main():
     # Parse optional args
     max_clips = 5
     min_duration = 15
-    max_duration = 90
+    max_duration = 60
 
     if len(sys.argv) > 2:
         max_clips = int(sys.argv[2])
