@@ -55,6 +55,48 @@ clipping_image = (
 
 @app.function(
     image=clipping_image,
+    timeout=60,
+    secrets=[modal.Secret.from_name("cerebras-api-key")],
+)
+def test_cerebras():
+    """Quick test: verify Cerebras API works from inside Modal container."""
+    import os
+    import httpx
+
+    api_key = os.environ.get("CEREBRAS_API_KEY", "")
+    print(f"CEREBRAS_API_KEY set: {bool(api_key)} (len={len(api_key)})")
+
+    if not api_key:
+        return {"error": "CEREBRAS_API_KEY not found in environment"}
+
+    try:
+        response = httpx.post(
+            "https://api.cerebras.ai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": "llama3.1-8b",
+                "messages": [
+                    {"role": "user", "content": "Say hello in JSON"},
+                ],
+                "temperature": 0.1,
+                "max_tokens": 50,
+                "response_format": {"type": "json_object"},
+            },
+            timeout=30.0,
+        )
+        return {
+            "status_code": response.status_code,
+            "body": response.text[:500],
+        }
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}
+
+
+@app.function(
+    image=clipping_image,
     gpu="A10G",
     timeout=1800,  # 30 min max
     secrets=[modal.Secret.from_name("cerebras-api-key")],

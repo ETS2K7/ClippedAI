@@ -147,7 +147,7 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
     api_key = os.environ.get("CEREBRAS_API_KEY", "")
     if not api_key:
         print("  ⚠️ No CEREBRAS_API_KEY — falling back to composite scoring")
-        return _fallback_ranking(candidates, max_clips)
+        return _fallback_ranking(candidates, max_clips, "No CEREBRAS_API_KEY")
 
     # Build user prompt
     candidate_blocks = []
@@ -158,7 +158,7 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
             f"Time: {c['start']:.1f}s – {c['end']:.1f}s ({c['duration']:.0f}s)\n"
             f"Signals: energy={c['energy_score']:.2f}, "
             f"scenes={c['scene_score']:.2f}, keywords={c['keyword_score']:.2f}\n"
-            f"Transcript:\n\"{c['transcript_text'][:500]}\"\n"
+            f"Transcript:\n\"{c['transcript_text'][:200]}\"\n"
             f"---"
         )
         candidate_blocks.append(block)
@@ -200,16 +200,17 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
                 ],
                 "temperature": CEREBRAS_TEMPERATURE,
                 "max_tokens": CEREBRAS_MAX_TOKENS,
-                "response_format": {"type": "json_object"},
             },
             timeout=90.0,
         )
         if response.status_code != 200:
-            print(f"  ❌ Cerebras HTTP {response.status_code}: {response.text[:500]}")
-            return _fallback_ranking(candidates, max_clips)
+            err = f"HTTP {response.status_code}: {response.text[:300]}"
+            print(f"  ❌ Cerebras: {err}")
+            return _fallback_ranking(candidates, max_clips, err)
     except Exception as e:
-        print(f"  ❌ Cerebras API error: {type(e).__name__}: {e}")
-        return _fallback_ranking(candidates, max_clips)
+        err = f"{type(e).__name__}: {e}"
+        print(f"  ❌ Cerebras API error: {err}")
+        return _fallback_ranking(candidates, max_clips, err)
 
     # Parse response
     try:
@@ -223,12 +224,18 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
             parsed = json.loads(content)
             # If it's a dict with a "clips" or "rankings" key, extract the array
             if isinstance(parsed, dict):
+                # LLM may wrap array in an object — try known keys, then any list value
                 for key in ("clips", "rankings", "candidates", "results"):
                     if key in parsed and isinstance(parsed[key], list):
                         rankings = parsed[key]
                         break
                 else:
-                    raise ValueError("JSON object has no recognizable array key")
+                    for v in parsed.values():
+                        if isinstance(v, list) and len(v) > 0:
+                            rankings = v
+                            break
+                    else:
+                        raise ValueError(f"No array in JSON object. Keys: {list(parsed.keys())}")
             elif isinstance(parsed, list):
                 rankings = parsed
             else:
@@ -237,14 +244,14 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
             # Fallback: extract JSON array from response text
             json_match = re.search(r'\[.*\]', content, re.DOTALL)
             if not json_match:
-                raise ValueError(f"No JSON array found in response: {content[:200]}")
+                raise ValueError(f"No JSON array in response")
             rankings = json.loads(json_match.group())
 
         print(f"  ✅ Parsed {len(rankings)} rankings from LLM")
     except Exception as e:
-        print(f"  ❌ Failed to parse LLM response: {type(e).__name__}: {e}")
-        print(f"     Raw content: {content[:300] if 'content' in dir() else 'N/A'}")
-        return _fallback_ranking(candidates, max_clips)
+        err = f"{type(e).__name__}: {e} | content: {content[:200] if 'content' in dir() else 'N/A'}"
+        print(f"  ❌ Parse failed: {err}")
+        return _fallback_ranking(candidates, max_clips, err)
 
     # Merge LLM rankings with candidate data
     ranked_map = {r["candidate_id"]: r for r in rankings}
@@ -277,8 +284,9 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
     return final
 
 
-def _fallback_ranking(candidates: list, max_clips: int) -> list:
+def _fallback_ranking(candidates: list, max_clips: int, reason: str = "unknown") -> list:
     """Use composite scores when LLM is unavailable."""
+    print(f"  ⚠️ Fallback ranking — reason: {reason}")
     sorted_c = sorted(candidates, key=lambda x: x["composite_score"], reverse=True)
     results = []
     for c in sorted_c[:max_clips]:
@@ -291,7 +299,7 @@ def _fallback_ranking(candidates: list, max_clips: int) -> list:
             "title": f"Highlight at {c['start']:.0f}s",
             "description": c["transcript_text"][:100],
             "hashtags": [],
-            "reasoning": "Ranked by composite score (LLM unavailable)",
+            "reasoning": f"Fallback (composite score). LLM error: {reason}",
             "energy_score": c["energy_score"],
             "scene_score": c["scene_score"],
             "keyword_score": c["keyword_score"],
