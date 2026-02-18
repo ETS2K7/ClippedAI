@@ -25,10 +25,9 @@ clipping_image = (
         "fonts-liberation",   # Fallback fonts
     )
     .pip_install(
-        # Core ML
-        "torch==2.1.2",
-        "torchaudio==2.1.2",
-        "openai-whisper",
+        # Core ML — versions must match WhisperX requirements
+        "torch>=2.8.0",
+        "torchaudio>=2.8.0",
         "whisperx @ git+https://github.com/m-bain/whisperX.git",
 
         # Scene detection
@@ -48,19 +47,9 @@ clipping_image = (
         # LLM API
         "httpx>=0.25",
     )
-)
-
-# ──────────────────────────────────────
-# Mount local pipeline code into container
-# ──────────────────────────────────────
-local_mount = modal.Mount.from_local_dir(
-    ".",
-    remote_path="/app",
-    condition=lambda path: (
-        path.endswith(".py") and
-        not path.startswith(".") and
-        "__pycache__" not in path
-    ),
+    # Bundle pipeline code into the image
+    .add_local_dir("pipeline", remote_path="/app/pipeline")
+    .add_local_file("config.py", remote_path="/app/config.py")
 )
 
 
@@ -68,7 +57,6 @@ local_mount = modal.Mount.from_local_dir(
     image=clipping_image,
     gpu="A10G",
     timeout=1800,  # 30 min max
-    mounts=[local_mount],
     secrets=[modal.Secret.from_name("cerebras-api-key")],
 )
 def process_video(
@@ -90,7 +78,7 @@ def process_video(
     import sys
     import time
 
-    # Add mounted code to path
+    # Add bundled code to path
     sys.path.insert(0, "/app")
 
     from pipeline import ingest, transcribe, scene_detect, audio_analysis
