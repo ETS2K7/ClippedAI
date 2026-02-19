@@ -14,7 +14,7 @@ from config import (
     WINDOW_SIZES, WINDOW_STEP_RATIO, CANDIDATE_MULTIPLIER, OVERLAP_THRESHOLD,
     ENERGY_WEIGHT, SCENE_WEIGHT, KEYWORD_WEIGHT, VIRAL_KEYWORDS,
     CEREBRAS_MODEL, CEREBRAS_API_URL, CEREBRAS_TEMPERATURE, CEREBRAS_MAX_TOKENS,
-    LLM_SYSTEM_PROMPT,
+    LLM_SYSTEM_PROMPT, RD_MODE,
 )
 
 
@@ -32,7 +32,7 @@ def select_clips(
     """
     max_clips = settings.get("max_clips", 5)
     min_duration = settings.get("min_duration", 15)
-    max_duration = settings.get("max_duration", 90)
+    max_duration = settings.get("max_duration", 60)
 
     # Phase A: Generate candidates
     candidates = generate_candidates(
@@ -67,16 +67,17 @@ def generate_candidates(
     if not segments:
         return []
 
-    # Build flat timeline of words and text
     all_windows = []
     target_count = max_clips * CANDIDATE_MULTIPLIER
+
+    # Start from first speech, not t=0 (avoids awkward silence openings)
+    first_speech_start = segments[0]["start"]
 
     for window_size in WINDOW_SIZES:
         step = window_size * WINDOW_STEP_RATIO
 
-        # Slide over the transcript
         video_duration = segments[-1]["end"]
-        t = 0.0
+        t = first_speech_start
         while t + min_duration <= video_duration:
             window_end = min(t + window_size, video_duration)
             actual_duration = window_end - t
@@ -88,7 +89,7 @@ def generate_candidates(
                 window_end = t + max_duration
                 actual_duration = max_duration
 
-            # Snap to sentence boundaries
+            # Snap to sentence boundaries (tight: only snap forward, max 1s)
             start_snapped, end_snapped = _snap_to_sentences(segments, t, window_end)
             if end_snapped - start_snapped < min_duration:
                 t += step
@@ -140,16 +141,20 @@ def generate_candidates(
 def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
     """
     Send candidates to Cerebras LLM for viral ranking.
-    Falls back to composite_score if LLM fails.
+    In RD_MODE: raises exception on failure (no silent fallback).
+    In production: falls back to composite scoring.
     """
     import httpx
 
     api_key = os.environ.get("CEREBRAS_API_KEY", "")
     if not api_key:
-        print("  ⚠️ No CEREBRAS_API_KEY — falling back to composite scoring")
-        return _fallback_ranking(candidates, max_clips, "No CEREBRAS_API_KEY")
+        msg = "No CEREBRAS_API_KEY — cannot rank clips"
+        if RD_MODE:
+            raise RuntimeError(f"🛑 LLM FAILED: {msg}")
+        print(f"  ⚠️ {msg}")
+        return _fallback_ranking(candidates, max_clips, msg)
 
-    # Build user prompt
+    # Build user prompt — pass FULL transcript (up to 1500 chars per candidate)
     candidate_blocks = []
     for c in candidates:
         block = (
@@ -158,7 +163,7 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
             f"Time: {c['start']:.1f}s – {c['end']:.1f}s ({c['duration']:.0f}s)\n"
             f"Signals: energy={c['energy_score']:.2f}, "
             f"scenes={c['scene_score']:.2f}, keywords={c['keyword_score']:.2f}\n"
-            f"Transcript:\n\"{c['transcript_text'][:200]}\"\n"
+            f"Transcript:\n\"{c['transcript_text'][:1500]}\"\n"
             f"---"
         )
         candidate_blocks.append(block)
@@ -167,6 +172,8 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
         f'Video title: "{video_title}"\n\n'
         f"Here are {len(candidates)} candidate clips. Rank them by virality potential.\n\n"
         f"{''.join(candidate_blocks)}\n\n"
+        f"CRITICAL: Evaluate the FIRST 3 SECONDS of each candidate's transcript. "
+        f"If the opening is weak, generic, or lacks a hook, mark keep=false.\n\n"
         f"Return a JSON array with exactly {len(candidates)} objects, one per candidate:\n"
         f"[\n"
         f'  {{\n'
@@ -177,6 +184,7 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
         f'    "title": "<string, 5-10 words>",\n'
         f'    "description": "<string, 1-2 sentences>",\n'
         f'    "hashtags": ["<string>", ...],\n'
+        f'    "hook_strength": "<weak|medium|strong>",\n'
         f'    "reasoning": "<string, why this is/isn\'t engaging>"\n'
         f"  }}\n"
         f"]\n\n"
@@ -184,7 +192,7 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
     )
 
     # Call Cerebras API
-    print(f"  🔗 Calling Cerebras API (model={CEREBRAS_MODEL})...")
+    print(f"  🔗 Calling Cerebras API (model={CEREBRAS_MODEL}, {len(candidates)} candidates)...")
     try:
         response = httpx.post(
             CEREBRAS_API_URL,
@@ -201,30 +209,34 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
                 "temperature": CEREBRAS_TEMPERATURE,
                 "max_tokens": CEREBRAS_MAX_TOKENS,
             },
-            timeout=90.0,
+            timeout=120.0,
         )
         if response.status_code != 200:
             err = f"HTTP {response.status_code}: {response.text[:300]}"
             print(f"  ❌ Cerebras: {err}")
+            if RD_MODE:
+                raise RuntimeError(f"🛑 LLM FAILED: {err}")
             return _fallback_ranking(candidates, max_clips, err)
-    except Exception as e:
-        err = f"{type(e).__name__}: {e}"
-        print(f"  ❌ Cerebras API error: {err}")
+    except httpx.TimeoutException as e:
+        err = f"Timeout after 120s: {e}"
+        print(f"  ❌ Cerebras: {err}")
+        if RD_MODE:
+            raise RuntimeError(f"🛑 LLM FAILED: {err}")
         return _fallback_ranking(candidates, max_clips, err)
 
     # Parse response
     try:
         data = response.json()
         content = data["choices"][0]["message"]["content"]
-        print(f"  📝 LLM response received ({len(content)} chars)")
+        print(f"  📝 LLM response ({len(content)} chars)")
 
-        # Extract JSON from response (may be wrapped in markdown or object)
-        # Try parsing as direct JSON first
+        # Try parsing as direct JSON
         try:
             parsed = json.loads(content)
-            # If it's a dict with a "clips" or "rankings" key, extract the array
-            if isinstance(parsed, dict):
-                # LLM may wrap array in an object — try known keys, then any list value
+            if isinstance(parsed, list):
+                rankings = parsed
+            elif isinstance(parsed, dict):
+                # LLM may wrap array in an object
                 for key in ("clips", "rankings", "candidates", "results"):
                     if key in parsed and isinstance(parsed[key], list):
                         rankings = parsed[key]
@@ -236,12 +248,9 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
                             break
                     else:
                         raise ValueError(f"No array in JSON object. Keys: {list(parsed.keys())}")
-            elif isinstance(parsed, list):
-                rankings = parsed
             else:
                 raise ValueError(f"Unexpected JSON type: {type(parsed)}")
         except json.JSONDecodeError:
-            # Fallback: extract JSON array from response text
             json_match = re.search(r'\[.*\]', content, re.DOTALL)
             if not json_match:
                 raise ValueError(f"No JSON array in response")
@@ -251,6 +260,8 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
     except Exception as e:
         err = f"{type(e).__name__}: {e} | content: {content[:200] if 'content' in dir() else 'N/A'}"
         print(f"  ❌ Parse failed: {err}")
+        if RD_MODE:
+            raise RuntimeError(f"🛑 LLM PARSE FAILED: {err}")
         return _fallback_ranking(candidates, max_clips, err)
 
     # Merge LLM rankings with candidate data
@@ -268,6 +279,7 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
                 "title": r.get("title", f"Clip {c['id']}"),
                 "description": r.get("description", ""),
                 "hashtags": r.get("hashtags", []),
+                "hook_strength": r.get("hook_strength", "unknown"),
                 "reasoning": r.get("reasoning", ""),
                 "energy_score": c["energy_score"],
                 "scene_score": c["scene_score"],
@@ -280,12 +292,18 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
     # Sort final by timestamp for natural order
     final.sort(key=lambda x: x["start"])
 
+    if not final and RD_MODE:
+        raise RuntimeError(
+            f"🛑 LLM marked ALL candidates as keep=false. "
+            f"Rankings: {json.dumps(rankings, indent=2)[:1000]}"
+        )
+
     print(f"  🧠 LLM selected {len(final)} clips (from {len(results)} kept)")
     return final
 
 
 def _fallback_ranking(candidates: list, max_clips: int, reason: str = "unknown") -> list:
-    """Use composite scores when LLM is unavailable."""
+    """Use composite scores when LLM is unavailable. Only used when RD_MODE=False."""
     print(f"  ⚠️ Fallback ranking — reason: {reason}")
     sorted_c = sorted(candidates, key=lambda x: x["composite_score"], reverse=True)
     results = []
@@ -299,6 +317,7 @@ def _fallback_ranking(candidates: list, max_clips: int, reason: str = "unknown")
             "title": f"Highlight at {c['start']:.0f}s",
             "description": c["transcript_text"][:100],
             "hashtags": [],
+            "hook_strength": "unknown",
             "reasoning": f"Fallback (composite score). LLM error: {reason}",
             "energy_score": c["energy_score"],
             "scene_score": c["scene_score"],
@@ -313,18 +332,23 @@ def _fallback_ranking(candidates: list, max_clips: int, reason: str = "unknown")
 # ──────────────────────────────────────
 
 def _snap_to_sentences(segments: list, start: float, end: float) -> tuple:
-    """Snap start/end to nearest segment boundaries."""
-    # Find closest segment start >= our start
+    """
+    Snap start/end to nearest segment boundaries.
+    Tight snapping: only snap forward for start (max 1.5s),
+    only snap backward for end (max 1.5s).
+    """
     best_start = start
     best_end = end
 
+    # Snap start FORWARD to next segment start (don't snap backward — avoids chopping hooks)
     for seg in segments:
-        if seg["start"] >= start - 1.0 and seg["start"] <= start + 3.0:
+        if seg["start"] >= start and seg["start"] <= start + 1.5:
             best_start = seg["start"]
             break
 
+    # Snap end BACKWARD to closest segment end (don't extend past window)
     for seg in reversed(segments):
-        if seg["end"] <= end + 1.0 and seg["end"] >= end - 3.0:
+        if seg["end"] <= end and seg["end"] >= end - 1.5:
             best_end = seg["end"]
             break
 
@@ -342,12 +366,18 @@ def _get_text_in_range(segments: list, start: float, end: float) -> str:
 
 
 def _score_energy(audio: dict, start: float, end: float) -> float:
-    """Count energy peaks within the window, normalized."""
+    """
+    Score energy peaks per-window-duration (not global).
+    Higher density of peaks within the window = higher score.
+    """
     peaks_in_window = [p for p in audio["peaks"] if start <= p["time"] <= end]
-    total_peaks = len(audio["peaks"])
-    if total_peaks == 0:
+    duration = end - start
+    if duration <= 0:
         return 0.0
-    return min(len(peaks_in_window) / max(total_peaks * 0.1, 1), 1.0)
+
+    # Peaks per 10 seconds — normalized so 2+ peaks/10s = 1.0
+    peak_density = len(peaks_in_window) / (duration / 10.0)
+    return min(peak_density / 2.0, 1.0)
 
 
 def _score_scenes(scenes: list, start: float, end: float) -> float:

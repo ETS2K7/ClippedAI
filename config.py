@@ -1,5 +1,8 @@
 """All tunable constants for the ClippedAI clipping pipeline."""
 
+# ──────────────────── Pipeline Mode ────────────────────
+RD_MODE = True  # R&D mode: LLM failures raise exceptions instead of silent fallback
+
 # ──────────────────── Ingest ────────────────────
 MAX_VIDEO_DURATION = 4 * 3600  # 4 hours max
 MAX_RESOLUTION = 1080
@@ -44,7 +47,7 @@ VIRAL_KEYWORDS = [
 CEREBRAS_MODEL = "gpt-oss-120b"
 CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
 CEREBRAS_TEMPERATURE = 0.3
-CEREBRAS_MAX_TOKENS = 4000
+CEREBRAS_MAX_TOKENS = 8000
 
 LLM_SYSTEM_PROMPT = """You are a viral video expert. Your job is to identify the most engaging, \
 shareable moments from a long-form video transcript.
