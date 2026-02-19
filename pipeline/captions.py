@@ -1,9 +1,9 @@
 """
 Pipeline Step 7 — Captions
-Generate .ass subtitle files with strict word-level timing.
+Generate .ass subtitle files with strict 1-to-1 word-level timing.
 
 Each word appears ONLY when spoken and disappears IMMEDIATELY when it ends.
-No grouping, no merging, no lookahead.
+No grouping. No merging. No lookahead. One word at a time.
 """
 
 import os
@@ -13,27 +13,19 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
     CAPTION_FONT, CAPTION_FONT_SIZE, CAPTION_HIGHLIGHT_COLOR,
     CAPTION_DEFAULT_COLOR, CAPTION_OUTLINE_COLOR, CAPTION_OUTLINE_WIDTH,
-    CAPTION_WORDS_PER_GROUP, CAPTION_MARGIN_BOTTOM,
+    CAPTION_MARGIN_BOTTOM,
     OUTPUT_WIDTH, OUTPUT_HEIGHT,
 )
 
 WORK_DIR = "/tmp/clipped"
-
-# Maximum gap (seconds) between words before we consider it a new phrase.
-# Words within this gap are shown together as a rolling phrase.
-PHRASE_GAP_THRESHOLD = 0.4
 
 
 def generate_ass(words: list, clip_index: int) -> str:
     """
     Generate an .ass subtitle file with strict word-level timing.
 
-    Each word is highlighted exactly when spoken. Words are shown in
-    phrases (up to CAPTION_WORDS_PER_GROUP), but only words that have
-    ALREADY been spoken remain visible. Future words are never shown.
-
-    A phrase ends (all text disappears) when the last spoken word ends
-    or when there's a gap > PHRASE_GAP_THRESHOLD between words.
+    One word on screen at a time. Appears when spoken. Disappears when
+    the word ends. No previous words, no upcoming words.
 
     Args:
         words: [{"word": "Hey", "start": 0.0, "end": 0.28}, ...]
@@ -48,49 +40,22 @@ def generate_ass(words: list, clip_index: int) -> str:
             f.write(_ass_header())
         return ass_path
 
-    # Split words into phrases based on timing gaps
-    phrases = _split_into_phrases(words)
-
-    # Build ASS events — one event per word, showing accumulated words in phrase
     events = []
-    for phrase in phrases:
-        for word_idx in range(len(phrase)):
-            active_word = phrase[word_idx]
+    for word in words:
+        t_start = word["start"]
+        t_end = word["end"]
 
-            # Build display: show all words from phrase start up to (and including)
-            # the current active word. Words already spoken are default color,
-            # the current word is highlighted.
-            parts = []
-            for j in range(word_idx + 1):
-                w = phrase[j]
-                if j == word_idx:
-                    # Active (current) word — highlighted
-                    parts.append(
-                        f"{{\\b1\\c&H{CAPTION_HIGHLIGHT_COLOR}&}}"
-                        f"{w['word']}"
-                        f"{{\\b0\\c&H{CAPTION_DEFAULT_COLOR}&}}"
-                    )
-                else:
-                    # Already spoken — default color
-                    parts.append(w["word"])
+        # Prevent 0-duration flickering
+        if t_end - t_start < 0.05:
+            t_end = t_start + 0.05
 
-            line_text = " ".join(parts)
+        # Only the current word is shown — bold + highlighted
+        text = (
+            f"{{\\b1\\c&H{CAPTION_HIGHLIGHT_COLOR}&}}"
+            f"{word['word']}"
+        )
 
-            # Start: exactly when this word begins
-            t_start = active_word["start"]
-
-            # End: exactly when this word ends (NOT when the next word starts)
-            t_end = active_word["end"]
-
-            # Ensure minimum display time of 50ms
-            if t_end - t_start < 0.05:
-                t_end = t_start + 0.05
-
-            events.append({
-                "start": t_start,
-                "end": t_end,
-                "text": line_text,
-            })
+        events.append({"start": t_start, "end": t_end, "text": text})
 
     # Write .ass file
     ass_path = os.path.join(WORK_DIR, f"clip_{clip_index:02d}.ass")
@@ -107,40 +72,6 @@ def generate_ass(words: list, clip_index: int) -> str:
             )
 
     return ass_path
-
-
-def _split_into_phrases(words: list) -> list:
-    """
-    Split words into phrases based on timing gaps and max group size.
-
-    A new phrase starts when:
-    - Gap between previous word end and next word start > PHRASE_GAP_THRESHOLD
-    - Phrase reaches CAPTION_WORDS_PER_GROUP words
-    """
-    if not words:
-        return []
-
-    phrases = []
-    current_phrase = [words[0]]
-
-    for i in range(1, len(words)):
-        prev_word = words[i - 1]
-        curr_word = words[i]
-
-        gap = curr_word["start"] - prev_word["end"]
-        phrase_full = len(current_phrase) >= CAPTION_WORDS_PER_GROUP
-
-        if gap > PHRASE_GAP_THRESHOLD or phrase_full:
-            # Start new phrase
-            phrases.append(current_phrase)
-            current_phrase = [curr_word]
-        else:
-            current_phrase.append(curr_word)
-
-    if current_phrase:
-        phrases.append(current_phrase)
-
-    return phrases
 
 
 def _ass_header() -> str:
