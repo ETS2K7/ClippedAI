@@ -60,7 +60,10 @@ def generate_candidates(
     max_clips: int,
 ) -> list:
     """
-    Sliding window over transcript to find candidate clip regions.
+    Generate candidate clip regions using TWO strategies:
+    1. Sliding windows (coverage-based)
+    2. Event-centered windows (around peaks, scene changes)
+
     Scores each window with energy, scene density, and keyword signals.
     """
     segments = transcript["segments"]
@@ -72,58 +75,42 @@ def generate_candidates(
 
     # Start from first speech, not t=0 (avoids awkward silence openings)
     first_speech_start = segments[0]["start"]
+    video_duration = segments[-1]["end"]
 
+    # ── Strategy 1: Sliding windows (coverage) ──
     for window_size in WINDOW_SIZES:
         step = window_size * WINDOW_STEP_RATIO
-
-        video_duration = segments[-1]["end"]
         t = first_speech_start
         while t + min_duration <= video_duration:
-            window_end = min(t + window_size, video_duration)
-            actual_duration = window_end - t
-
-            if actual_duration < min_duration:
-                t += step
-                continue
-            if actual_duration > max_duration:
-                window_end = t + max_duration
-                actual_duration = max_duration
-
-            # Snap to sentence boundaries (tight: only snap forward, max 1s)
-            start_snapped, end_snapped = _snap_to_sentences(segments, t, window_end)
-            if end_snapped - start_snapped < min_duration:
-                t += step
-                continue
-
-            # Gather transcript text in window
-            text = _get_text_in_range(segments, start_snapped, end_snapped)
-            if len(text.split()) < 10:  # Skip near-empty windows
-                t += step
-                continue
-
-            # Score the window
-            energy_score = _score_energy(audio, start_snapped, end_snapped)
-            scene_score = _score_scenes(scenes, start_snapped, end_snapped)
-            keyword_score = _score_keywords(text)
-
-            composite = (
-                energy_score * ENERGY_WEIGHT +
-                scene_score * SCENE_WEIGHT +
-                keyword_score * KEYWORD_WEIGHT
-            )
-
-            all_windows.append({
-                "start": round(start_snapped, 2),
-                "end": round(end_snapped, 2),
-                "duration": round(end_snapped - start_snapped, 2),
-                "transcript_text": text,
-                "energy_score": round(energy_score, 4),
-                "scene_score": round(scene_score, 4),
-                "keyword_score": round(keyword_score, 4),
-                "composite_score": round(composite, 4),
-            })
-
+            window = _make_window(segments, audio, scenes, t, t + window_size,
+                                  min_duration, max_duration)
+            if window:
+                all_windows.append(window)
             t += step
+
+    # ── Strategy 2: Event-centered windows ──
+    # Center windows around energy peaks
+    for peak in audio.get("peaks", []):
+        center = peak["time"]
+        for radius in [10, 15]:  # Try 20s and 30s clips centered on peak
+            win_start = max(first_speech_start, center - radius)
+            win_end = min(video_duration, center + radius)
+            window = _make_window(segments, audio, scenes, win_start, win_end,
+                                  min_duration, max_duration)
+            if window:
+                all_windows.append(window)
+
+    # Center windows around scene boundaries
+    for scene in scenes:
+        scene_time = scene["start"]
+        # Clip starting at scene change (hook potential)
+        for length in [15, 25]:
+            win_start = scene_time
+            win_end = min(video_duration, scene_time + length)
+            window = _make_window(segments, audio, scenes, win_start, win_end,
+                                  min_duration, max_duration)
+            if window:
+                all_windows.append(window)
 
     # Deduplicate overlapping windows
     all_windows.sort(key=lambda w: w["composite_score"], reverse=True)
@@ -131,11 +118,54 @@ def generate_candidates(
 
     # Return top N
     result = deduped[:target_count]
-    # Assign IDs
     for i, c in enumerate(result):
         c["id"] = i
 
+    print(f"    (sliding: {len(all_windows)} raw, {len(deduped)} deduped, {len(result)} kept)")
     return result
+
+
+def _make_window(segments, audio, scenes, start, end, min_dur, max_dur):
+    """Score and validate a single candidate window. Returns dict or None."""
+    actual_duration = end - start
+    if actual_duration < min_dur:
+        return None
+    if actual_duration > max_dur:
+        end = start + max_dur
+
+    # Snap to sentence boundaries
+    start_snapped, end_snapped = _snap_to_sentences(segments, start, end)
+    if end_snapped - start_snapped < min_dur:
+        return None
+
+    text = _get_text_in_range(segments, start_snapped, end_snapped)
+    if len(text.split()) < 10:
+        return None
+
+    energy_score = _score_energy(audio, start_snapped, end_snapped)
+    scene_score = _score_scenes(scenes, start_snapped, end_snapped)
+    keyword_score = _score_keywords(text)
+
+    composite = (
+        energy_score * ENERGY_WEIGHT +
+        scene_score * SCENE_WEIGHT +
+        keyword_score * KEYWORD_WEIGHT
+    )
+
+    # Extract hook text (first ~3 seconds of transcript)
+    hook_text = _get_text_in_range(segments, start_snapped, start_snapped + 3.0)
+
+    return {
+        "start": round(start_snapped, 2),
+        "end": round(end_snapped, 2),
+        "duration": round(end_snapped - start_snapped, 2),
+        "transcript_text": text,
+        "hook_text": hook_text.strip() if hook_text else "",
+        "energy_score": round(energy_score, 4),
+        "scene_score": round(scene_score, 4),
+        "keyword_score": round(keyword_score, 4),
+        "composite_score": round(composite, 4),
+    }
 
 
 def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
@@ -154,7 +184,7 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
         print(f"  ⚠️ {msg}")
         return _fallback_ranking(candidates, max_clips, msg)
 
-    # Build user prompt — pass FULL transcript (up to 1500 chars per candidate)
+    # Build user prompt — structurally isolate hook text from full transcript
     candidate_blocks = []
     for c in candidates:
         block = (
@@ -163,7 +193,8 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
             f"Time: {c['start']:.1f}s – {c['end']:.1f}s ({c['duration']:.0f}s)\n"
             f"Signals: energy={c['energy_score']:.2f}, "
             f"scenes={c['scene_score']:.2f}, keywords={c['keyword_score']:.2f}\n"
-            f"Transcript:\n\"{c['transcript_text'][:1500]}\"\n"
+            f"HOOK (first 3 seconds): \"{c.get('hook_text', '')}\"\n"
+            f"FULL TRANSCRIPT:\n\"{c['transcript_text'][:1500]}\"\n"
             f"---"
         )
         candidate_blocks.append(block)

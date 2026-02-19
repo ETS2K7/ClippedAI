@@ -41,8 +41,11 @@ def detect_faces(video_path: str, start: float, end: float) -> list:
     ]
     subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
-    # Load YOLOv8 face model
-    model = YOLO("yolov8n.pt")  # Uses general model, detects "person" class
+    # Load YOLOv8 once (cached after first call)
+    global _yolo_model
+    if "_yolo_model" not in globals() or _yolo_model is None:
+        _yolo_model = YOLO("yolov8n.pt")
+    model = _yolo_model
 
     # Detect faces in each frame
     faces = []

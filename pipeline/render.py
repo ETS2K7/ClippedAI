@@ -86,8 +86,8 @@ def final_render(
     # Add captions if .ass file has content
     if ass_path and os.path.exists(ass_path):
         # Escape special characters in path for FFmpeg filter
-        ass_escaped = ass_path.replace("\\", "/").replace(":", "\\:")
-        vf_parts.append(f"ass='{ass_path}'")
+        ass_escaped = ass_path.replace("\\", "/").replace(":", "\\\\:").replace("'", "\\\\'")
+        vf_parts.append(f"ass='{ass_escaped}'")
 
     vf = ",".join(vf_parts)
 

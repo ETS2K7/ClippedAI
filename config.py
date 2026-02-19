@@ -29,9 +29,9 @@ CANDIDATE_MULTIPLIER = 3  # 3× max_clips
 OVERLAP_THRESHOLD = 0.5
 
 # Scoring weights
-ENERGY_WEIGHT = 0.40
-SCENE_WEIGHT = 0.30
-KEYWORD_WEIGHT = 0.30
+ENERGY_WEIGHT = 0.45
+SCENE_WEIGHT = 0.35
+KEYWORD_WEIGHT = 0.20
 
 VIRAL_KEYWORDS = [
     "insane", "crazy", "unbelievable", "oh my god", "no way",
