@@ -1,6 +1,6 @@
 # ClippedAI — Full Codebase Snapshot
 
-> Generated: 2026-02-20 04:00:24
+> Generated: 2026-02-20 04:06:45
 > Files: 15
 
 ---
@@ -130,17 +130,17 @@ LOUDNORM_TARGET = -14  # LUFS
 
 ## `modal_app.py`
 
-*262 lines*
+*306 lines*
 
 ```python
 """
 ClippedAI — Modal App
-Single Modal function that runs the full clipping pipeline on A10G GPU.
 
 Architecture:
-  - Video is downloaded LOCALLY on user's Mac (yt-dlp has browser cookie access)
-  - Video bytes are uploaded to this Modal function
-  - All processing (transcribe, analyze, select, render) happens on Modal GPU
+  - Video is downloaded LOCALLY on user's Mac (yt-dlp has browser cookies)
+  - Video bytes are uploaded to the CPU orchestrator
+  - Transcription runs on a SEPARATE A10G GPU function (pay only for GPU time)
+  - All other processing (scene detect, analysis, render) runs on CPU
   - Rendered clip bytes are returned to the local machine
 """
 
@@ -182,12 +182,49 @@ clipping_image = (
         # LLM API
         "httpx>=0.25",
     )
+    # Bake YOLO weights into image (avoids cold-start download per container)
+    .run_commands(
+        "mkdir -p /app && python -c \"import urllib.request; urllib.request.urlretrieve("
+        "'https://github.com/ultralytics/assets/releases/download/v8.1.0/yolov8n.pt', "
+        "'/app/yolov8n.pt')\""
+    )
     # Bundle pipeline code into the image
     .add_local_dir("pipeline", remote_path="/app/pipeline")
     .add_local_file("config.py", remote_path="/app/config.py")
 )
 
 
+# ──────────────────────────────────────
+# GPU-only: Transcription worker
+# ──────────────────────────────────────
+@app.function(
+    image=clipping_image,
+    gpu="A10G",
+    timeout=900,  # 15 min max for transcription
+)
+def transcribe_gpu(audio_bytes: bytes) -> dict:
+    """
+    Dedicated GPU function for WhisperX transcription.
+    A10G spins up, transcribes, returns result, spins down.
+    No GPU billing during scene detect, rendering, etc.
+    """
+    import sys
+    sys.path.insert(0, "/app")
+    from pipeline import transcribe
+
+    # Write audio to temp file
+    audio_path = "/tmp/clipped/audio.wav"
+    import os
+    os.makedirs("/tmp/clipped", exist_ok=True)
+    with open(audio_path, "wb") as f:
+        f.write(audio_bytes)
+
+    return transcribe.transcribe(audio_path)
+
+
+# ──────────────────────────────────────
+# Debug: Test Cerebras API from container
+# ──────────────────────────────────────
 @app.function(
     image=clipping_image,
     timeout=60,
@@ -212,13 +249,12 @@ def test_cerebras():
                 "Content-Type": "application/json",
             },
             json={
-                "model": "llama3.1-8b",
+                "model": "gpt-oss-120b",
                 "messages": [
                     {"role": "user", "content": "Say hello in JSON"},
                 ],
                 "temperature": 0.1,
                 "max_tokens": 50,
-                "response_format": {"type": "json_object"},
             },
             timeout=30.0,
         )
@@ -230,10 +266,13 @@ def test_cerebras():
         return {"error": f"{type(e).__name__}: {e}"}
 
 
+# ──────────────────────────────────────
+# CPU orchestrator: Full pipeline
+# ──────────────────────────────────────
 @app.function(
     image=clipping_image,
-    gpu="A10G",
     timeout=1800,  # 30 min max
+    memory=4096,   # 4GB RAM for large video files
     secrets=[modal.Secret.from_name("cerebras-api-key")],
 )
 def process_video(
@@ -246,10 +285,8 @@ def process_video(
     """
     Full pipeline: video bytes → rendered clips with metadata.
 
-    Video is pre-downloaded on the local machine and uploaded as bytes.
-    All processing happens in this single container:
-    - GPU used for WhisperX transcription
-    - CPU used for everything else (FFmpeg, scene detect, etc.)
+    GPU is used ONLY for transcription (via transcribe_gpu.remote()).
+    Everything else runs on this cheap CPU container.
     """
     import os
     import sys
@@ -258,7 +295,7 @@ def process_video(
     # Add bundled code to path
     sys.path.insert(0, "/app")
 
-    from pipeline import ingest, transcribe, scene_detect, audio_analysis
+    from pipeline import ingest, scene_detect, audio_analysis
     from pipeline import clip_selector, reframe, captions, render
 
     os.makedirs("/tmp/clipped/segments", exist_ok=True)
@@ -278,26 +315,29 @@ def process_video(
     print(f"✅ Ingest ({timings['ingest']}s) — {video_info['title']} "
           f"({video_info['duration']:.0f}s, {video_info['width']}x{video_info['height']})")
 
-    # ── Step 2: Transcribe (GPU) ──
+    # ── Step 2: Transcribe (GPU — separate A10G function) ──
     t0 = time.time()
-    transcript = transcribe.transcribe(audio_path)
+    with open(audio_path, "rb") as f:
+        audio_bytes_data = f.read()
+    print("📡 Sending audio to GPU for transcription...")
+    transcript = transcribe_gpu.remote(audio_bytes_data)
     timings["transcribe"] = round(time.time() - t0, 1)
     print(f"✅ Transcribed ({timings['transcribe']}s) — "
           f"{len(transcript['segments'])} segments, lang={transcript['language']}")
 
-    # ── Step 3: Scene Detection ──
+    # ── Step 3: Scene Detection (CPU) ──
     t0 = time.time()
     scenes = scene_detect.detect_scenes(video_info["video_path"])
     timings["scene_detect"] = round(time.time() - t0, 1)
     print(f"✅ Scenes ({timings['scene_detect']}s) — {len(scenes)} scenes")
 
-    # ── Step 4: Audio Analysis ──
+    # ── Step 4: Audio Analysis (CPU) ──
     t0 = time.time()
     audio = audio_analysis.analyze_audio(audio_path)
     timings["audio_analysis"] = round(time.time() - t0, 1)
     print(f"✅ Audio ({timings['audio_analysis']}s) — {len(audio['peaks'])} peaks")
 
-    # ── Step 5: Clip Selection ──
+    # ── Step 5: Clip Selection + LLM Ranking (CPU + Cerebras API) ──
     t0 = time.time()
     settings = {
         "max_clips": max_clips,
@@ -319,9 +359,12 @@ def process_video(
             "timings": timings,
         }
 
-    # ── Steps 6-8: Render Each Clip ──
+    # ── Steps 6-8: Render Each Clip (CPU + FFmpeg) ──
     t0 = time.time()
     clips = []
+
+    # Import transcribe here for word extraction (no GPU needed for this)
+    from pipeline import transcribe as transcribe_mod
 
     for i, clip_info in enumerate(selected):
         print(f"\n🎬 Rendering clip {i+1}/{len(selected)}: \"{clip_info['title']}\"")
@@ -336,7 +379,7 @@ def process_video(
             i,
         )
 
-        # Detect faces + compute crop position
+        # Detect faces + compute crop position (YOLO uses pre-baked weights)
         faces = reframe.detect_faces(
             video_info["video_path"],
             clip_info["start"],
@@ -350,7 +393,7 @@ def process_video(
         print(f"   👤 {len(faces)} face detections, crop_x={crop_x}")
 
         # Generate captions
-        clip_words = transcribe.get_words_in_range(
+        clip_words = transcribe_mod.get_words_in_range(
             transcript,
             clip_info["start"],
             clip_info["end"],
@@ -374,6 +417,7 @@ def process_video(
             "title": clip_info["title"],
             "description": clip_info.get("description", ""),
             "hashtags": clip_info.get("hashtags", []),
+            "hook_strength": clip_info.get("hook_strength", "unknown"),
             "start": clip_info["start"],
             "end": clip_info["end"],
             "duration": clip_info["duration"],
@@ -1591,7 +1635,7 @@ def _deduplicate(windows: list) -> list:
 
 ## `pipeline/reframe.py`
 
-*138 lines*
+*141 lines*
 
 ```python
 """
@@ -1638,9 +1682,12 @@ def detect_faces(video_path: str, start: float, end: float) -> list:
     subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
     # Load YOLOv8 once (cached after first call)
+    # Use baked weights from image, fallback to auto-download for local dev
     global _yolo_model
     if "_yolo_model" not in globals() or _yolo_model is None:
-        _yolo_model = YOLO("yolov8n.pt")
+        import os as _os
+        weights = "/app/yolov8n.pt" if _os.path.exists("/app/yolov8n.pt") else "yolov8n.pt"
+        _yolo_model = YOLO(weights)
     model = _yolo_model
 
     # Detect faces in each frame
@@ -2040,4 +2087,4 @@ output/
 
 ---
 
-**Total: 15 files, 1880 lines**
+**Total: 15 files, 1927 lines**

@@ -42,9 +42,12 @@ def detect_faces(video_path: str, start: float, end: float) -> list:
     subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
     # Load YOLOv8 once (cached after first call)
+    # Use baked weights from image, fallback to auto-download for local dev
     global _yolo_model
     if "_yolo_model" not in globals() or _yolo_model is None:
-        _yolo_model = YOLO("yolov8n.pt")
+        import os as _os
+        weights = "/app/yolov8n.pt" if _os.path.exists("/app/yolov8n.pt") else "yolov8n.pt"
+        _yolo_model = YOLO(weights)
     model = _yolo_model
 
     # Detect faces in each frame
