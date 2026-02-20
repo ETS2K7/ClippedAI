@@ -1,6 +1,6 @@
 # ClippedAI — Full Codebase Snapshot
 
-> Generated: 2026-02-20 04:06:45
+> Generated: 2026-02-20 19:01:45
 > Files: 15
 
 ---
@@ -1169,7 +1169,7 @@ def _merge_nearby_peaks(peaks: list, min_gap: float = 2.0) -> list:
 
 ## `pipeline/clip_selector.py`
 
-*457 lines*
+*505 lines*
 
 ```python
 """
@@ -1491,19 +1491,36 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
                 "keyword_score": c["keyword_score"],
             })
 
-    # Sort by virality, take top max_clips
+    # Sort by virality score
     results.sort(key=lambda x: x["virality_score"], reverse=True)
-    final = results[:max_clips]
+
+    # Post-LLM dedup — remove clips that overlap with higher-scored ones
+    deduped = []
+    for clip in results:
+        overlaps = False
+        for kept in deduped:
+            overlap_start = max(clip["start"], kept["start"])
+            overlap_end = min(clip["end"], kept["end"])
+            if overlap_end > overlap_start:
+                overlap_dur = overlap_end - overlap_start
+                min_dur = min(clip["duration"], kept["duration"])
+                if min_dur > 0 and (overlap_dur / min_dur) > 0.15:
+                    overlaps = True
+                    break
+        if not overlaps:
+            deduped.append(clip)
+
+    final = deduped[:max_clips]
     # Sort final by timestamp for natural order
     final.sort(key=lambda x: x["start"])
 
     if not final and RD_MODE:
         raise RuntimeError(
-            f"🛑 LLM marked ALL candidates as keep=false. "
+            f"🛑 LLM marked ALL candidates as keep=false or all overlap. "
             f"Rankings: {json.dumps(rankings, indent=2)[:1000]}"
         )
 
-    print(f"  🧠 LLM selected {len(final)} clips (from {len(results)} kept)")
+    print(f"  🧠 LLM selected {len(final)} clips (from {len(results)} kept, {len(results) - len(deduped)} removed for overlap)")
     return final
 
 
@@ -1538,24 +1555,55 @@ def _fallback_ranking(candidates: list, max_clips: int, reason: str = "unknown")
 
 def _snap_to_sentences(segments: list, start: float, end: float) -> tuple:
     """
-    Snap start/end to nearest segment boundaries.
-    Tight snapping: only snap forward for start (max 1.5s),
-    only snap backward for end (max 1.5s).
+    Snap start/end to natural sentence boundaries using punctuation markers.
+    Looks within 5s window for sentence-ending punctuation (. ? !).
+    Falls back to segment boundaries if no punctuation found.
     """
     best_start = start
     best_end = end
 
-    # Snap start FORWARD to next segment start (don't snap backward — avoids chopping hooks)
+    # Snap START forward to a sentence beginning (after punctuation in previous segment)
+    # Look up to 5s forward for a segment that starts after a sentence-ender
     for seg in segments:
-        if seg["start"] >= start and seg["start"] <= start + 1.5:
+        if seg["start"] < start:
+            continue
+        if seg["start"] > start + 5.0:
+            break
+        # Check if previous segment ended with sentence punctuation
+        seg_idx = segments.index(seg)
+        if seg_idx > 0:
+            prev_text = segments[seg_idx - 1].get("text", "").strip()
+            if prev_text and prev_text[-1] in '.?!"':
+                best_start = seg["start"]
+                break
+        elif seg_idx == 0:
+            # First segment — good start point
             best_start = seg["start"]
             break
 
-    # Snap end BACKWARD to closest segment end (don't extend past window)
+    # Snap END backward to a sentence ending (segment that ends with punctuation)
+    # Look up to 5s backward
     for seg in reversed(segments):
-        if seg["end"] <= end and seg["end"] >= end - 1.5:
+        if seg["end"] > end:
+            continue
+        if seg["end"] < end - 5.0:
+            break
+        seg_text = seg.get("text", "").strip()
+        if seg_text and seg_text[-1] in '.?!"':
             best_end = seg["end"]
             break
+
+    # Fallback: if no punctuation found, snap to nearest segment boundary within 3s
+    if best_start == start:
+        for seg in segments:
+            if seg["start"] >= start and seg["start"] <= start + 3.0:
+                best_start = seg["start"]
+                break
+    if best_end == end:
+        for seg in reversed(segments):
+            if seg["end"] <= end and seg["end"] >= end - 3.0:
+                best_end = seg["end"]
+                break
 
     return best_start, best_end
 
@@ -1785,15 +1833,16 @@ def compute_crop_x(faces: list, source_w: int, source_h: int) -> int:
 
 ## `pipeline/captions.py`
 
-*100 lines*
+*119 lines*
 
 ```python
 """
 Pipeline Step 7 — Captions
-Generate .ass subtitle files with strict 1-to-1 word-level timing.
+Generate .ass subtitle files with grouped word display + sequential highlighting.
 
-Each word appears ONLY when spoken and disappears IMMEDIATELY when it ends.
-No grouping. No merging. No lookahead. One word at a time.
+Words are displayed in groups of CAPTION_WORDS_PER_GROUP. The current spoken word
+is highlighted (bold + cyan), while other words in the group are dimmed white.
+Groups advance when the last word in a group finishes.
 """
 
 import os
@@ -1803,7 +1852,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
     CAPTION_FONT, CAPTION_FONT_SIZE, CAPTION_HIGHLIGHT_COLOR,
     CAPTION_DEFAULT_COLOR, CAPTION_OUTLINE_COLOR, CAPTION_OUTLINE_WIDTH,
-    CAPTION_MARGIN_BOTTOM,
+    CAPTION_MARGIN_BOTTOM, CAPTION_WORDS_PER_GROUP,
     OUTPUT_WIDTH, OUTPUT_HEIGHT,
 )
 
@@ -1812,10 +1861,11 @@ WORK_DIR = "/tmp/clipped"
 
 def generate_ass(words: list, clip_index: int) -> str:
     """
-    Generate an .ass subtitle file with strict word-level timing.
+    Generate an .ass subtitle file with grouped captions.
 
-    One word on screen at a time. Appears when spoken. Disappears when
-    the word ends. No previous words, no upcoming words.
+    Words appear in groups (e.g. 4 at a time). The spoken word is highlighted
+    cyan+bold, while context words are dimmed white. This is more readable
+    than single-word flashing while still showing precise timing.
 
     Args:
         words: [{"word": "Hey", "start": 0.0, "end": 0.28}, ...]
@@ -1830,22 +1880,39 @@ def generate_ass(words: list, clip_index: int) -> str:
             f.write(_ass_header())
         return ass_path
 
+    # Split words into groups
+    group_size = CAPTION_WORDS_PER_GROUP
+    groups = []
+    for i in range(0, len(words), group_size):
+        groups.append(words[i:i + group_size])
+
+    # Generate events: one event per word, showing the full group with active highlight
     events = []
-    for word in words:
-        t_start = word["start"]
-        t_end = word["end"]
+    for group in groups:
+        for active_idx, active_word in enumerate(group):
+            t_start = active_word["start"]
+            t_end = active_word["end"]
 
-        # Prevent 0-duration flickering
-        if t_end - t_start < 0.05:
-            t_end = t_start + 0.05
+            # Prevent 0-duration flickering
+            if t_end - t_start < 0.05:
+                t_end = t_start + 0.05
 
-        # Only the current word is shown — bold + highlighted
-        text = (
-            f"{{\\b1\\c&H{CAPTION_HIGHLIGHT_COLOR}&}}"
-            f"{word['word']}"
-        )
+            # Build the display text: all words in group, active one highlighted
+            parts = []
+            for j, w in enumerate(group):
+                if j == active_idx:
+                    # Active word: bold + highlight color
+                    parts.append(
+                        f"{{\\b1\\c&H{CAPTION_HIGHLIGHT_COLOR}&}}{w['word']}"
+                    )
+                else:
+                    # Context word: normal weight + default color
+                    parts.append(
+                        f"{{\\b0\\c&H{CAPTION_DEFAULT_COLOR}&}}{w['word']}"
+                    )
 
-        events.append({"start": t_start, "end": t_end, "text": text})
+            text = " ".join(parts)
+            events.append({"start": t_start, "end": t_end, "text": text})
 
     # Write .ass file
     ass_path = os.path.join(WORK_DIR, f"clip_{clip_index:02d}.ass")
@@ -2087,4 +2154,4 @@ output/
 
 ---
 
-**Total: 15 files, 1927 lines**
+**Total: 15 files, 1994 lines**

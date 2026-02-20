@@ -1,9 +1,10 @@
 """
 Pipeline Step 7 — Captions
-Generate .ass subtitle files with strict 1-to-1 word-level timing.
+Generate .ass subtitle files with grouped word display + sequential highlighting.
 
-Each word appears ONLY when spoken and disappears IMMEDIATELY when it ends.
-No grouping. No merging. No lookahead. One word at a time.
+Words are displayed in groups of CAPTION_WORDS_PER_GROUP. The current spoken word
+is highlighted (bold + cyan), while other words in the group are dimmed white.
+Groups advance when the last word in a group finishes.
 """
 
 import os
@@ -13,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import (
     CAPTION_FONT, CAPTION_FONT_SIZE, CAPTION_HIGHLIGHT_COLOR,
     CAPTION_DEFAULT_COLOR, CAPTION_OUTLINE_COLOR, CAPTION_OUTLINE_WIDTH,
-    CAPTION_MARGIN_BOTTOM,
+    CAPTION_MARGIN_BOTTOM, CAPTION_WORDS_PER_GROUP,
     OUTPUT_WIDTH, OUTPUT_HEIGHT,
 )
 
@@ -22,10 +23,11 @@ WORK_DIR = "/tmp/clipped"
 
 def generate_ass(words: list, clip_index: int) -> str:
     """
-    Generate an .ass subtitle file with strict word-level timing.
+    Generate an .ass subtitle file with grouped captions.
 
-    One word on screen at a time. Appears when spoken. Disappears when
-    the word ends. No previous words, no upcoming words.
+    Words appear in groups (e.g. 4 at a time). The spoken word is highlighted
+    cyan+bold, while context words are dimmed white. This is more readable
+    than single-word flashing while still showing precise timing.
 
     Args:
         words: [{"word": "Hey", "start": 0.0, "end": 0.28}, ...]
@@ -40,22 +42,39 @@ def generate_ass(words: list, clip_index: int) -> str:
             f.write(_ass_header())
         return ass_path
 
+    # Split words into groups
+    group_size = CAPTION_WORDS_PER_GROUP
+    groups = []
+    for i in range(0, len(words), group_size):
+        groups.append(words[i:i + group_size])
+
+    # Generate events: one event per word, showing the full group with active highlight
     events = []
-    for word in words:
-        t_start = word["start"]
-        t_end = word["end"]
+    for group in groups:
+        for active_idx, active_word in enumerate(group):
+            t_start = active_word["start"]
+            t_end = active_word["end"]
 
-        # Prevent 0-duration flickering
-        if t_end - t_start < 0.05:
-            t_end = t_start + 0.05
+            # Prevent 0-duration flickering
+            if t_end - t_start < 0.05:
+                t_end = t_start + 0.05
 
-        # Only the current word is shown — bold + highlighted
-        text = (
-            f"{{\\b1\\c&H{CAPTION_HIGHLIGHT_COLOR}&}}"
-            f"{word['word']}"
-        )
+            # Build the display text: all words in group, active one highlighted
+            parts = []
+            for j, w in enumerate(group):
+                if j == active_idx:
+                    # Active word: bold + highlight color
+                    parts.append(
+                        f"{{\\b1\\c&H{CAPTION_HIGHLIGHT_COLOR}&}}{w['word']}"
+                    )
+                else:
+                    # Context word: normal weight + default color
+                    parts.append(
+                        f"{{\\b0\\c&H{CAPTION_DEFAULT_COLOR}&}}{w['word']}"
+                    )
 
-        events.append({"start": t_start, "end": t_end, "text": text})
+            text = " ".join(parts)
+            events.append({"start": t_start, "end": t_end, "text": text})
 
     # Write .ass file
     ass_path = os.path.join(WORK_DIR, f"clip_{clip_index:02d}.ass")

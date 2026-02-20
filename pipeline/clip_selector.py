@@ -317,19 +317,36 @@ def rank_with_llm(candidates: list, video_title: str, max_clips: int) -> list:
                 "keyword_score": c["keyword_score"],
             })
 
-    # Sort by virality, take top max_clips
+    # Sort by virality score
     results.sort(key=lambda x: x["virality_score"], reverse=True)
-    final = results[:max_clips]
+
+    # Post-LLM dedup — remove clips that overlap with higher-scored ones
+    deduped = []
+    for clip in results:
+        overlaps = False
+        for kept in deduped:
+            overlap_start = max(clip["start"], kept["start"])
+            overlap_end = min(clip["end"], kept["end"])
+            if overlap_end > overlap_start:
+                overlap_dur = overlap_end - overlap_start
+                min_dur = min(clip["duration"], kept["duration"])
+                if min_dur > 0 and (overlap_dur / min_dur) > 0.15:
+                    overlaps = True
+                    break
+        if not overlaps:
+            deduped.append(clip)
+
+    final = deduped[:max_clips]
     # Sort final by timestamp for natural order
     final.sort(key=lambda x: x["start"])
 
     if not final and RD_MODE:
         raise RuntimeError(
-            f"🛑 LLM marked ALL candidates as keep=false. "
+            f"🛑 LLM marked ALL candidates as keep=false or all overlap. "
             f"Rankings: {json.dumps(rankings, indent=2)[:1000]}"
         )
 
-    print(f"  🧠 LLM selected {len(final)} clips (from {len(results)} kept)")
+    print(f"  🧠 LLM selected {len(final)} clips (from {len(results)} kept, {len(results) - len(deduped)} removed for overlap)")
     return final
 
 
@@ -364,24 +381,55 @@ def _fallback_ranking(candidates: list, max_clips: int, reason: str = "unknown")
 
 def _snap_to_sentences(segments: list, start: float, end: float) -> tuple:
     """
-    Snap start/end to nearest segment boundaries.
-    Tight snapping: only snap forward for start (max 1.5s),
-    only snap backward for end (max 1.5s).
+    Snap start/end to natural sentence boundaries using punctuation markers.
+    Looks within 5s window for sentence-ending punctuation (. ? !).
+    Falls back to segment boundaries if no punctuation found.
     """
     best_start = start
     best_end = end
 
-    # Snap start FORWARD to next segment start (don't snap backward — avoids chopping hooks)
+    # Snap START forward to a sentence beginning (after punctuation in previous segment)
+    # Look up to 5s forward for a segment that starts after a sentence-ender
     for seg in segments:
-        if seg["start"] >= start and seg["start"] <= start + 1.5:
+        if seg["start"] < start:
+            continue
+        if seg["start"] > start + 5.0:
+            break
+        # Check if previous segment ended with sentence punctuation
+        seg_idx = segments.index(seg)
+        if seg_idx > 0:
+            prev_text = segments[seg_idx - 1].get("text", "").strip()
+            if prev_text and prev_text[-1] in '.?!"':
+                best_start = seg["start"]
+                break
+        elif seg_idx == 0:
+            # First segment — good start point
             best_start = seg["start"]
             break
 
-    # Snap end BACKWARD to closest segment end (don't extend past window)
+    # Snap END backward to a sentence ending (segment that ends with punctuation)
+    # Look up to 5s backward
     for seg in reversed(segments):
-        if seg["end"] <= end and seg["end"] >= end - 1.5:
+        if seg["end"] > end:
+            continue
+        if seg["end"] < end - 5.0:
+            break
+        seg_text = seg.get("text", "").strip()
+        if seg_text and seg_text[-1] in '.?!"':
             best_end = seg["end"]
             break
+
+    # Fallback: if no punctuation found, snap to nearest segment boundary within 3s
+    if best_start == start:
+        for seg in segments:
+            if seg["start"] >= start and seg["start"] <= start + 3.0:
+                best_start = seg["start"]
+                break
+    if best_end == end:
+        for seg in reversed(segments):
+            if seg["end"] <= end and seg["end"] >= end - 3.0:
+                best_end = seg["end"]
+                break
 
     return best_start, best_end
 
