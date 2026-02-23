@@ -62,7 +62,15 @@ def render_clip(
     ]
 
     logger.info("Rendering clip: %s", output_path.name)
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        logger.error("FFmpeg render timed out after 120s: %s", output_path.name)
+        return _render_simple(
+            source_video, caption_path, output_path,
+            output_width, output_height,
+            clip_start, clip_end,
+        )
 
     if result.returncode != 0:
         logger.error("FFmpeg render failed: %s", result.stderr[-500:])
@@ -176,7 +184,10 @@ def _render_simple(
     ]
 
     logger.info("Simple render fallback: %s", output_path.name)
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"FFmpeg simple render timed out after 120s: {output_path.name}")
 
     if result.returncode != 0:
         raise RuntimeError(f"FFmpeg simple render failed: {result.stderr[-500:]}")

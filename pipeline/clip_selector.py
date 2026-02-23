@@ -36,6 +36,7 @@ def generate_candidates(
       6. Laughter / applause events
       7. Silence gaps (natural breakpoints)
 
+    Uses precomputed time indices for O(log n) range queries.
     Returns list of candidate clips with scores.
     """
     settings = settings or {}
@@ -49,11 +50,34 @@ def generate_candidates(
         logger.warning("No transcript segments — cannot generate candidates")
         return []
 
-    # Score every possible window
+    # ── Precompute sorted time indices (avoids O(n) per window) ──
+    word_times = []  # [(start_time, word_dict)]
+    for seg in segments:
+        for w in seg.get("words", []):
+            word_times.append((w.get("start", 0), w))
+    word_times.sort(key=lambda x: x[0])
+    word_starts = [wt[0] for wt in word_times]
+
+    seg_starts = sorted(seg["start"] for seg in segments)
+    seg_ends = sorted(seg["end"] for seg in segments)
+
+    scene_boundaries = sorted(s.get("boundary", 0) for s in scenes)
+
+    highlight_events = sorted(
+        e["start"] for e in audio_events
+        if e.get("event_type") in ("laughter", "applause", "high_energy")
+    )
+
+    seg_speaker_data = [(seg["start"], seg.get("speaker", "")) for seg in segments]
+    seg_speaker_data.sort(key=lambda x: x[0])
+    seg_speaker_starts = [s[0] for s in seg_speaker_data]
+
+    # Score every possible window using bisect for range queries
+    import bisect
+
     duration = segments[-1]["end"] if segments else 0
     candidates = []
 
-    # Sliding window at 5-second intervals
     step = 5.0
     for window_start in np.arange(0, max(0, duration - min_dur), step):
         for window_dur in range(ideal_dur[0], ideal_dur[1] + 1, 5):
@@ -61,12 +85,16 @@ def generate_candidates(
             if window_end > duration:
                 continue
 
-            score = _score_window(
-                window_start, window_end,
-                segments, scenes, audio_events,
+            score = _score_window_indexed(
+                float(window_start), float(window_end),
+                word_times, word_starts,
+                seg_starts, seg_ends,
+                scene_boundaries,
+                highlight_events,
+                seg_speaker_data, seg_speaker_starts,
             )
 
-            if score > 0.1:  # minimum viability threshold
+            if score > 0.1:
                 candidates.append({
                     "start": round(float(window_start), 3),
                     "end": round(float(window_end), 3),
@@ -84,72 +112,80 @@ def generate_candidates(
     # Remove semantically similar candidates (enforce content diversity)
     candidates = _deduplicate_by_content(candidates, transcript)
 
+    # Re-sort after dedup to ensure best clips survive downstream
+    candidates.sort(key=lambda c: c["algorithmic_score"], reverse=True)
+
     logger.info("Generated %d candidates from %.0fs video", len(candidates), duration)
     return candidates
 
 
-def _score_window(
+def _score_window_indexed(
     start: float,
     end: float,
-    segments: list[dict],
-    scenes: list[dict],
-    audio_events: list[dict],
+    word_times: list[tuple],
+    word_starts: list[float],
+    seg_starts: list[float],
+    seg_ends: list[float],
+    scene_boundaries: list[float],
+    highlight_events: list[float],
+    seg_speaker_data: list[tuple],
+    seg_speaker_starts: list[float],
 ) -> float:
-    """Score a candidate window using 7 signals."""
+    """Score a candidate window using 7 signals with O(log n) lookups."""
+    import bisect
 
-    # 1. Word density (proxy for speech activity)
-    words_in_window = []
-    for seg in segments:
-        for w in seg.get("words", []):
-            if start <= w["start"] <= end:
-                words_in_window.append(w)
-    word_density = len(words_in_window) / max(1, end - start)
-    signal_speech = min(1.0, word_density / 3.0)  # normalize: 3 words/sec = max
+    duration = end - start
+
+    # 1. Word density (bisect range query)
+    lo = bisect.bisect_left(word_starts, start)
+    hi = bisect.bisect_right(word_starts, end)
+    words_in_window = [word_times[i][1] for i in range(lo, hi)]
+    word_density = len(words_in_window) / max(1, duration)
+    signal_speech = min(1.0, word_density / 3.0)
 
     # 2. Keyword triggers
     trigger_words = {
         "wow", "amazing", "incredible", "insane", "crazy", "unbelievable",
         "wait", "what", "oh", "no way", "seriously", "actually",
         "important", "secret", "truth", "real", "honest",
-        "?",  # questions
+        "?",
     }
     text = " ".join(w["word"].lower() for w in words_in_window)
     trigger_count = sum(1 for tw in trigger_words if tw in text)
     signal_keywords = min(1.0, trigger_count / 5.0)
 
-    # 3. Scene density
-    scene_cuts = sum(1 for s in scenes if start <= s.get("boundary", 0) <= end)
-    duration = end - start
+    # 3. Scene density (bisect)
+    s_lo = bisect.bisect_left(scene_boundaries, start)
+    s_hi = bisect.bisect_right(scene_boundaries, end)
+    scene_cuts = s_hi - s_lo
     signal_scenes = min(1.0, scene_cuts / max(1, duration / 10))
 
-    # 4. Speaker turn density
-    speakers = set()
+    # 4. Speaker turn density (bisect)
+    sp_lo = bisect.bisect_left(seg_speaker_starts, start)
+    sp_hi = bisect.bisect_right(seg_speaker_starts, end)
     speaker_changes = 0
     prev_speaker = None
-    for seg in segments:
-        if start <= seg["start"] <= end:
-            spk = seg.get("speaker", "")
-            speakers.add(spk)
-            if prev_speaker and spk != prev_speaker:
-                speaker_changes += 1
-            prev_speaker = spk
+    for i in range(sp_lo, sp_hi):
+        spk = seg_speaker_data[i][1]
+        if prev_speaker and spk != prev_speaker:
+            speaker_changes += 1
+        prev_speaker = spk
     signal_turns = min(1.0, speaker_changes / 5.0)
 
-    # 5. Audio events (laughter, applause)
-    highlight_events = sum(
-        1 for e in audio_events
-        if start <= e["start"] <= end and
-        e["event_type"] in ("laughter", "applause", "high_energy")
-    )
-    signal_audio = min(1.0, highlight_events / 3.0)
+    # 5. Audio events (bisect)
+    a_lo = bisect.bisect_left(highlight_events, start)
+    a_hi = bisect.bisect_right(highlight_events, end)
+    signal_audio = min(1.0, (a_hi - a_lo) / 3.0)
 
-    # 6. Completeness — prefer starting/ending at sentence boundaries
-    starts_at_sentence = any(
-        abs(seg["start"] - start) < 1.0 for seg in segments
-    )
-    ends_at_sentence = any(
-        abs(seg["end"] - end) < 1.0 for seg in segments
-    )
+    # 6. Completeness — sentence boundaries (bisect)
+    ss_lo = bisect.bisect_left(seg_starts, start - 1.0)
+    ss_hi = bisect.bisect_right(seg_starts, start + 1.0)
+    starts_at_sentence = ss_hi > ss_lo
+
+    se_lo = bisect.bisect_left(seg_ends, end - 1.0)
+    se_hi = bisect.bisect_right(seg_ends, end + 1.0)
+    ends_at_sentence = se_hi > se_lo
+
     signal_completeness = (0.5 if starts_at_sentence else 0) + (0.5 if ends_at_sentence else 0)
 
     # 7. Ideal duration bonus
@@ -363,7 +399,22 @@ def _call_groq(prompt: str, max_clips: int) -> list[int]:
         temperature=0.3,
         max_tokens=100,
         timeout=30,
-        response_format={"type": "json_object"},
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "ranking",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "indices": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                        }
+                    },
+                    "required": ["indices"],
+                },
+            },
+        },
     )
 
     text = response.choices[0].message.content.strip()

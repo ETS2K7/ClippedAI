@@ -195,19 +195,27 @@ def _group_into_lines(
     """
     Group words into display lines respecting:
     RULE 5: max 2 lines, word wrap at boundaries, max 80% width.
+    Enforces CAPTION_MAX_LINES per time window — older lines are flushed.
     """
     max_chars_per_line = int((width - 2 * margin) / (font_size * 0.55))
-    line_groups = []
+    max_lines = config.CAPTION_MAX_LINES
+
+    all_line_groups = []
     current_line = []
     current_chars = 0
+    pending_lines = []  # buffer of lines being displayed
 
     for w in words:
         word_len = len(w["word"]) + 1  # +1 for space
 
         if current_chars + word_len > max_chars_per_line and current_line:
-            line_groups.append(current_line)
+            pending_lines.append(current_line)
             current_line = []
             current_chars = 0
+
+            # Enforce max_lines: flush oldest line when exceeded
+            if len(pending_lines) > max_lines:
+                all_line_groups.append(pending_lines.pop(0))
 
         # Build display text with highlight override
         display = "{\\b1\\c&H00FFFF&}" + w["word"]
@@ -219,9 +227,12 @@ def _group_into_lines(
         current_chars += word_len
 
     if current_line:
-        line_groups.append(current_line)
+        pending_lines.append(current_line)
 
-    return line_groups
+    # Flush remaining
+    all_line_groups.extend(pending_lines)
+
+    return all_line_groups
 
 
 def _format_ass_time(seconds: float) -> str:
