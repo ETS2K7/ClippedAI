@@ -236,38 +236,15 @@ def _asd_with_loconet(
     audio_path: Path,
 ) -> list[dict]:
     """Active speaker detection using LoCoNet."""
-    # LoCoNet integration — expects specific input format
-    # This is a wrapper around the LoCoNet_ASD inference pipeline
-    from loconet import LoCoNetModel
-
-    model = LoCoNetModel.load_pretrained()
-
-    # Process video + audio jointly
-    predictions = model.predict(
-        video_path=str(video_path),
-        audio_path=str(audio_path),
+    # LoCoNet requires specific data preparation (face crops + audio segments
+    # aligned per-frame). The full integration depends on LoCoNet's repo
+    # structure which varies. For MVP, we explicitly use the fallback and
+    # log clearly so we know when to wire in the real model.
+    logger.warning(
+        "LoCoNet ASD not yet wired — using face-size fallback. "
+        "Clip quality will be good but not optimal."
     )
-
-    # Map predictions back to frame detections
-    for frame_data in frame_detections:
-        ts = frame_data["timestamp"]
-        for face in frame_data["faces"]:
-            # Find closest LoCoNet prediction for this face
-            face["asd_confidence"] = _lookup_asd_confidence(
-                predictions, ts, face["bbox"]
-            )
-
-    return frame_detections
-
-
-def _lookup_asd_confidence(
-    predictions: dict,
-    timestamp: float,
-    bbox: list,
-) -> float:
-    """Look up ASD confidence from LoCoNet predictions."""
-    # Default: unknown
-    return 0.5
+    raise ImportError("LoCoNet integration pending — using fallback")
 
 
 def _asd_fallback(frame_detections: list[dict]) -> list[dict]:
@@ -325,11 +302,15 @@ def global_reid(
     embeddings = []
     embedding_labels = []  # (chunk_idx, track_id)
 
+    # Open video once and reuse across all chunks (avoid per-chunk overhead)
+    cap = cv2.VideoCapture(str(video_path))
+    video_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    if not cap.isOpened():
+        logger.warning("Could not open video for re-ID: %s", video_path)
+        return _identity_mapping(all_chunk_tracks)
+
     for chunk_idx, chunk_tracks in enumerate(all_chunk_tracks):
         track_embeddings = {}  # track_id -> list of embeddings
-
-        cap = cv2.VideoCapture(str(video_path))
-        video_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
 
         for frame_data in chunk_tracks:
             for face in frame_data.get("faces", []):
@@ -368,14 +349,14 @@ def global_reid(
                     emb = faces_detected[0].embedding
                     track_embeddings[tid].append({"ts": ts, "emb": emb})
 
-        cap.release()
-
         # Take mean embedding per track
         for tid, emb_list in track_embeddings.items():
             if emb_list:
                 mean_emb = np.mean([e["emb"] for e in emb_list], axis=0)
                 embeddings.append(mean_emb)
                 embedding_labels.append((chunk_idx, tid))
+
+    cap.release()
 
     if not embeddings:
         return _identity_mapping(all_chunk_tracks)

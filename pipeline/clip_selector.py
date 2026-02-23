@@ -362,6 +362,7 @@ def _call_groq(prompt: str, max_clips: int) -> list[int]:
         ],
         temperature=0.3,
         max_tokens=100,
+        timeout=30,
         response_format={"type": "json_object"},
     )
 
@@ -395,6 +396,7 @@ def _call_together(prompt: str, max_clips: int) -> list[int]:
         ],
         temperature=0.3,
         max_tokens=100,
+        timeout=30,
     )
 
     text = response.choices[0].message.content.strip()
@@ -412,12 +414,18 @@ def _extract_text_for_range(
     start: float,
     end: float,
 ) -> str:
-    """Extract transcript text within a time range."""
+    """Extract transcript text within a time range.
+    Falls back to segment-level text if WhisperX dropped word timings."""
     words = []
     for seg in segments:
-        for w in seg.get("words", []):
-            if start <= w["start"] <= end:
-                words.append(w["word"])
+        seg_words = seg.get("words", [])
+        if seg_words:
+            for w in seg_words:
+                if start <= w["start"] <= end:
+                    words.append(w["word"])
+        elif seg["start"] < end and seg["end"] > start:
+            # Fallback: no word-level data, use segment text
+            words.append(seg.get("text", ""))
     return " ".join(words)
 
 

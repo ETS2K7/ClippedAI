@@ -48,8 +48,12 @@ def _analyze_with_panns(
     audio, sr = librosa.load(str(audio_path), sr=32000, mono=True)
     duration = len(audio) / sr
 
+    # Auto-detect device — AudioAnalyzer container is CPU-only
+    import torch
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
     # Initialize PANNs
-    tagger = AudioTagging(checkpoint_path=None, device="cuda")
+    tagger = AudioTagging(checkpoint_path=None, device=device)
 
     events = []
     # Sliding window analysis

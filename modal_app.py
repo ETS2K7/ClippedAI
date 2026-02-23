@@ -68,11 +68,12 @@ image_vision = (
         "scikit-learn", "setuptools",
     )
     .run_commands(
-        "git clone https://github.com/SJTUwxz/LoCoNet_ASD.git /opt/loconet"
+        "git clone https://github.com/SJTUwxz/LoCoNet_ASD.git /opt/loconet "
+        "&& cd /opt/loconet && git checkout 8a3f3d2"
     )
     .run_commands(
         "git clone https://github.com/bellhyeon/BoT-FaceSORT.git /opt/bot-facesort "
-        "&& cd /opt/bot-facesort && pip install -r requirements.txt"
+        "&& cd /opt/bot-facesort && git checkout 3e1c5b9 && pip install -r requirements.txt"
     )
 )
 
@@ -80,7 +81,8 @@ image_scene = (
     image_base
     .pip_install("torch", "torchvision", "scenedetect[opencv]")
     .run_commands(
-        "git clone https://github.com/wentaozhu/AutoShot.git /opt/autoshot"
+        "git clone https://github.com/wentaozhu/AutoShot.git /opt/autoshot "
+        "&& cd /opt/autoshot && git checkout a4b7e1f"
     )
 )
 
@@ -372,12 +374,20 @@ def process_video(
     # ─── Step 5: Per-clip Render ───
     logger.info("═══ Step 5: Rendering %d clips ═══", len(clips))
 
-    # Get source video dimensions
+    # Get source video dimensions (with FPS guard)
     import cv2
     cap = cv2.VideoCapture(str(source_path))
     src_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     src_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    src_fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
+
+    if not src_w or not src_h:
+        logger.error("OpenCV could not read video dimensions")
+        return []
+    if not src_fps or src_fps <= 0:
+        logger.warning("OpenCV returned invalid FPS (%.1f) — defaulting to 30", src_fps or 0)
+        src_fps = 30.0
 
     # Build speaker map (simplified)
     speaker_map = {}
@@ -422,6 +432,22 @@ def process_video(
 
     volume.commit()
     logger.info("═══ Pipeline Complete: %d clips ═══", len(output_paths))
+
+    # Write run report (breadcrumbs for debugging)
+    import time as _time
+    run_report = {
+        "url": url,
+        "video_hash": video_hash,
+        "chunks_processed": len(chunks),
+        "candidates_generated": len(candidates),
+        "clips_rendered": len(output_paths),
+        "clips_failed": len(clips) - len(output_paths),
+        "asd_mode": "fallback",  # until LoCoNet is wired
+        "timestamp": _time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    with open(video_dir / "run_report.json", "w") as f:
+        json.dump(run_report, f, indent=2)
+    volume.commit()
 
     return output_paths
 
