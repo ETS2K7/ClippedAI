@@ -80,8 +80,12 @@ def download_video(
 ) -> Path:
     """
     Download video from YouTube using yt-dlp with bot bypass.
+    Enforces rate limits via persistent state to prevent account burns.
     Returns path to downloaded video file.
     """
+    # Enforce rate guard before attempting download
+    _enforce_rate_guard(output_dir)
+
     output_template = str(output_dir / "source.%(ext)s")
 
     ydl_opts = {
@@ -122,10 +126,12 @@ def download_video(
                         )
                 logger.info("Downloaded: %s (%.1f MB)", video_path.name,
                            video_path.stat().st_size / 1e6)
+                _record_download_success(output_dir)
                 return video_path
 
         except Exception as e:
             last_error = e
+            _record_download_failure(output_dir)
             logger.warning(
                 "Download attempt %d/%d failed: %s",
                 attempt, config.YT_MAX_RETRIES, e,
@@ -141,6 +147,104 @@ def download_video(
     raise RuntimeError(
         f"All {config.YT_MAX_RETRIES} download attempts failed"
     ) from last_error
+
+
+# ─────────────────────────────────────────────
+# Rate Guard (persistent state on Volume)
+# ─────────────────────────────────────────────
+
+class RateLimitError(Exception):
+    """Raised when download rate limit is exceeded."""
+    pass
+
+
+def _rate_state_path(work_dir: Path) -> Path:
+    """Path to persistent rate limit state file."""
+    state_dir = Path(config.MODAL_VOLUME_MOUNT) / "_cookies"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    return state_dir / "rate_limit_state.json"
+
+
+def _load_rate_state(work_dir: Path) -> dict:
+    """Load rate limit state from JSON."""
+    path = _rate_state_path(work_dir)
+    if path.exists():
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            pass
+    return {"downloads": [], "failures": [], "cooldown_until": 0}
+
+
+def _save_rate_state(work_dir: Path, state: dict) -> None:
+    """Save rate limit state to JSON."""
+    path = _rate_state_path(work_dir)
+    with open(path, "w") as f:
+        json.dump(state, f)
+
+
+def _enforce_rate_guard(work_dir: Path) -> None:
+    """
+    Check rate limits before download:
+      - Max 15 downloads/hour
+      - Max 50 downloads/day
+      - 3 consecutive failures → 1-hour cooldown
+    """
+    state = _load_rate_state(work_dir)
+    now = time.time()
+
+    # Check cooldown
+    if now < state.get("cooldown_until", 0):
+        remaining = int(state["cooldown_until"] - now)
+        raise RateLimitError(
+            f"Account in cooldown for {remaining}s after repeated failures"
+        )
+
+    # Check hourly cap
+    one_hour_ago = now - 3600
+    recent_downloads = [t for t in state.get("downloads", []) if t > one_hour_ago]
+    if len(recent_downloads) >= config.YT_MAX_DOWNLOADS_PER_HOUR:
+        raise RateLimitError(
+            f"Hourly download limit reached ({config.YT_MAX_DOWNLOADS_PER_HOUR}/hr)"
+        )
+
+    # Check daily cap
+    one_day_ago = now - 86400
+    daily_downloads = [t for t in state.get("downloads", []) if t > one_day_ago]
+    if len(daily_downloads) >= config.YT_MAX_DOWNLOADS_PER_DAY:
+        raise RateLimitError(
+            f"Daily download limit reached ({config.YT_MAX_DOWNLOADS_PER_DAY}/day)"
+        )
+
+
+def _record_download_success(work_dir: Path) -> None:
+    """Record a successful download, reset failure counter."""
+    state = _load_rate_state(work_dir)
+    state["downloads"].append(time.time())
+    state["failures"] = []  # reset on success
+    # Prune old entries (keep last 24h)
+    cutoff = time.time() - 86400
+    state["downloads"] = [t for t in state["downloads"] if t > cutoff]
+    _save_rate_state(work_dir, state)
+
+
+def _record_download_failure(work_dir: Path) -> None:
+    """Record a failure. Trigger cooldown after consecutive threshold."""
+    state = _load_rate_state(work_dir)
+    state["failures"].append(time.time())
+    # Keep only recent failures (last hour)
+    cutoff = time.time() - 3600
+    state["failures"] = [t for t in state["failures"] if t > cutoff]
+
+    if len(state["failures"]) >= config.YT_COOLDOWN_AFTER_FAILURES:
+        state["cooldown_until"] = time.time() + config.YT_COOLDOWN_DURATION
+        logger.warning(
+            "Rate guard: %d consecutive failures → %ds cooldown",
+            len(state["failures"]), config.YT_COOLDOWN_DURATION,
+        )
+
+    _save_rate_state(work_dir, state)
 
 
 # ─────────────────────────────────────────────

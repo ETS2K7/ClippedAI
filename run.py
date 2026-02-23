@@ -112,7 +112,10 @@ Examples:
             # For local CLI, we'd use modal.Volume.read_file
             try:
                 from modal_app import volume as vol
-                data = vol.read_file(remote_path)
+                # Strip mount prefix: read_file expects relative path within volume
+                mount_prefix = config.MODAL_VOLUME_MOUNT + "/"
+                relative_path = remote_path.replace(mount_prefix, "")
+                data = vol.read_file(relative_path)
                 with open(local_path, "wb") as f:
                     for chunk in data:
                         f.write(chunk)

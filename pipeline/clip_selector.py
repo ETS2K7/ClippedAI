@@ -81,6 +81,9 @@ def generate_candidates(
     # Remove overlapping candidates (enforce zero temporal overlap)
     candidates = _remove_overlapping(candidates)
 
+    # Remove semantically similar candidates (enforce content diversity)
+    candidates = _deduplicate_by_content(candidates, transcript)
+
     logger.info("Generated %d candidates from %.0fs video", len(candidates), duration)
     return candidates
 
@@ -184,6 +187,60 @@ def _remove_overlapping(candidates: list[dict]) -> list[dict]:
         if not overlaps:
             selected.append(c)
     return selected
+
+
+def _deduplicate_by_content(
+    candidates: list[dict],
+    transcript: dict,
+) -> list[dict]:
+    """
+    Remove semantically similar candidates using TF-IDF cosine similarity.
+    If two clips share > SEMANTIC_SIMILARITY_PENALTY similarity, discard  
+    the lower-scoring one. Prevents duplicate-topic clips from podcasts.
+    """
+    if len(candidates) <= 1:
+        return candidates
+
+    segments = transcript.get("segments", [])
+
+    # Extract text for each candidate
+    texts = []
+    for c in candidates:
+        text = _extract_text_for_range(segments, c["start"], c["end"])
+        texts.append(text if text.strip() else "empty")
+
+    # Compute TF-IDF similarity
+    try:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+
+        vectorizer = TfidfVectorizer(stop_words="english", max_features=500)
+        tfidf_matrix = vectorizer.fit_transform(texts)
+        sim_matrix = cosine_similarity(tfidf_matrix)
+
+        # Greedy dedup: keep highest scored, discard similar
+        keep = [True] * len(candidates)
+        for i in range(len(candidates)):
+            if not keep[i]:
+                continue
+            for j in range(i + 1, len(candidates)):
+                if not keep[j]:
+                    continue
+                if sim_matrix[i][j] > config.SEMANTIC_SIMILARITY_PENALTY:
+                    # Discard the lower-scored one
+                    keep[j] = False
+                    logger.info(
+                        "Dedup: dropping candidate %.0f-%.0fs (sim=%.2f with %.0f-%.0fs)",
+                        candidates[j]["start"], candidates[j]["end"],
+                        sim_matrix[i][j],
+                        candidates[i]["start"], candidates[i]["end"],
+                    )
+
+        return [c for c, k in zip(candidates, keep) if k]
+
+    except ImportError:
+        logger.warning("sklearn unavailable, skipping semantic dedup")
+        return candidates
 
 
 # ─────────────────────────────────────────────
