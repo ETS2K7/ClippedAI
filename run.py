@@ -83,12 +83,12 @@ Examples:
 
     try:
         import modal
-        from modal_app import process_video
+        from modal_app import process_video, app
 
         print("\n⏳ Running pipeline on Modal...")
         print("   This may take 2-5 minutes on first run.\n")
 
-        with modal.enable_output():
+        with app.run():
             clip_paths = process_video.remote(args.url, settings)
 
         elapsed = time.time() - start_time

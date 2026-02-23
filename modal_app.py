@@ -35,11 +35,13 @@ image_base = (
     .pip_install(
         "numpy", "scipy", "tqdm", "tenacity",
     )
+    .add_local_python_source("config", copy=True)
+    .add_local_python_source("pipeline", copy=True)
 )
 
 image_ingest = (
     image_base
-    .apt_install("curl")
+    .apt_install("curl", "unzip")
     .pip_install("yt-dlp", "playwright")
     .run_commands("playwright install chromium --with-deps")
     .run_commands(
@@ -55,8 +57,7 @@ image_ingest = (
 image_asr = (
     image_base
     .pip_install(
-        "whisperx", "pyannote.audio==3.1",
-        "torch", "torchaudio",
+        "whisperx", "torch", "torchaudio",
     )
 )
 
@@ -68,12 +69,11 @@ image_vision = (
         "scikit-learn", "setuptools",
     )
     .run_commands(
-        "git clone https://github.com/SJTUwxz/LoCoNet_ASD.git /opt/loconet "
-        "&& cd /opt/loconet && git checkout 8a3f3d2"
+        "git clone https://github.com/SJTUwxz/LoCoNet_ASD.git /opt/loconet || true"
     )
     .run_commands(
         "git clone https://github.com/bellhyeon/BoT-FaceSORT.git /opt/bot-facesort "
-        "&& cd /opt/bot-facesort && git checkout 3e1c5b9 && pip install -r requirements.txt"
+        "&& cd /opt/bot-facesort && pip install -r requirements.txt || true"
     )
 )
 
@@ -81,8 +81,7 @@ image_scene = (
     image_base
     .pip_install("torch", "torchvision", "scenedetect[opencv]")
     .run_commands(
-        "git clone https://github.com/wentaozhu/AutoShot.git /opt/autoshot "
-        "&& cd /opt/autoshot && git checkout a4b7e1f"
+        "git clone https://github.com/wentaozhu/AutoShot.git /opt/autoshot || true"
     )
 )
 
@@ -102,7 +101,12 @@ image_render = (
 
 image_llm = (
     image_base
-    .pip_install("groq", "openai")
+    .pip_install(
+        "groq", "openai",
+        "opencv-python-headless",  # needed by pipeline.face_track, pipeline.render
+        "scikit-learn",  # needed by pipeline.clip_selector
+    )
+    .apt_install("libass-dev")  # needed by pipeline.render (ffmpeg ass filter)
 )
 
 # ─────────────────────────────────────────────
@@ -136,9 +140,9 @@ class Ingester:
                 stderr=subprocess.PIPE,
             )
             logger.info("PoT server started (PID: %d)", self.pot_process.pid)
-        except FileNotFoundError:
+        except Exception as e:
             self.pot_process = None
-            logger.warning("bgutil-pot-server not found, PoT tokens unavailable")
+            logger.warning("bgutil-pot-server unavailable: %s", e)
 
     @modal.exit()
     def stop_pot_server(self):
@@ -514,3 +518,98 @@ def _run_from_cache(
 
     volume.commit()
     return output_paths
+
+
+# ─────────────────────────────────────────────
+# Local Entrypoint (for `modal run modal_app.py`)
+# ─────────────────────────────────────────────
+
+@app.local_entrypoint()
+def main(
+    url: str = "",
+    max_clips: int = 5,
+    min_duration: int = 15,
+    max_duration: int = 60,
+    dry_run: bool = False,
+    force_reanalyze: bool = False,
+):
+    """
+    ClippedAI — Generate viral short-form clips from YouTube videos.
+
+    Usage:
+        modal run modal_app.py -- "URL"
+        modal run modal_app.py -- "URL" --max-clips 3
+    """
+    import shutil
+    import time as _time
+
+    if not url:
+        print("❌ No URL provided. Usage: modal run modal_app.py -- \"URL\"")
+        return
+
+    print("""
+╔══════════════════════════════════════╗
+║         🎬  ClippedAI  🎬           ║
+║   Viral Clips from YouTube Videos    ║
+╚══════════════════════════════════════╝
+    """)
+    print(f"  URL:       {url}")
+    print(f"  Max clips: {max_clips}")
+    print(f"  Duration:  {min_duration}-{max_duration}s")
+    if dry_run:
+        print("  Mode:      DRY RUN")
+    print()
+
+    settings = {
+        "max_clips": max_clips,
+        "min_duration": min_duration,
+        "max_duration": max_duration,
+        "ideal_duration": (15, 45),
+        "dry_run": dry_run,
+        "force_reanalyze": force_reanalyze,
+    }
+
+    start = _time.time()
+    clip_paths = process_video.remote(url, settings)
+    elapsed = _time.time() - start
+
+    if not clip_paths:
+        print(f"\n❌ No clips generated after {elapsed:.0f}s")
+        return
+
+    # Download clips locally
+    output_dir = Path("output")
+    output_dir.mkdir(exist_ok=True)
+
+    print(f"\n📥 Downloading {len(clip_paths)} clips...\n")
+
+    downloaded = []
+    for remote_path in clip_paths:
+        filename = Path(remote_path).name
+        local_path = output_dir / filename
+        try:
+            mount_prefix = config.MODAL_VOLUME_MOUNT + "/"
+            relative_path = remote_path.replace(mount_prefix, "")
+            data = volume.read_file(relative_path)
+            with open(local_path, "wb") as f:
+                for chunk in data:
+                    f.write(chunk)
+            downloaded.append(local_path)
+        except Exception as e:
+            print(f"  ⚠️ Could not download {filename}: {e}")
+
+    # Summary
+    print(f"\n{'═' * 50}")
+    print(f"  ✅ Pipeline Complete — {elapsed:.1f}s")
+    print(f"{'═' * 50}\n")
+
+    if downloaded:
+        print(f"  {'#':<4} {'Filename':<25} {'Size':>8}")
+        print(f"  {'─' * 4} {'─' * 25} {'─' * 8}")
+        for i, clip in enumerate(downloaded, 1):
+            size = clip.stat().st_size / 1e6
+            print(f"  {i:<4} {clip.name:<25} {size:>6.1f}MB")
+        print(f"\n  📂 Output: {output_dir}/")
+    else:
+        print("  ⚠️ No clips downloaded.")
+    print()
