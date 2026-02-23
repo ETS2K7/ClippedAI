@@ -55,10 +55,16 @@ image_ingest = (
 )
 
 image_asr = (
-    image_base
-    .pip_install(
-        "whisperx", "torch", "torchaudio",
+    modal.Image.from_registry(
+        "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04",
+        add_python="3.11",
     )
+    .apt_install("git", "ffmpeg")
+    .pip_install(
+        "torch==2.5.1", "torchaudio==2.5.1", "whisperx",
+    )
+    .add_local_python_source("config", copy=True)
+    .add_local_python_source("pipeline", copy=True)
 )
 
 image_vision = (
@@ -267,6 +273,7 @@ def process_video(
     url: str,
     settings: Optional[dict] = None,
     video_path: Optional[str] = None,
+    video_hash: Optional[str] = None,
 ) -> list[str]:
     """
     Main pipeline orchestrator.
@@ -292,12 +299,24 @@ def process_video(
     # ─── Step 1: Ingest ───
     logger.info("═══ Step 1: Ingest ═══")
 
-    if video_path:
+    if video_hash:
+        # Pre-chunked: load cached ingest data directly from Volume
+        cache_dir = config.video_dir(video_hash)
+        ingest_marker = cache_dir / ".ingest_complete"
+        if ingest_marker.exists():
+            logger.info("Loading pre-chunked ingest data for hash %s", video_hash)
+            with open(cache_dir / "ingest_meta.json") as f:
+                ingest_result = json.load(f)
+        else:
+            raise RuntimeError(
+                f"video_hash {video_hash} provided but no .ingest_complete marker found at {cache_dir}"
+            )
+    elif video_path:
         # Pre-uploaded video: skip download, do chunking locally
         from pipeline.ingest import compute_video_hash, chunk_video, extract_audio, _get_duration
         source = Path(video_path)
-        video_hash = compute_video_hash(source)
-        cache_dir = config.video_dir(video_hash)
+        computed_hash = compute_video_hash(source)
+        cache_dir = config.video_dir(computed_hash)
         chunk_dir = cache_dir / "chunks"
         chunk_dir.mkdir(parents=True, exist_ok=True)
 
@@ -316,7 +335,7 @@ def process_video(
                 chunk["audio_path"] = str(audio_path)
             duration = _get_duration(source)
             ingest_result = {
-                "video_hash": video_hash,
+                "video_hash": computed_hash,
                 "url": url or "local",
                 "source_path": str(source),
                 "duration": duration,
@@ -572,6 +591,7 @@ def main(
     dry_run: bool = False,
     force_reanalyze: bool = False,
     video_path: str = "",
+    video_hash: str = "",
 ):
     """
     ClippedAI — Generate viral short-form clips from YouTube videos.
@@ -583,10 +603,10 @@ def main(
     import shutil
     import time as _time
 
-    if not url and not video_path:
-        print("❌ No URL or video path provided.")
+    if not url and not video_path and not video_hash:
+        print("❌ No URL, video path, or video hash provided.")
         print("   Usage: modal run modal_app.py --url \"URL\"")
-        print("     or:  modal run modal_app.py --video-path \"_work/source_video.mp4\" --url \"context\"")
+        print("     or:  modal run modal_app.py --video-hash \"abc123\" --max-clips 3")
         return
 
     display_source = url if url else video_path
@@ -625,6 +645,7 @@ def main(
         url or "local",
         settings,
         video_path=full_video_path if full_video_path else None,
+        video_hash=video_hash if video_hash else None,
     )
     elapsed = _time.time() - start
 
