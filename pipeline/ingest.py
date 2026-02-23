@@ -14,7 +14,6 @@ import time
 from pathlib import Path
 from typing import Optional
 
-import yt_dlp
 
 import config
 
@@ -85,6 +84,8 @@ def download_video(
     """
     # Enforce rate guard before attempting download
     _enforce_rate_guard(output_dir)
+
+    import yt_dlp  # lazy import — only needed for download, not chunking
 
     output_template = str(output_dir / "source.%(ext)s")
 

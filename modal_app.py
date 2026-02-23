@@ -261,16 +261,17 @@ class AudioAnalyzer:
     image=image_llm,
     volumes={config.MODAL_VOLUME_MOUNT: volume},
     secrets=secrets,
-    timeout=900,
+    timeout=3600,
 )
 def process_video(
     url: str,
     settings: Optional[dict] = None,
+    video_path: Optional[str] = None,
 ) -> list[str]:
     """
     Main pipeline orchestrator.
 
-    1. Ingest (download + chunk)
+    1. Ingest (download + chunk) — or skip if video_path provided
     2. Parallel map analysis (ASR, face, scene, audio)
     3. Global reduce (re-ID, merge)
     4. Clip selection (LLM)
@@ -290,8 +291,46 @@ def process_video(
 
     # ─── Step 1: Ingest ───
     logger.info("═══ Step 1: Ingest ═══")
-    ingester = Ingester()
-    ingest_result = ingester.ingest.remote(url)
+
+    if video_path:
+        # Pre-uploaded video: skip download, do chunking locally
+        from pipeline.ingest import compute_video_hash, chunk_video, extract_audio, _get_duration
+        source = Path(video_path)
+        video_hash = compute_video_hash(source)
+        cache_dir = config.video_dir(video_hash)
+        chunk_dir = cache_dir / "chunks"
+        chunk_dir.mkdir(parents=True, exist_ok=True)
+
+        # Check if already chunked
+        ingest_marker = cache_dir / ".ingest_complete"
+        if ingest_marker.exists():
+            logger.info("Ingest cache hit — loading existing artifacts")
+            with open(cache_dir / "ingest_meta.json") as f:
+                ingest_result = json.load(f)
+        else:
+            logger.info("Chunking pre-uploaded video: %s", source.name)
+            chunks = chunk_video(source, chunk_dir)
+            for chunk in chunks:
+                audio_path = Path(chunk["path"]).with_suffix(".wav")
+                extract_audio(Path(chunk["path"]), audio_path)
+                chunk["audio_path"] = str(audio_path)
+            duration = _get_duration(source)
+            ingest_result = {
+                "video_hash": video_hash,
+                "url": url or "local",
+                "source_path": str(source),
+                "duration": duration,
+                "num_chunks": len(chunks),
+                "chunks": chunks,
+            }
+            with open(cache_dir / "ingest_meta.json", "w") as f:
+                json.dump(ingest_result, f, indent=2)
+            ingest_marker.touch()
+            volume.commit()
+            logger.info("Local ingest complete: %d chunks from %.1fs video", len(chunks), duration)
+    else:
+        ingester = Ingester()
+        ingest_result = ingester.ingest.remote(url)
 
     video_hash = ingest_result["video_hash"]
     chunks = ingest_result["chunks"]
@@ -532,6 +571,7 @@ def main(
     max_duration: int = 60,
     dry_run: bool = False,
     force_reanalyze: bool = False,
+    video_path: str = "",
 ):
     """
     ClippedAI — Generate viral short-form clips from YouTube videos.
@@ -543,19 +583,24 @@ def main(
     import shutil
     import time as _time
 
-    if not url:
-        print("❌ No URL provided. Usage: modal run modal_app.py -- \"URL\"")
+    if not url and not video_path:
+        print("❌ No URL or video path provided.")
+        print("   Usage: modal run modal_app.py --url \"URL\"")
+        print("     or:  modal run modal_app.py --video-path \"_work/source_video.mp4\" --url \"context\"")
         return
 
-    print("""
+    display_source = url if url else video_path
+    print(f"""
 ╔══════════════════════════════════════╗
 ║         🎬  ClippedAI  🎬           ║
 ║   Viral Clips from YouTube Videos    ║
 ╚══════════════════════════════════════╝
     """)
-    print(f"  URL:       {url}")
+    print(f"  Source:    {display_source}")
     print(f"  Max clips: {max_clips}")
     print(f"  Duration:  {min_duration}-{max_duration}s")
+    if video_path:
+        print(f"  Mode:      PRE-UPLOADED ({video_path})")
     if dry_run:
         print("  Mode:      DRY RUN")
     print()
@@ -570,7 +615,17 @@ def main(
     }
 
     start = _time.time()
-    clip_paths = process_video.remote(url, settings)
+
+    # Build volume path if video_path is relative (within modal volume)
+    full_video_path = ""
+    if video_path:
+        full_video_path = f"{config.MODAL_VOLUME_MOUNT}/{video_path}"
+
+    clip_paths = process_video.remote(
+        url or "local",
+        settings,
+        video_path=full_video_path if full_video_path else None,
+    )
     elapsed = _time.time() - start
 
     if not clip_paths:
