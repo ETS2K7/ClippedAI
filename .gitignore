@@ -1,0 +1,56 @@
+# Plan documents — excluded from repo (private)
+implementation_plan.md
+core_clipping_pipeline.md
+
+# Snapshot (local utility)
+snapshot.py
+CODEBASE.md
+codebase.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Modal
+.modal/
+
+# Environment variables
+.env
+.env.*
+
+# Output clips (local only)
+output/
+
+# Model weights (downloaded at runtime)
+models/
+*.pt
+*.onnx
+*.bin
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
