@@ -260,13 +260,13 @@ class SceneDetector:
 
 @app.cls(
     image=image_audio,
-    cpu=2,
+    gpu="T4",
     volumes={config.MODAL_VOLUME_MOUNT: volume},
     timeout=120,
     retries=modal.Retries(max_retries=2, backoff_coefficient=2.0),
 )
 class AudioAnalyzer:
-    """PANNs container (CPU)."""
+    """PANNs container (T4 GPU)."""
 
     @modal.method()
     def analyze(self, chunk_meta: dict) -> list[dict]:
@@ -283,6 +283,7 @@ class AudioAnalyzer:
 
 @app.function(
     image=image_llm,
+    gpu="T4",
     volumes={config.MODAL_VOLUME_MOUNT: volume},
     secrets=secrets,
     timeout=3600,
