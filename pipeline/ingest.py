@@ -303,6 +303,9 @@ def chunk_video(
         start = end - overlap
         if start >= duration:
             break
+        # Prevent infinite loop: if remaining video < overlap, stop
+        if (duration - start) <= overlap:
+            break
         chunk_idx += 1
 
     return chunks
