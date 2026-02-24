@@ -74,6 +74,7 @@ image_vision = (
         "ultralytics", "insightface", "onnxruntime-gpu",
         "filterpy", "mediapipe", "opencv-python-headless",
         "scikit-learn", "setuptools", "loguru",
+        "lapx",  # drop-in replacement for lap (fixes Python 3.11 build)
     )
     .run_commands(
         "git clone https://github.com/SJTUwxz/LoCoNet_ASD.git /opt/loconet || true"
@@ -81,6 +82,10 @@ image_vision = (
     .run_commands(
         "git clone https://github.com/bellhyeon/BoT-FaceSORT.git /opt/bot-facesort "
         "&& cd /opt/bot-facesort && pip install -r requirements.txt || true"
+    )
+    .run_commands(
+        # Pre-download yolov8n-face model at build time
+        "python -c \"from ultralytics import YOLO; YOLO('yolov8n-face.pt')\" || true"
     )
 )
 
