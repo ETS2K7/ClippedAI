@@ -393,28 +393,13 @@ def _call_groq(prompt: str, max_clips: int) -> list[int]:
     response = client.chat.completions.create(
         model=config.LLM_MODEL_RANKING,
         messages=[
-            {"role": "system", "content": "You are a viral content curator. Respond only with a JSON array of integers."},
+            {"role": "system", "content": "You are a viral content curator. Respond with JSON: {\"indices\": [int, ...]}"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.3,
         max_tokens=100,
         timeout=30,
-        response_format={
-            "type": "json_schema",
-            "json_schema": {
-                "name": "ranking",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "indices": {
-                            "type": "array",
-                            "items": {"type": "integer"},
-                        }
-                    },
-                    "required": ["indices"],
-                },
-            },
-        },
+        response_format={"type": "json_object"},
     )
 
     text = response.choices[0].message.content.strip()
