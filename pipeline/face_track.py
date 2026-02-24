@@ -45,7 +45,14 @@ def detect_faces_in_chunk(
     """
     from ultralytics import YOLO
 
-    model = YOLO(config.FACE_MODEL)
+    # Prefer face-specific model if available (pre-downloaded from HuggingFace)
+    face_model_path = Path(config.FACE_MODEL_FACE)
+    if face_model_path.exists():
+        model = YOLO(str(face_model_path))
+        logger.info("Using face-specific model: %s", face_model_path)
+    else:
+        model = YOLO(config.FACE_MODEL)
+        logger.info("Face model not found, using general model: %s", config.FACE_MODEL)
 
     cap = cv2.VideoCapture(str(video_path))
     video_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0

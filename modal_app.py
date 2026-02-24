@@ -75,6 +75,7 @@ image_vision = (
         "filterpy", "mediapipe", "opencv-python-headless",
         "scikit-learn", "setuptools", "loguru",
         "lapx",  # drop-in replacement for lap (fixes Python 3.11 build)
+        "huggingface_hub",
     )
     .run_commands(
         "git clone https://github.com/SJTUwxz/LoCoNet_ASD.git /opt/loconet || true"
@@ -84,8 +85,11 @@ image_vision = (
         "&& cd /opt/bot-facesort && pip install -r requirements.txt || true"
     )
     .run_commands(
-        # Pre-download yolov8n-face model at build time
-        "python -c \"from ultralytics import YOLO; YOLO('yolov8n-face.pt')\" || true"
+        # Pre-download face-specific YOLOv8 model from HuggingFace
+        'python -c "from huggingface_hub import hf_hub_download; '
+        'hf_hub_download(repo_id=\"arnabdhar/YOLOv8-Face-Detection\", '
+        'filename=\"model.pt\", local_dir=\"/opt\"); '
+        'import shutil; shutil.move(\"/opt/model.pt\", \"/opt/yolov8n-face.pt\")" || true'
     )
 )
 

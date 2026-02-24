@@ -49,7 +49,8 @@ HF_TOKEN = os.environ.get("HF_TOKEN", "")
 # ─────────────────────────────────────────────
 # Face Detection & Tracking
 # ─────────────────────────────────────────────
-FACE_MODEL = "yolov8n-face.pt"  # Face-specific YOLO model (pre-downloaded in Modal image)
+FACE_MODEL = "yolov8n.pt"  # Ultralytics YOLO model (auto-downloads)
+FACE_MODEL_FACE = "/opt/yolov8n-face.pt"  # Face-specific model (pre-downloaded from HuggingFace)
 FACE_CONF_THRESHOLD = 0.5
 FACE_IOU_THRESHOLD = 0.45
 INSIGHTFACE_COSINE_THRESHOLD = 0.62  # for global re-ID clustering
