@@ -9,11 +9,11 @@ from pathlib import Path
 # ─────────────────────────────────────────────
 # LLM
 # ─────────────────────────────────────────────
-LLM_PROVIDER_PRIORITY = ["groq", "together"]
+LLM_PROVIDER_PRIORITY = ["groq", "cerebras"]
 LLM_MODEL_RANKING = "llama-3.3-70b-versatile"  # Groq production model
-LLM_MODEL_FALLBACK = "meta-llama/Llama-3.3-70B-Instruct-Turbo"  # Together.ai format
+LLM_MODEL_FALLBACK = "llama-3.3-70b"  # Cerebras format
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-TOGETHER_API_KEY = os.environ.get("TOGETHER_API_KEY", "")
+CEREBRAS_API_KEY = os.environ.get("CEREBRAS_API_KEY", "")
 
 # ─────────────────────────────────────────────
 # Video Processing

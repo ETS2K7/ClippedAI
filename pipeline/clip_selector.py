@@ -332,7 +332,7 @@ def _call_llm(
     max_clips: int,
 ) -> list[int]:
     """
-    Call Groq (primary) or Together.ai (fallback) to rank candidates.
+    Call Groq (primary) or Cerebras (fallback) to rank candidates.
     Returns list of candidate indices in ranked order.
     """
     prompt = _build_ranking_prompt(candidate_summaries, max_clips)
@@ -341,8 +341,8 @@ def _call_llm(
         try:
             if provider == "groq":
                 return _call_groq(prompt, max_clips)
-            elif provider == "together":
-                return _call_together(prompt, max_clips)
+            elif provider == "cerebras":
+                return _call_cerebras(prompt, max_clips)
         except Exception as e:
             logger.warning("LLM provider %s failed: %s", provider, e)
             continue
@@ -415,32 +415,31 @@ def _call_groq(prompt: str, max_clips: int) -> list[int]:
     return list(range(max_clips))
 
 
-def _call_together(prompt: str, max_clips: int) -> list[int]:
-    """Call Together.ai API."""
-    import openai
+def _call_cerebras(prompt: str, max_clips: int) -> list[int]:
+    """Call Cerebras API."""
+    from cerebras.cloud.sdk import Cerebras
 
-    client = openai.OpenAI(
-        api_key=config.TOGETHER_API_KEY,
-        base_url="https://api.together.xyz/v1",
-    )
+    client = Cerebras(api_key=config.CEREBRAS_API_KEY)
 
     response = client.chat.completions.create(
         model=config.LLM_MODEL_FALLBACK,
         messages=[
-            {"role": "system", "content": "You are a viral content curator. Respond only with a JSON array of integers."},
+            {"role": "system", "content": "You are a viral content curator. Respond with JSON: {\"indices\": [int, ...]}"},
             {"role": "user", "content": prompt},
         ],
         temperature=0.3,
         max_tokens=100,
-        timeout=30,
+        response_format={"type": "json_object"},
     )
 
     text = response.choices[0].message.content.strip()
-    # Extract JSON array from response
-    import re
-    match = re.search(r'\[[\d\s,]+\]', text)
-    if match:
-        return [int(x) for x in json.loads(match.group())][:max_clips]
+    result = json.loads(text)
+
+    if isinstance(result, list):
+        return [int(x) for x in result[:max_clips]]
+    elif isinstance(result, dict):
+        indices = result.get("indices", result.get("selection", result.get("ranking", [])))
+        return [int(x) for x in indices[:max_clips]]
 
     return list(range(max_clips))
 

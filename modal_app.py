@@ -114,7 +114,7 @@ image_render = (
 image_llm = (
     image_base
     .pip_install(
-        "groq", "openai",
+        "groq", "cerebras-cloud-sdk",
         "opencv-python-headless",  # needed by pipeline.face_track, pipeline.render
         "scikit-learn",  # needed by pipeline.clip_selector
     )
@@ -125,7 +125,10 @@ image_llm = (
 # Secrets
 # ─────────────────────────────────────────────
 
-secrets = [modal.Secret.from_name("clippedai-secrets")]
+secrets = [
+    modal.Secret.from_name("clippedai-secrets"),
+    modal.Secret.from_name("cerebras-api-key"),
+]
 
 
 # ─────────────────────────────────────────────
