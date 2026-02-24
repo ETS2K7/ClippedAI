@@ -73,7 +73,7 @@ image_vision = (
     .pip_install(
         "ultralytics", "insightface", "onnxruntime-gpu",
         "filterpy", "mediapipe", "opencv-python-headless",
-        "scikit-learn", "setuptools",
+        "scikit-learn", "setuptools", "loguru",
     )
     .run_commands(
         "git clone https://github.com/SJTUwxz/LoCoNet_ASD.git /opt/loconet || true"
@@ -94,9 +94,14 @@ image_scene = (
 
 image_audio = (
     image_base
+    .apt_install("wget")
     .pip_install(
         "panns-inference", "librosa",
         "torch", "torchaudio",
+    )
+    .run_commands(
+        # Pre-download PANNs model + AudioSet class labels at build time
+        "python -c \"from panns_inference import AudioTagging; AudioTagging(checkpoint_path=None, device='cpu')\" || true"
     )
 )
 
