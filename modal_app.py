@@ -56,13 +56,14 @@ image_ingest = (
 
 image_asr = (
     modal.Image.from_registry(
-        "nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04",
+        "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
         add_python="3.11",
     )
     .apt_install("git", "ffmpeg")
-    .pip_install(
-        "torch==2.5.1", "torchaudio==2.5.1", "whisperx",
+    .run_commands(
+        "pip install torch==2.5.1 torchaudio==2.5.1 --index-url https://download.pytorch.org/whl/cu118"
     )
+    .pip_install("whisperx")
     .add_local_python_source("config", copy=True)
     .add_local_python_source("pipeline", copy=True)
 )

@@ -65,24 +65,27 @@ def transcribe_chunk(
     del align_model
     torch.cuda.empty_cache()
 
-    # Step 3: Speaker diarization
-    logger.info("Diarizing speakers...")
-    diarize_model = whisperx.DiarizationPipeline(
-        use_auth_token=config.HF_TOKEN,
-        device=device,
-    )
-    diarize_segments = diarize_model(
-        audio,
-        min_speakers=1,
-        max_speakers=num_speakers or 10,
-    )
+    # Step 3: Speaker diarization (optional — whisperx API changes across versions)
+    try:
+        logger.info("Diarizing speakers...")
+        diarize_model = whisperx.DiarizationPipeline(
+            use_auth_token=config.HF_TOKEN,
+            device=device,
+        )
+        diarize_segments = diarize_model(
+            audio,
+            min_speakers=1,
+            max_speakers=num_speakers or 10,
+        )
 
-    # Assign speakers to word-level segments
-    result = whisperx.assign_word_speakers(diarize_segments, result)
+        # Assign speakers to word-level segments
+        result = whisperx.assign_word_speakers(diarize_segments, result)
 
-    # Free diarize model
-    del diarize_model
-    torch.cuda.empty_cache()
+        # Free diarize model
+        del diarize_model
+        torch.cuda.empty_cache()
+    except (AttributeError, Exception) as e:
+        logger.warning("Diarization skipped: %s — speaker labels will be UNKNOWN", e)
 
     # Step 4: Offset timestamps to global time (chunk_start)
     segments = []
