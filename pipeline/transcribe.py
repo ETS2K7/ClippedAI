@@ -60,7 +60,7 @@ def transcribe_chunk(chunk_path: str, output_dir: str, hf_token: str) -> dict:
     )
 
     diarize_pipeline = PyannotePipeline.from_pretrained(
-        "pyannote/speaker-diarization-3.1",
+        "pyannote/speaker-diarization-community-1",
         token=hf_token,
     )
     if device == "cuda":
@@ -71,36 +71,18 @@ def transcribe_chunk(chunk_path: str, output_dir: str, hf_token: str) -> dict:
     audio_dict = {"waveform": waveform, "sample_rate": sample_rate}
     diarize_result = diarize_pipeline(audio_dict)
 
-    # Convert Pyannote output to DataFrame for WhisperX compatibility
-    # Handle different output types across Pyannote versions
+    # Pyannote 4.0 community-1 returns DiarizeOutput with .speaker_diarization
+    # Extract the Annotation and convert to DataFrame for WhisperX
     import pandas as pd
-    from pyannote.core import Annotation
 
-    # DiarizeOutput wraps an Annotation — extract it
-    if hasattr(diarize_result, "annotation"):
-        annotation = diarize_result.annotation
-    elif isinstance(diarize_result, Annotation):
-        annotation = diarize_result
-    else:
-        # If it's already a DataFrame or something else, try direct use
-        annotation = diarize_result
-
+    annotation = diarize_result.speaker_diarization
     diarize_rows = []
-    if isinstance(annotation, Annotation):
-        for segment, _, speaker in annotation.itertracks(yield_label=True):
-            diarize_rows.append({
-                "start": segment.start,
-                "end": segment.end,
-                "speaker": speaker,
-            })
-    elif hasattr(annotation, 'itertracks'):
-        for segment, _, speaker in annotation.itertracks(yield_label=True):
-            diarize_rows.append({
-                "start": segment.start,
-                "end": segment.end,
-                "speaker": speaker,
-            })
-
+    for segment, _, speaker in annotation.itertracks(yield_label=True):
+        diarize_rows.append({
+            "start": segment.start,
+            "end": segment.end,
+            "speaker": speaker,
+        })
     diarize_segments = pd.DataFrame(diarize_rows)
 
     # Assign speakers to WhisperX segments
