@@ -43,6 +43,11 @@ def download_video(url: str, download_dir: str) -> str:
     print(f"\n📥 Downloading video...")
     print(f"   URL: {url}")
 
+    # Clean download dir to avoid picking up stale files
+    if os.path.exists(download_dir):
+        for f in Path(download_dir).glob("*.mp4"):
+            f.unlink()
+
     output_template = os.path.join(download_dir, "%(id)s.%(ext)s")
 
     cmd = [
@@ -62,8 +67,8 @@ def download_video(url: str, download_dir: str) -> str:
         print(result.stderr[-2000:])
         sys.exit(1)
 
-    # Find the downloaded file
-    mp4_files = list(Path(download_dir).glob("*.mp4"))
+    # Find the downloaded file (pick newest by mtime)
+    mp4_files = sorted(Path(download_dir).glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True)
     if not mp4_files:
         print("❌ No MP4 file found after download")
         sys.exit(1)
