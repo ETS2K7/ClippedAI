@@ -47,3 +47,22 @@ HF_SECRET_NAME = "huggingface-secret"
 APP_NAME = "clippedai"
 GPU_TYPE_ASR = "A10G"
 GPU_TYPE_VISION = "T4"
+
+# --- Face Tracking ---
+FACE_CONF_THRESHOLD = 0.5
+FACE_NMS_THRESHOLD = 0.7
+ASD_CONFIDENCE_THRESHOLD = 0.85   # LoCoNet: above this → center on active face
+ASD_OVERLAP_THRESHOLD = 0.60      # Below this → safe wide shot
+
+# --- Reframing ---
+REFRAME_SEGMENT_DURATION = 0.5    # seconds per crop segment
+HYSTERESIS_MIN = 1.5              # seconds — minimum speaker hold
+HYSTERESIS_MAX = 3.0              # seconds — maximum speaker hold
+SAFETY_MARGIN = 0.15              # 15% padding around face
+MIN_FACE_HEIGHT_RATIO = 0.55      # minimum 55% face height in frame
+GOOD_FRAME_THRESHOLD = 0.92       # pre-render validation
+REID_COSINE_THRESHOLD = 0.62      # DBSCAN cosine distance for re-ID
+
+# --- Pinned Commits ---
+BOTFACESORT_COMMIT = "3d597ec3f8cc98c8bebc4b390a8d9ee619da4efb"
+LOCONET_COMMIT = "68d90c83fde956d60245d0715bbd18e9e5fd3bae"

@@ -1,12 +1,12 @@
 """
-ClippedAI — Modal App Definition (Milestone 2: Speech + Captions)
+ClippedAI — Modal App Definition (Milestone 3: Speaker Framing)
 
 Micro-container architecture:
 - image_ingest: FFmpeg only (dev mode — video uploaded from Mac)
 - image_asr: WhisperX + Pyannote 4.0 (GPU: A10G)
+- image_vision: YOLO26 + BoT-FaceSORT + LoCoNet + InsightFace (GPU: T4)
 
 Later milestones will add:
-- image_vision: YOLO26 + BoT-FaceSORT + LoCoNet
 - image_scene: AutoShot
 - image_audio: BEATs
 """
@@ -24,6 +24,12 @@ from config import (
     OUTPUT_HEIGHT,
     HF_SECRET_NAME,
     GPU_TYPE_ASR,
+    GPU_TYPE_VISION,
+    FACE_CONF_THRESHOLD,
+    FACE_NMS_THRESHOLD,
+    REID_COSINE_THRESHOLD,
+    BOTFACESORT_COMMIT,
+    LOCONET_COMMIT,
 )
 
 # --- Modal App ---
@@ -54,6 +60,44 @@ image_asr = (
         "pandas",
         "whisperx @ git+https://github.com/m-bain/whisperX.git",
         "pyannote.audio>=3.1",
+    )
+    .add_local_file("config.py", "/root/config.py")
+    .add_local_dir("pipeline", "/root/pipeline")
+)
+
+image_vision = (
+    modal.Image.debian_slim(python_version="3.11")
+    .apt_install("ffmpeg", "git", "libgl1", "libglib2.0-0")
+    .pip_install(
+        "ultralytics",
+        "insightface",
+        "onnxruntime-gpu",
+        "filterpy",
+        "mediapipe",
+        "opencv-python-headless",
+        "numpy", "setuptools", "scikit-learn",
+        "torch", "torchvision",
+        "lapx",  # pre-built wheel replacement for 'lap' (BoT-FaceSORT dep)
+    )
+    .run_commands(
+        f"git clone https://github.com/SJTUwxz/LoCoNet_ASD.git /opt/loconet "
+        f"&& cd /opt/loconet && git checkout {LOCONET_COMMIT}",
+    )
+    .run_commands(
+        f"git clone https://github.com/bellhyeon/BoT-FaceSORT.git /opt/bot-facesort "
+        f"&& cd /opt/bot-facesort && git checkout {BOTFACESORT_COMMIT} "
+        # Replace lap with lapx (lap has no pre-built wheel)
+        f"&& sed -i 's/^lap==.*/lapx/' requirements.txt "
+        # Remove conflicting version-pinned packages already installed
+        f"&& sed -i '/^torch==/d' requirements.txt "
+        f"&& sed -i '/^torchvision==/d' requirements.txt "
+        f"&& sed -i '/^torchaudio==/d' requirements.txt "
+        f"&& sed -i '/^numpy==/d' requirements.txt "
+        f"&& sed -i '/^onnxruntime-gpu==/d' requirements.txt "
+        f"&& sed -i '/^triton==/d' requirements.txt "
+        f"&& sed -i '/^opencv-python==/d' requirements.txt "
+        f"&& sed -i '/^--extra-index-url/d' requirements.txt "
+        f"&& pip install -r requirements.txt",
     )
     .add_local_file("config.py", "/root/config.py")
     .add_local_dir("pipeline", "/root/pipeline")
@@ -112,6 +156,66 @@ def transcribe_chunk(video_hash: str, chunk: dict) -> dict:
 
 
 # ============================================================
+# FACE TRACKING (GPU)
+# ============================================================
+
+@app.function(
+    image=image_vision,
+    secrets=[hf_secret],
+    gpu=GPU_TYPE_VISION,
+    volumes={VOLUME_MOUNT: volume},
+    timeout=1200,
+    retries=modal.Retries(max_retries=2, backoff_coefficient=2.0),
+)
+def face_track_chunk(video_hash: str, chunk: dict) -> dict:
+    """
+    Run face detection + tracking + ASD on a chunk.
+    YOLO26 → BoT-FaceSORT → LoCoNet → InsightFace re-ID.
+    """
+    import sys
+    sys.path.insert(0, "/root")
+    from pipeline.face_track import analyze_chunk
+
+    output_dir = f"{VOLUME_MOUNT}/{video_hash}/face_analysis"
+    analysis = analyze_chunk(
+        chunk_path=chunk["path"],
+        output_dir=output_dir,
+        conf=FACE_CONF_THRESHOLD,
+        nms=FACE_NMS_THRESHOLD,
+        cosine_threshold=REID_COSINE_THRESHOLD,
+    )
+    volume.commit()
+    return analysis
+
+
+# ============================================================
+# REFRAME (compute crop plan)
+# ============================================================
+
+@app.function(
+    image=image_ingest,
+    volumes={VOLUME_MOUNT: volume},
+    timeout=300,
+)
+def compute_reframe(
+    video_hash: str, face_analysis: dict, transcript: dict | None, clip_index: int
+) -> str:
+    """Compute the reframe crop plan from face analysis data."""
+    import sys
+    sys.path.insert(0, "/root")
+    from pipeline.reframe import generate_crop_plan
+
+    output_path = f"{VOLUME_MOUNT}/{video_hash}/crop_plans/clip_{clip_index:03d}.json"
+    generate_crop_plan(
+        face_analysis=face_analysis,
+        output_path=output_path,
+        transcript=transcript,
+    )
+    volume.commit()
+    return output_path
+
+
+# ============================================================
 # CAPTION GENERATION
 # ============================================================
 
@@ -150,24 +254,39 @@ def generate_captions(video_hash: str, transcript: dict, clip_index: int) -> str
     timeout=600,
     retries=modal.Retries(max_retries=3, backoff_coefficient=2.0),
 )
-def render_clip(video_hash: str, chunk: dict, clip_index: int, ass_path: str | None = None) -> str:
+def render_clip(
+    video_hash: str,
+    chunk: dict,
+    clip_index: int,
+    ass_path: str | None = None,
+    crop_plan_path: str | None = None,
+) -> str:
     """
-    Render a center-cropped vertical clip with optional caption burn-in.
+    Render a vertical clip with speaker-centered reframing + captions.
+    Falls back to center-crop if no crop plan is available.
     """
     import sys
     sys.path.insert(0, "/root")
-    from pipeline.render import center_crop_render
+    from pipeline.render import center_crop_render, dynamic_crop_render
 
     renders_dir = Path(VOLUME_MOUNT) / video_hash / "renders"
     renders_dir.mkdir(parents=True, exist_ok=True)
 
     output_path = str(renders_dir / f"clip_{clip_index:03d}.mp4")
 
-    center_crop_render(
-        input_path=chunk["path"],
-        output_path=output_path,
-        ass_path=ass_path,
-    )
+    if crop_plan_path and os.path.exists(crop_plan_path):
+        dynamic_crop_render(
+            input_path=chunk["path"],
+            output_path=output_path,
+            crop_plan_path=crop_plan_path,
+            ass_path=ass_path,
+        )
+    else:
+        center_crop_render(
+            input_path=chunk["path"],
+            output_path=output_path,
+            ass_path=ass_path,
+        )
 
     volume.commit()
     return output_path
@@ -180,16 +299,18 @@ def render_clip(video_hash: str, chunk: dict, clip_index: int, ass_path: str | N
 @app.function(
     image=image_ingest,
     volumes={VOLUME_MOUNT: volume},
-    timeout=1800,
+    timeout=3600,
 )
 def process_video(video_hash: str, max_clips: int = 1) -> list[str]:
     """
-    Main orchestrator (Milestone 2).
+    Main orchestrator (Milestone 3).
     1. Check cache
     2. Chunk video
-    3. Transcribe chunks (GPU)
-    4. Generate captions
-    5. Render center-crop clips with captions
+    3. Transcribe chunks (GPU — A10G)
+    4. Face track chunks (GPU — T4)
+    5. Compute reframe crop plans
+    6. Generate captions
+    7. Render speaker-centered clips with captions
     """
     video_dir = Path(VOLUME_MOUNT) / video_hash
 
@@ -209,17 +330,37 @@ def process_video(video_hash: str, max_clips: int = 1) -> list[str]:
     else:
         chunks = chunk_video.remote(video_hash)
 
-    # Step 2: Transcribe chunks in parallel (GPU)
+    # Step 2: Transcribe chunks in parallel (GPU — A10G)
     transcripts = []
     for chunk in chunks[:max_clips]:
         transcript = transcribe_chunk.remote(video_hash, chunk)
         transcripts.append(transcript)
 
-    # Step 3: Generate captions + render clips
+    # Step 3: Face track chunks in parallel (GPU — T4)
+    face_analyses = []
+    for chunk in chunks[:max_clips]:
+        analysis = face_track_chunk.remote(video_hash, chunk)
+        face_analyses.append(analysis)
+
+    # Step 4: Compute reframe + generate captions + render
     clip_paths = []
-    for i, (chunk, transcript) in enumerate(zip(chunks[:max_clips], transcripts)):
+    for i, (chunk, transcript, face_analysis) in enumerate(
+        zip(chunks[:max_clips], transcripts, face_analyses)
+    ):
+        # Compute crop plan from face analysis
+        crop_plan_path = compute_reframe.remote(
+            video_hash, face_analysis, transcript, i
+        )
+
+        # Generate captions
         ass_path = generate_captions.remote(video_hash, transcript, i)
-        clip_path = render_clip.remote(video_hash, chunk, i, ass_path=ass_path)
+
+        # Render with dynamic crop + captions
+        clip_path = render_clip.remote(
+            video_hash, chunk, i,
+            ass_path=ass_path,
+            crop_plan_path=crop_plan_path,
+        )
         clip_paths.append(clip_path)
 
     return clip_paths
