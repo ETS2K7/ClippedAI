@@ -96,6 +96,8 @@ image_vision = (
         f"&& sed -i '/^onnxruntime-gpu==/d' requirements.txt "
         f"&& sed -i '/^triton==/d' requirements.txt "
         f"&& sed -i '/^opencv-python==/d' requirements.txt "
+        f"&& sed -i '/^typing_extensions==/d' requirements.txt "
+        f"&& sed -i '/^flatbuffers==/d' requirements.txt "
         f"&& sed -i '/^--extra-index-url/d' requirements.txt "
         f"&& pip install -r requirements.txt",
     )
