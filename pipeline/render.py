@@ -1,6 +1,7 @@
 """
-ClippedAI — Basic center-crop vertical render (Milestone 1).
+ClippedAI — Center-crop vertical render with optional caption burn-in.
 Takes a source video segment and produces a 9:16 center-cropped vertical clip.
+Supports burning in ASS karaoke captions via FFmpeg's ass filter.
 """
 import subprocess
 
@@ -12,17 +13,20 @@ def center_crop_render(
     output_path: str,
     start: float | None = None,
     duration: float | None = None,
+    ass_path: str | None = None,
 ) -> str:
     """
     Render a center-cropped 9:16 vertical clip from a source video.
 
-    Uses FFmpeg crop filter to extract the center vertical slice.
-    No speaker detection — just a basic center crop for Milestone 1.
+    Args:
+        input_path: source video path
+        output_path: rendered clip output path
+        start: optional start time in seconds
+        duration: optional clip duration in seconds
+        ass_path: optional path to .ass file for caption burn-in
     """
-    # Build FFmpeg command
     cmd = ["ffmpeg", "-y"]
 
-    # If start/duration specified, seek first
     if start is not None:
         cmd += ["-ss", str(start)]
 
@@ -31,20 +35,19 @@ def center_crop_render(
     if duration is not None:
         cmd += ["-t", str(duration)]
 
-    # Center crop: extract a vertical 9:16 slice from the center of the frame.
-    # crop=ih*9/16:ih:iw/2-ih*9/16/2:0 means:
-    #   width  = input_height * 9/16
-    #   height = input_height
-    #   x      = center horizontally
-    #   y      = 0 (top)
-    # Then scale to exact output dimensions.
-    crop_filter = (
-        f"crop=ih*9/16:ih:(iw-ih*9/16)/2:0,"
-        f"scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:flags=lanczos"
-    )
+    # Build filter chain: crop → scale → (optional) ASS subtitles
+    filters = [
+        f"crop=ih*9/16:ih:(iw-ih*9/16)/2:0",
+        f"scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:flags=lanczos",
+    ]
+
+    if ass_path:
+        # Escape special characters in path for FFmpeg filter
+        escaped_path = ass_path.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
+        filters.append(f"ass='{escaped_path}'")
 
     cmd += [
-        "-vf", crop_filter,
+        "-vf", ",".join(filters),
         "-c:v", VIDEO_CODEC,
         "-crf", str(VIDEO_CRF),
         "-preset", VIDEO_PRESET,
@@ -61,3 +64,4 @@ def center_crop_render(
         )
 
     return output_path
+
