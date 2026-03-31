@@ -1,232 +1,200 @@
-# ClippedAI — Oracle Cloud Deployment Guide
+# ClippedAI — Deployment Guide (GitHub → OCI)
 
-## Prerequisites
-- Oracle Cloud account (free tier)
-- Domain `clippedai.app` registered (done ✓)
-- SSH key pair generated
+The deployment pipeline is: **push to `main` → GitHub Actions → OCI ARM server**.
 
 ---
 
-## Step 1 — Provision OCI ARM Instance
+## Architecture
 
-1. Log in to [cloud.oracle.com](https://cloud.oracle.com)
-2. Go to **Compute → Instances → Create Instance**
-3. Configure:
-   - **Name:** `clippedai-prod`
-   - **Image:** Ubuntu 22.04 (Minimal)
-   - **Shape:** `VM.Standard.A1.Flex` (ARM Ampere)
-   - **OCPUs:** 4
-   - **Memory:** 24 GB
-   - **Boot volume:** 100 GB (free tier allows 200GB total)
-4. Upload your SSH public key
-5. Click **Create**
-6. Note the **Public IP address**
-
----
-
-## Step 2 — Open Firewall Ports
-
-### OCI Console (Security List)
-1. Go to **Networking → Virtual Cloud Networks → Your VCN → Security Lists**
-2. Add Ingress rules:
-   | Protocol | Port | Source |
-   |----------|------|--------|
-   | TCP | 80 | 0.0.0.0/0 |
-   | TCP | 443 | 0.0.0.0/0 |
-
-### OS Firewall (on the VM)
-```bash
-sudo ufw allow OpenSSH
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw enable
+```
+Your Machine  →  git push  →  GitHub (main branch)
+                                    ↓  (GitHub Actions triggers)
+                              OCI ARM A1 Server
+                                 git pull
+                                 docker compose build app
+                                 docker compose up -d
+                              ↑
+                           Nginx (80/443)
+                           └─ Certbot SSL
+                           └─ proxy → localhost:3000
+                              └─ Next.js app container
+                                 └─ PostgreSQL container
 ```
 
 ---
 
-## Step 3 — Configure DNS
+## One-Time Setup Steps
 
-In your `name.com` dashboard for `clippedai.app`:
+### Step 1 — Create GitHub Repo
+
+1. Go to [github.com/new](https://github.com/new)
+2. Create a **private** repo named `ClippedAI`
+3. **Do not** initialize with README
+
+Then push from your local machine:
+```bash
+cd /Users/ebelthomasseiko/ClippedAI
+git remote add origin https://github.com/YOUR_USERNAME/ClippedAI.git
+git push -u origin main
+```
+
+---
+
+### Step 2 — Install OCI CLI
+
+```bash
+pip install oci-cli
+oci --version  # verify
+```
+
+---
+
+### Step 3 — Configure OCI CLI
+
+```bash
+oci setup config
+```
+
+You'll be prompted for:
+- **Tenancy OCID** → OCI Console → Avatar → Tenancy → Copy OCID
+- **User OCID** → OCI Console → Avatar → My Profile → Copy OCID
+- **Region** → e.g. `ap-mumbai-1`
+- **Generate new API key?** → Yes
+
+Then paste the generated public key into:
+OCI Console → Avatar → My Profile → API Keys → Add API Key → Paste public key
+
+---
+
+### Step 4 — Install jq (required by scripts)
+
+```bash
+brew install jq
+```
+
+---
+
+### Step 5 — Provision OCI Instance
+
+```bash
+./deploy/oci-provision.sh
+```
+
+This takes ~3 minutes and outputs your **public IP**. Note it down.
+
+---
+
+### Step 6 — Point DNS
+
+In your domain registrar for `clippedai.app`:
 
 | Type | Name | Value |
 |------|------|-------|
-| A | @ | YOUR_OCI_PUBLIC_IP |
-| A | www | YOUR_OCI_PUBLIC_IP |
+| A | @ | `YOUR_OCI_PUBLIC_IP` |
+| A | www | `YOUR_OCI_PUBLIC_IP` |
 
-Wait 5–15 minutes for DNS to propagate before proceeding.
-
----
-
-## Step 4 — Server Setup
-
-SSH into your instance:
-```bash
-ssh ubuntu@YOUR_OCI_PUBLIC_IP
-```
-
-### Install Docker
-```bash
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker ubuntu
-newgrp docker
-```
-
-### Install Docker Compose
-```bash
-sudo apt-get install -y docker-compose-plugin
-docker compose version  # verify
-```
-
-### Install Nginx + Certbot
-```bash
-sudo apt-get update
-sudo apt-get install -y nginx certbot python3-certbot-nginx
-```
+Wait 5–15 minutes for propagation.
 
 ---
 
-## Step 5 — Get SSL Certificate
+### Step 7 — Bootstrap the Server
 
 ```bash
-sudo certbot --nginx -d clippedai.app -d www.clippedai.app
+./deploy/bootstrap.sh https://github.com/YOUR_USERNAME/ClippedAI.git
 ```
 
-Follow prompts. Certbot will auto-renew via cron.
+This will:
+- Install Docker, Nginx, Certbot
+- Clone your repo to `/opt/clippedai`
+- Generate a **deploy key** and print the private key
+
+**Copy the printed private key** — you need it for GitHub Actions.
 
 ---
 
-## Step 6 — Configure Nginx
+### Step 8 — Add GitHub Actions Secrets
+
+Go to: **GitHub repo → Settings → Secrets and variables → Actions**
+
+Add every secret listed in [`deploy/github-secrets.md`](./github-secrets.md).
+
+| The two infrastructure secrets: |
+|---|
+| `OCI_SERVER_IP` = your OCI public IP |
+| `OCI_SSH_PRIVATE_KEY` = the private key printed by `bootstrap.sh` |
+
+---
+
+### Step 9 — Issue SSL Certificate
+
+After DNS has propagated (verify with `dig +short clippedai.app`):
 
 ```bash
-sudo cp /path/to/nginx/clippedai.conf /etc/nginx/sites-available/clippedai
-sudo ln -s /etc/nginx/sites-available/clippedai /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default  # remove default site
-sudo nginx -t                             # test config
-sudo systemctl reload nginx
+./deploy/setup-ssl.sh
 ```
 
 ---
 
-## Step 7 — Generate YouTube Cookies (for YouTube downloads)
-
-On your **local machine** (not the server):
-
-1. Install the browser extension **"Get cookies.txt LOCALLY"** (Chrome/Firefox)
-2. Log into YouTube/Google in your browser
-3. Navigate to `youtube.com`
-4. Click the extension → Export cookies as `cookies.txt`
-5. Create a Modal secret:
+### Step 10 — Trigger First Deploy
 
 ```bash
-# Install Modal CLI if not already installed
-pip install modal
-
-# Create the secret (paste cookies.txt content when prompted)
-modal secret create youtube-cookies cookies.txt="$(cat /path/to/cookies.txt)"
+git push origin main
 ```
 
-> **Note:** Refresh cookies every 3–6 months when they expire.
+Watch it at: **GitHub → Actions tab → "Deploy to Oracle Cloud"**
 
----
-
-## Step 8 — Deploy the Application
-
-### Clone repo on the server
+Then verify:
 ```bash
-git clone https://github.com/YOUR_USERNAME/ClippedAI.git ~/ClippedAI
-cd ~/ClippedAI
-```
-
-### Create production env file
-```bash
-cp frontend/.env.production.template frontend/.env.production
-nano frontend/.env.production
-# Fill in all REPLACE_WITH_* values
-```
-
-Generate `AUTH_SECRET`:
-```bash
-openssl rand -hex 32
-```
-
-Set `POSTGRES_PASSWORD` in environment (used by docker-compose):
-```bash
-echo "POSTGRES_PASSWORD=YOUR_SECURE_PASSWORD" >> ~/.bashrc
-source ~/.bashrc
-```
-
-### Configure Nginx (copy from repo)
-```bash
-sudo cp nginx/clippedai.conf /etc/nginx/sites-available/clippedai
-sudo ln -sf /etc/nginx/sites-available/clippedai /etc/nginx/sites-enabled/clippedai
-sudo nginx -t && sudo systemctl reload nginx
-```
-
-### Start services
-```bash
-cd ~/ClippedAI
-docker compose up -d --build
-docker compose logs -f  # watch startup logs
-```
-
----
-
-## Step 9 — Deploy Modal Backend
-
-```bash
-# From your local machine
-cd ClippedAI/backend
-pip install modal
-modal deploy main.py
-```
-
-After deploying, copy the new endpoint URL and update `PROCESS_VIDEO_ENDPOINT` in `frontend/.env.production`.
-
-Then restart the app:
-```bash
-# On the server
-cd ~/ClippedAI
-docker compose restart app
-```
-
----
-
-## Step 10 — Verify Deployment
-
-```bash
-# Health check
 curl https://clippedai.app/api/health
+# → {"status":"ok","timestamp":"..."}
+```
 
-# Check containers
+---
+
+## Ongoing Deployments
+
+Every `git push origin main` automatically:
+1. SSH into OCI server
+2. Writes `.env.production` from GitHub secrets
+3. `git pull` latest code
+4. `docker compose up -d --build app` (rebuilds only the app layer)
+5. Runs `prisma migrate deploy`
+6. Health-checks the app
+
+**Zero-downtime** — postgres container is never restarted unless you explicitly do so.
+
+---
+
+## Useful Commands (on the server)
+
+```bash
+# SSH in
+ssh -i ~/.ssh/id_ed25519 ubuntu@YOUR_OCI_IP
+
+# View live logs
+cd /opt/clippedai && docker compose logs -f app
+
+# Check container status
 docker compose ps
 
-# Check logs
-docker compose logs app --tail=50
-docker compose logs db --tail=20
+# Manual redeploy
+cd /opt/clippedai && git pull && docker compose up -d --build app
+
+# Database backup
+docker compose exec db pg_dump -U clippedai clippedai > backup_$(date +%Y%m%d).sql
+
+# Renew SSL (runs automatically, but for manual test)
+sudo certbot renew --dry-run
 ```
 
 ---
 
-## Maintenance
+## YouTube Cookies (for yt-dlp)
 
-### Update the app after code changes
 ```bash
-cd ~/ClippedAI
-git pull
-docker compose up -d --build app
-```
+# On your local machine — after logging into YouTube in browser
+modal secret create youtube-cookies cookies.txt="$(cat /path/to/cookies.txt)"
 
-### Database backup
-```bash
-docker compose exec db pg_dump -U clippedai clippedai > backup_$(date +%Y%m%d).sql
-```
-
-### View live logs
-```bash
-docker compose logs -f app
-```
-
-### SSL certificate renewal (automatic, but manual test)
-```bash
-sudo certbot renew --dry-run
+# Redeploy Modal backend
+cd ClippedAI/backend && modal deploy main.py
 ```
