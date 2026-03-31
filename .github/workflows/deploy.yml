@@ -1,0 +1,85 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH agent
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OCI_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.OCI_SERVER_IP }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      # ── Write .env.production locally, then scp it to server ──────────
+      - name: Write .env.production
+        run: |
+          cat > /tmp/env.production << EOF
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          AUTH_SECRET=${{ secrets.AUTH_SECRET }}
+          BASE_URL=https://clippedai.app
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
+          PROCESS_VIDEO_ENDPOINT=${{ secrets.PROCESS_VIDEO_ENDPOINT }}
+          PROCESS_VIDEO_ENDPOINT_AUTH=${{ secrets.PROCESS_VIDEO_ENDPOINT_AUTH }}
+          EOF
+          # Strip leading whitespace from heredoc
+          sed -i 's/^[[:space:]]*//' /tmp/env.production
+          echo "✓ .env.production written (${#} chars)"
+
+      - name: Upload .env.production to server
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            /tmp/env.production \
+            ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/frontend/.env.production
+
+      # ── Pull from GitHub and rebuild on server ─────────────────────────
+      - name: Deploy on server
+        run: |
+          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.OCI_SERVER_IP }} << 'ENDSSH'
+            set -euo pipefail
+            cd /opt/clippedai
+
+            echo "==> Pulling latest code from GitHub..."
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "==> Rebuilding app container..."
+            POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" docker compose up -d --build app
+
+            echo "==> Waiting for app to be healthy..."
+            for i in $(seq 1 12); do
+              if docker compose exec -T app wget -qO- http://localhost:3000/api/health 2>/dev/null | grep -q '"status":"ok"'; then
+                echo "✓ App is healthy"
+                break
+              fi
+              [ $i -eq 12 ] && echo "✗ Health check timeout" && docker compose logs app --tail=50 && exit 1
+              echo "  Waiting... ($((i*10))s)"
+              sleep 10
+            done
+
+            echo "==> Deploy complete!"
+            docker compose ps
+          ENDSSH
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+
+      - name: Verify deployment
+        run: |
+          sleep 5
+          curl -sf https://clippedai.app/api/health | grep '"status":"ok"' \
+            && echo "✅ https://clippedai.app is live!" \
+            || echo "⚠️  HTTPS check failed — check DNS and SSL"

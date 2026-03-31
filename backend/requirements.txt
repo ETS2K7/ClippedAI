@@ -1,0 +1,11 @@
+numpy==1.26.4
+requests==2.31.0
+opencv-python==4.9.0.80
+modal==0.62.65
+pydantic==2.7.0
+google-genai==1.0.0
+scipy==1.13.0
+scenedetect==0.6.3
+python-dotenv==1.0.1
+boto3==1.34.111
+yt-dlp>=2024.03.10

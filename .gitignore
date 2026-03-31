@@ -1,0 +1,57 @@
+# ─── Python / backend ─────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+venv/
+.venv/
+env/
+.env_backend
+*.egg-info/
+dist/
+build/
+
+# Modal artifacts
+.modal/
+
+# ─── Node / frontend ──────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+.pnp
+.pnp.js
+coverage/
+next-env.d.ts
+
+# ─── DB / data ────────────────────────────────────────────────────────────
+*.sqlite
+*.sqlite-journal
+db.sqlite
+prisma/db.sqlite
+prisma/db.sqlite-journal
+
+# ─── Secrets / env ────────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+.env.development
+.env.*.local
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
+
+# ─── Build / misc ─────────────────────────────────────────────────────────
+.DS_Store
+*.log
+*.mov
+*.mp4
+output/
+test_podcast.mp4
+.turbo/
+tsconfig.tsbuildinfo
+
+# ─── OCI / deploy keys ────────────────────────────────────────────────────
+deploy/oci_api_key*.pem
+deploy/*.key
