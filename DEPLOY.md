@@ -34,7 +34,7 @@ Your Machine  →  git push  →  GitHub (main branch)
 Then push from your local machine:
 ```bash
 cd /Users/ebelthomasseiko/ClippedAI
-git remote add origin https://github.com/YOUR_USERNAME/ClippedAI.git
+git remote add origin https://github.com/ETS2K7/ClippedAI.git
 git push -u origin main
 ```
 
@@ -100,7 +100,7 @@ Wait 5–15 minutes for propagation.
 ### Step 7 — Bootstrap the Server
 
 ```bash
-./deploy/bootstrap.sh https://github.com/YOUR_USERNAME/ClippedAI.git
+./deploy/bootstrap.sh https://github.com/ETS2K7/ClippedAI.git
 ```
 
 This will:
