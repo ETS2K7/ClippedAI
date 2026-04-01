@@ -33,11 +33,11 @@ services:
     command: >
       sh -c "node node_modules/prisma/build/index.js migrate deploy && node server.js"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health | grep ok || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health | grep ok || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 60s
+      retries: 5
+      start_period: 90s
 
 volumes:
   postgres_data:
