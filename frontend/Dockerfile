@@ -14,8 +14,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate
+# Generate Prisma client (Already generated securely inside deps stage)
 
 # Build Next.js standalone
 ENV SKIP_ENV_VALIDATION=1
