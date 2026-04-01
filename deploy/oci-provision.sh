@@ -126,18 +126,9 @@ IMAGE_ID=$(oci compute image list \
   --operating-system "Canonical Ubuntu" \
   --operating-system-version "22.04" \
   --shape "$SHAPE" \
-  --output json | jq -r \
-  '[.data[] | select(.displayName | contains("aarch64") or test("ARM"; "i"))] | sort_by(."timeCreated") | last | .id')
+  --output json | jq -r '.data | sort_by(.timeCreated) | last | .id')
 
-if [[ -z "$IMAGE_ID" || "$IMAGE_ID" == "null" ]]; then
-  # Fallback: get any Ubuntu 22.04 image
-  IMAGE_ID=$(oci compute image list \
-    --compartment-id "$COMPARTMENT_ID" \
-    --operating-system "Canonical Ubuntu" \
-    --operating-system-version "22.04" \
-    --output json | jq -r \
-    '.data | sort_by(."timeCreated") | last | .id')
-fi
+[[ -z "$IMAGE_ID" || "$IMAGE_ID" == "null" ]] && die "Could not find Ubuntu 22.04 ARM image in $REGION"
 success "Image: $IMAGE_ID"
 
 # ── Step 8: Read SSH public key ───────────────────────────────

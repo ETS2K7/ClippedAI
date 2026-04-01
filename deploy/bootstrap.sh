@@ -51,6 +51,11 @@ info "Bootstrapping server at $PUBLIC_IP..."
 remote bash << REMOTE
 set -euo pipefail
 
+echo "==> Waiting for background OS updates to release apt locks (this can take a minute)..."
+while sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1 || sudo fuser /var/lib/apt/lists/lock >/dev/null 2>&1 || sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+  sleep 3
+done
+
 echo "==> Updating system packages..."
 export DEBIAN_FRONTEND=noninteractive
 sudo apt-get update -qq

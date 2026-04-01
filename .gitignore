@@ -55,3 +55,5 @@ tsconfig.tsbuildinfo
 # ─── OCI / deploy keys ────────────────────────────────────────────────────
 deploy/oci_api_key*.pem
 deploy/*.key
+deploy/oci-state.json
+deploy/oci*.log

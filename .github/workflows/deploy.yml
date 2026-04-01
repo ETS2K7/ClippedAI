@@ -35,6 +35,12 @@ jobs:
           S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}
           PROCESS_VIDEO_ENDPOINT=${{ secrets.PROCESS_VIDEO_ENDPOINT }}
           PROCESS_VIDEO_ENDPOINT_AUTH=${{ secrets.PROCESS_VIDEO_ENDPOINT_AUTH }}
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET=${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_SMALL_CREDIT_PACK=${{ secrets.STRIPE_SMALL_CREDIT_PACK }}
+          STRIPE_MEDIUM_CREDIT_PACK=${{ secrets.STRIPE_MEDIUM_CREDIT_PACK }}
+          STRIPE_LARGE_CREDIT_PACK=${{ secrets.STRIPE_LARGE_CREDIT_PACK }}
           EOF
           # Strip leading whitespace from heredoc
           sed -i 's/^[[:space:]]*//' /tmp/env.production
