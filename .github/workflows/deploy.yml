@@ -55,7 +55,8 @@ jobs:
       # ── Pull from GitHub and rebuild on server ─────────────────────────
       - name: Deploy on server
         run: |
-          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.OCI_SERVER_IP }} << 'ENDSSH'
+          ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.OCI_SERVER_IP }} \
+            "POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' bash -s" << 'ENDSSH'
             set -euo pipefail
             cd /opt/clippedai
 
@@ -67,12 +68,12 @@ jobs:
             POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" docker compose up -d --build app
 
             echo "==> Waiting for app to be healthy..."
-            for i in $(seq 1 12); do
-              if docker compose exec -T app wget -qO- http://localhost:3000/api/health 2>/dev/null | grep -q '"status":"ok"'; then
+            for i in $(seq 1 18); do
+              if docker compose exec -T app wget -qO- http://127.0.0.1:3000/api/health 2>/dev/null | grep -q '"status":"ok"'; then
                 echo "✓ App is healthy"
                 break
               fi
-              [ $i -eq 12 ] && echo "✗ Health check timeout" && docker compose logs app --tail=50 && exit 1
+              [ $i -eq 18 ] && echo "✗ Health check timeout" && docker compose logs app --tail=50 && exit 1
               echo "  Waiting... ($((i*10))s)"
               sleep 10
             done
@@ -80,8 +81,6 @@ jobs:
             echo "==> Deploy complete!"
             docker compose ps
           ENDSSH
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Verify deployment
         run: |
