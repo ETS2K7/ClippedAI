@@ -95,8 +95,14 @@ jobs:
 
       - name: Verify deployment
         run: |
-          echo "Waiting 30s for container to fully start..."
-          sleep 30
-          curl -sf https://clippedai.app/api/health | grep '"status":"ok"' \
-            && echo "✅ https://clippedai.app is live!" \
-            || echo "⚠️  HTTPS check failed — check DNS and SSL"
+          echo "==> Polling https://clippedai.app/api/health (up to 5 minutes)..."
+          for i in $(seq 1 30); do
+            if curl -sf https://clippedai.app/api/health | grep -q '"status":"ok"'; then
+              echo "✅ https://clippedai.app is live!"
+              exit 0
+            fi
+            echo "  Attempt $i/30 — waiting 10s..."
+            sleep 10
+          done
+          echo "⚠️  Health check timed out after 5 minutes"
+          exit 1
