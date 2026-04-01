@@ -54,17 +54,25 @@ jobs:
             /tmp/env.production \
             ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/frontend/.env.production
 
-      # ── Pull from GitHub and rebuild on server ─────────────────────────
+      # ── Rsync checked-out code to server (no git credentials needed) ────
+      - name: Sync code to server
+        run: |
+          rsync -az --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='frontend/.next' \
+            --exclude='frontend/node_modules' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/
+
+      # ── Rebuild on server ────────────────────────────────────────────────
       - name: Deploy on server
         run: |
           ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.OCI_SERVER_IP }} \
             "POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' bash -s" << 'ENDSSH'
             set -euo pipefail
             cd /opt/clippedai
-
-            echo "==> Pulling latest code from GitHub..."
-            git fetch origin main
-            git reset --hard origin/main
 
             echo "==> Rebuilding app container..."
             POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" docker compose up -d --build app
@@ -83,6 +91,7 @@ jobs:
             echo "==> Deploy complete!"
             docker compose ps
           ENDSSH
+
 
       - name: Verify deployment
         run: |
