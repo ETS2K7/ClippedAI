@@ -41,22 +41,27 @@ jobs:
           STRIPE_SMALL_CREDIT_PACK=${{ secrets.STRIPE_SMALL_CREDIT_PACK }}
           STRIPE_MEDIUM_CREDIT_PACK=${{ secrets.STRIPE_MEDIUM_CREDIT_PACK }}
           STRIPE_LARGE_CREDIT_PACK=${{ secrets.STRIPE_LARGE_CREDIT_PACK }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
           EOF
           # Strip leading whitespace from heredoc
           sed -i 's/^[[:space:]]*//' /tmp/env.production
-          echo "✓ .env.production written (${#} chars)"
+          echo "✓ .env.production written"
 
       - name: Upload .env.production to server
         run: |
           scp -i ~/.ssh/deploy_key \
             /tmp/env.production \
             ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/frontend/.env.production
+          # Also write a root .env for docker compose (POSTGRES_PASSWORD)
+          echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" | \
+            ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.OCI_SERVER_IP }} \
+            'cat > /opt/clippedai/.env'
 
       # ── Pull from GitHub and rebuild on server ─────────────────────────
       - name: Deploy on server
         run: |
           ssh -i ~/.ssh/deploy_key ubuntu@${{ secrets.OCI_SERVER_IP }} << 'ENDSSH'
-            set -euo pipefail
+            set -eo pipefail
             cd /opt/clippedai
 
             echo "==> Pulling latest code from GitHub..."
@@ -64,15 +69,19 @@ jobs:
             git reset --hard origin/main
 
             echo "==> Rebuilding app container..."
-            POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" docker compose up -d --build app
+            docker compose --env-file /opt/clippedai/.env up -d --build app
 
             echo "==> Waiting for app to be healthy..."
             for i in $(seq 1 12); do
-              if docker compose exec -T app wget -qO- http://localhost:3000/api/health 2>/dev/null | grep -q '"status":"ok"'; then
+              if docker compose exec -T app wget -qO- http://localhost:3000/api/health 2>/dev/null | grep -q 'ok'; then
                 echo "✓ App is healthy"
                 break
               fi
-              [ $i -eq 12 ] && echo "✗ Health check timeout" && docker compose logs app --tail=50 && exit 1
+              if [ $i -eq 12 ]; then
+                echo "✗ Health check timeout"
+                docker compose logs app --tail=50
+                exit 1
+              fi
               echo "  Waiting... ($((i*10))s)"
               sleep 10
             done
@@ -80,8 +89,6 @@ jobs:
             echo "==> Deploy complete!"
             docker compose ps
           ENDSSH
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
 
       - name: Verify deployment
         run: |
