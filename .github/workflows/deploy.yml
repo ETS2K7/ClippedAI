@@ -22,7 +22,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H "${{ secrets.OCI_SERVER_IP }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-      # ── Write .env.production locally, then scp it to server ──────────
+      # ── Write .env.production locally ──────────────────────────────────
       - name: Write .env.production
         run: |
           cat > /tmp/env.production << EOF
@@ -46,15 +46,9 @@ jobs:
           EOF
           # Strip leading whitespace from heredoc
           sed -i 's/^[[:space:]]*//' /tmp/env.production
-          echo "✓ .env.production written (${#} chars)"
+          echo "✓ .env.production written"
 
-      - name: Upload .env.production to server
-        run: |
-          scp -i ~/.ssh/deploy_key \
-            /tmp/env.production \
-            ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/frontend/.env.production
-
-      # ── Rsync checked-out code to server (no git credentials needed) ────
+      # ── Rsync checked-out code to server (excludes .env* so it's safe) ─
       - name: Sync code to server
         run: |
           rsync -az --delete \
@@ -63,8 +57,17 @@ jobs:
             --exclude='.next' \
             --exclude='frontend/.next' \
             --exclude='frontend/node_modules' \
+            --exclude='frontend/.env*' \
+            --exclude='.env*' \
             -e "ssh -i ~/.ssh/deploy_key" \
             ./ ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/
+
+      # ── Upload .env.production AFTER rsync so it's never deleted ───────
+      - name: Upload .env.production to server
+        run: |
+          scp -i ~/.ssh/deploy_key \
+            /tmp/env.production \
+            ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/frontend/.env.production
 
       # ── Rebuild on server ────────────────────────────────────────────────
       - name: Deploy on server
@@ -91,7 +94,6 @@ jobs:
             echo "==> Deploy complete!"
             docker compose ps
           ENDSSH
-
 
       - name: Verify deployment
         run: |
