@@ -17,34 +17,30 @@ export async function POST(req: Request) {
     );
   }
 
-  // Intercept and create a DB record for YouTube URLs
-  const uploadedFileId = sourceUrl;
-  
+  // YouTube URL — create a new DB record for it
   if (sourceUrl.startsWith("http")) {
-    // Determine title from URL
     const videoIdMatch = sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
     const videoId = videoIdMatch ? videoIdMatch[1] : "video";
-    
-    // Allocate the S3 destination path ahead of time so Next.js UI can track the clips correctly
+
     const generatedS3Key = `youtube-downloads/${session.user.id}-${Date.now()}/${videoId}/original.mp4`;
-    
-    // Create new DB record specifically for this Youtube task
+
     const newFile = await db.uploadedFile.create({
       data: {
         userId: session.user.id,
-        s3Key: generatedS3Key, 
+        s3Key: generatedS3Key,
         status: "processing",
         uploaded: true,
       },
     });
-    
-    // Fire the job immediately
-    fireModalJob(generatedS3Key, newFile.id, session.user.id, sourceUrl).catch((err) =>
-      console.error("[tasks/create] Modal job error:", err)
-    );
-    
+
+    // Fire-and-forget — Modal will call our webhook when done
+    fireModalJob(generatedS3Key, newFile.id, session.user.id, sourceUrl);
+
     return NextResponse.json({ task_id: newFile.id });
   }
+
+  // Uploaded file — find existing DB record
+  const uploadedFileId = sourceUrl;
 
   try {
     const existing = await db.uploadedFile.findUnique({
@@ -64,16 +60,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ task_id: existing.id });
     }
 
-    // Mark as queued immediately so the task page shows the right state
+    // Mark as processing immediately
     await db.uploadedFile.update({
       where: { id: uploadedFileId },
       data: { uploaded: true, status: "processing" },
     });
 
-    // Fire-and-forget: call the Modal endpoint directly (no Inngest dev server needed)
-    fireModalJob(existing.s3Key, uploadedFileId, session.user.id).catch(
-      (err) => console.error("[tasks/create] Modal job error:", err)
-    );
+    // Fire-and-forget — Modal will call our webhook when done
+    fireModalJob(existing.s3Key, uploadedFileId, session.user.id);
 
     return NextResponse.json({ task_id: existing.id });
   } catch (err) {
@@ -86,109 +80,41 @@ export async function POST(req: Request) {
 }
 
 /**
- * Calls the Modal processing endpoint and updates DB status when done.
- * Handles Modal's async 303 redirect pattern:
- *   POST → 303 { Location: ?__modal_function_call_id=... } (container cold-starting or running)
- *   GET poll URL → 200 when done
- * Runs fire-and-forget — HTTP response to client is returned before this completes.
+ * Fire-and-forget POST to Modal. No polling, no waiting.
+ * Modal will call POST /api/webhooks/modal when processing completes.
  */
-async function fireModalJob(
+function fireModalJob(
   s3Key: string,
   uploadedFileId: string,
   userId: string,
-  youtubeUrl: string | undefined = undefined
+  youtubeUrl?: string,
 ) {
-  try {
-    console.log(`[Modal] Starting job for ${uploadedFileId} s3Key=${s3Key}${youtubeUrl ? ` youtubeUrl=${youtubeUrl}` : ''}`);
+  const webhookUrl = `${env.BASE_URL}/api/webhooks/modal`;
 
-    // Step 1: POST to Modal endpoint (don't auto-follow redirects)
-    let finalResponse: Response;
-    const initialResp = await fetch(env.PROCESS_VIDEO_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.PROCESS_VIDEO_ENDPOINT_AUTH}`,
-      },
-      body: JSON.stringify({ s3_key: s3Key, youtube_url: youtubeUrl }),
-      redirect: "manual", // Modal returns 303 while cold-starting — must handle manually
-    });
+  console.log(`[Modal] Firing job for ${uploadedFileId} s3Key=${s3Key}${youtubeUrl ? ` youtubeUrl=${youtubeUrl}` : ""}`);
 
-    console.log(`[Modal] Initial response: ${initialResp.status}`);
-
-    if (initialResp.status === 303) {
-      // Modal async pattern: poll the redirect URL (GET) until non-303
-      const pollUrl = initialResp.headers.get("location");
-      if (!pollUrl) {
-        throw new Error("[Modal] Got 303 but no Location header");
-      }
-      console.log(`[Modal] Polling: ${pollUrl}`);
-
-      const MAX_POLLS = 120; // 120 × 10s = 20 min max
-      let polls = 0;
-      let pollResp: Response;
-
-      do {
-        polls++;
-        await new Promise((r) => setTimeout(r, 10_000)); // wait 10s between polls
-        pollResp = await fetch(pollUrl, {
-          method: "GET",
-          headers: { Authorization: `Bearer ${env.PROCESS_VIDEO_ENDPOINT_AUTH}` },
-          redirect: "manual",
-        });
-        console.log(`[Modal] Poll ${polls}: ${pollResp.status}`);
-      } while (pollResp!.status === 303 && polls < MAX_POLLS);
-
-      finalResponse = pollResp!;
-    } else {
-      finalResponse = initialResp;
-    }
-
-    if (!finalResponse.ok) {
-      const text = await finalResponse.text().catch(() => "");
-      console.error(`[Modal] Final non-OK: ${finalResponse.status} — ${text.slice(0, 300)}`);
-      await db.uploadedFile.update({
-        where: { id: uploadedFileId },
-        data: { status: "failed" },
-      });
-      return;
-    }
-
-    console.log(`[Modal] Job succeeded — discovering clips in S3`);
-
-    // Step 2: Discover clips written to S3 in the same folder as the original
-    const { ListObjectsV2Command, S3Client } = await import("@aws-sdk/client-s3");
-    const s3Client = new S3Client({
-      region: env.AWS_REGION,
-      credentials: {
-        accessKeyId: env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
-
-    const folderPrefix = s3Key.split("/")[0]!;
-    const listed = await s3Client.send(
-      new ListObjectsV2Command({ Bucket: env.S3_BUCKET_NAME, Prefix: folderPrefix })
-    );
-    const clipKeys = (listed.Contents ?? [])
-      .map((o) => o.Key)
-      .filter((k): k is string => k !== undefined && !k.endsWith("original.mp4"));
-
-    if (clipKeys.length > 0) {
-      await db.clip.createMany({
-        data: clipKeys.map((clipKey) => ({ s3Key: clipKey, uploadedFileId, userId })),
-      });
-    }
-
-    await db.uploadedFile.update({
-      where: { id: uploadedFileId },
-      data: { status: "processed" },
-    });
-
-    console.log(`[tasks/create] ✓ Done — ${clipKeys.length} clip(s) for ${uploadedFileId}`);
-  } catch (err) {
-    console.error("[Modal] fireModalJob threw:", err);
-    await db.uploadedFile
+  fetch(env.PROCESS_VIDEO_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.PROCESS_VIDEO_ENDPOINT_AUTH}`,
+    },
+    body: JSON.stringify({
+      s3_key: s3Key,
+      youtube_url: youtubeUrl,
+      uploaded_file_id: uploadedFileId,
+      user_id: userId,
+      webhook_url: webhookUrl,
+      webhook_secret: env.PROCESS_VIDEO_ENDPOINT_AUTH,
+    }),
+    redirect: "manual", // Modal may return 303 for async — that's fine, we don't need the result
+  }).then((resp) => {
+    console.log(`[Modal] Initial response: ${resp.status} for ${uploadedFileId}`);
+  }).catch((err) => {
+    console.error(`[Modal] Failed to fire job for ${uploadedFileId}:`, err);
+    // Update status to failed since Modal never received the job
+    db.uploadedFile
       .update({ where: { id: uploadedFileId }, data: { status: "failed" } })
       .catch(() => null);
-  }
+  });
 }

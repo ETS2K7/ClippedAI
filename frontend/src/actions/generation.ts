@@ -2,48 +2,9 @@
 
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { revalidatePath } from "next/cache";
 import { env } from "~/env";
-import { inngest } from "~/inngest/client";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-
-export async function processVideo(uploadedFileId: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
-
-  const uploadedVideo = await db.uploadedFile.findUniqueOrThrow({
-    where: {
-      id: uploadedFileId,
-      userId: session.user.id,
-    },
-    select: {
-      uploaded: true,
-      id: true,
-      userId: true,
-    },
-  });
-
-  if (uploadedVideo.uploaded) return;
-
-  await inngest.send({
-    name: "process-video-events",
-    data: { uploadedFileId: uploadedVideo.id, userId: uploadedVideo.userId },
-  });
-
-  await db.uploadedFile.update({
-    where: {
-      id: uploadedFileId,
-    },
-    data: {
-      uploaded: true,
-    },
-  });
-
-  revalidatePath("/dashboard");
-}
 
 export async function getClipPlayUrl(
   clipId: string,

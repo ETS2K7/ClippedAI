@@ -6,6 +6,7 @@ import uuid
 import subprocess
 import boto3
 import modal
+import requests
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -23,6 +24,11 @@ S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "clippedai-7137")
 class ProcessVideoRequest(BaseModel):
     s3_key: str
     youtube_url: str | None = None
+    # Webhook callback fields — Modal calls back when done
+    uploaded_file_id: str | None = None
+    user_id: str | None = None
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
 
 image = (modal.Image.debian_slim(python_version="3.10")
     .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget"])
@@ -114,12 +120,34 @@ def _process_video_pipeline(
             shutil.rmtree(base_dir, ignore_errors=True)
 
 
+def _send_webhook(
+    webhook_url: str,
+    webhook_secret: str,
+    uploaded_file_id: str,
+    user_id: str,
+    result: dict,
+) -> None:
+    """POST processing results back to the Next.js webhook endpoint."""
+    payload = {
+        "uploaded_file_id": uploaded_file_id,
+        "user_id": user_id,
+        "status": result.get("status", "failed"),
+        "clips": result.get("clips", []),
+        "secret": webhook_secret,
+    }
+    try:
+        resp = requests.post(webhook_url, json=payload, timeout=30)
+        resp.raise_for_status()
+        logger.info(f"Webhook delivered: {resp.status_code}")
+    except Exception as e:
+        logger.error(f"Webhook delivery failed: {e}")
+
+
 @app.cls(
     gpu="any",
     timeout=1200,
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
-        modal.Secret.from_name("youtube-cookies", required=False),
     ]
 )
 class ClippedAI:
@@ -138,7 +166,24 @@ class ClippedAI:
                 headers={"WWW-Authenticate": "Bearer"},
             )
 
-        return _process_video_pipeline(request.s3_key, request.youtube_url)
+        # Run the pipeline
+        try:
+            result = _process_video_pipeline(request.s3_key, request.youtube_url)
+        except Exception as e:
+            logger.error(f"Pipeline failed: {e}")
+            result = {"status": "failed", "clips": [], "error": str(e)}
+
+        # If webhook fields are provided, call back to Next.js
+        if request.webhook_url and request.webhook_secret and request.uploaded_file_id and request.user_id:
+            _send_webhook(
+                request.webhook_url,
+                request.webhook_secret,
+                request.uploaded_file_id,
+                request.user_id,
+                result,
+            )
+
+        return result
 
 
 @app.local_entrypoint()

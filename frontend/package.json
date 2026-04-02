@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbo",
-    "inngest-dev": "npx inngest-cli@latest dev",
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
     "build": "next build",
@@ -47,7 +46,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
-    "inngest": "^3.35.1",
     "lucide-react": "^0.509.0",
     "mediabunny": "^1.40.1",
     "next": "^15.2.3",
