@@ -109,6 +109,14 @@ jobs:
 
             echo "==> Deploy complete!"
             docker compose ps
+
+            # Sync Nginx config if changed
+            if ! diff -q /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai > /dev/null 2>&1; then
+              echo "==> Updating Nginx config..."
+              sudo cp /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai
+              sudo nginx -t && sudo systemctl reload nginx
+              echo "✓ Nginx config updated"
+            fi
           ENDSSH
 
       - name: Verify deployment
