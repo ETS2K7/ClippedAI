@@ -1,49 +1,91 @@
 'use client';
 
+import Link from 'next/link';
 import ScrollReveal from '~/components/landing/animations/ScrollReveal';
 
-export default function AIEditor() {
+export default function PoweredBySection() {
   return (
-    <section id="ai-editor" className="py-20 md:py-32 overflow-hidden bg-background">
-      <div className="padding-global">
-        <div className="container-1200 flex flex-col items-center">
-          
-          {/* Header */}
-          <ScrollReveal className="flex flex-col items-center text-center mb-12 md:mb-16 w-full">
-            {/* New Badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1A1A1A] border border-white/10 mb-6 md:mb-8">
-              <span className="text-[12px] md:text-[14px] font-medium text-[#f1f1f1] tracking-wide flex items-center gap-[6px]">
-                <span className="text-[14px]">✨</span>
-                New
-              </span>
-            </div>
-            
-            {/* Heading */}
-            <h2 className="text-[40px] md:text-[56px] lg:text-[68px] font-bold leading-[1.05] tracking-tight mb-6 max-w-[1000px]">
-              <span className="text-white">Introducing</span> <span className="text-[#A269FF]">AI Reframe 2</span>
-            </h2>
-            
-            {/* Subheading */}
-            <p className="text-[15px] md:text-[18px] lg:text-[20px] leading-[1.6] text-[#888888] font-medium max-w-[840px] mx-auto">
-              Resize your videos for any platform with our most advanced AI yet. It analyzes your scenes and applies the perfect layout—Split Screen, Screencasts, Gaming, and more—turning long videos into pro-quality clips in just one click.
-            </p>
-          </ScrollReveal>
+    <section className="py-24 md:py-32 relative">
+      <div className="max-w-[1200px] mx-auto px-6 md:px-8">
+        <ScrollReveal>
+          <div className="relative overflow-hidden rounded-3xl border border-slate-700/50 bg-gradient-to-br from-slate-800/60 to-slate-800/20 backdrop-blur-sm">
+            {/* Background orb */}
+            <div className="absolute top-[-50%] right-[-20%] w-[500px] h-[500px] rounded-full opacity-10 blur-[100px]"
+              style={{ background: 'radial-gradient(circle, #8B5CF6 0%, transparent 70%)' }}
+            />
 
-          {/* Video Container */}
-          <ScrollReveal delay={0.1} className="w-full">
-            <div className="w-full relative rounded-[20px] md:rounded-[32px] overflow-hidden border border-white/10 shadow-2xl bg-[#09090b]">
-              <video 
-                src="/assets/animation/ai-reframe-compressed.mp4" 
-                autoPlay 
-                loop 
-                muted 
-                playsInline 
-                className="w-full h-auto object-cover block"
-              />
+            <div className="relative z-10 px-8 py-16 md:px-16 md:py-20 flex flex-col md:flex-row items-center gap-12">
+              {/* Left content */}
+              <div className="flex-1 text-center md:text-left">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-violet-500/20 bg-violet-500/5 text-sm text-violet-400 mb-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Powered by AI
+                </div>
+
+                <h2 className="text-[28px] md:text-[36px] lg:text-[42px] font-bold leading-[1.1] tracking-[-0.02em] text-white mb-5">
+                  Built for speed.
+                  <br />
+                  <span
+                    className="bg-clip-text text-transparent"
+                    style={{ backgroundImage: 'linear-gradient(135deg, #8B5CF6, #06B6D4)' }}
+                  >
+                    Engineered for quality.
+                  </span>
+                </h2>
+
+                <p className="text-[16px] leading-[1.7] text-slate-400 mb-8 max-w-[480px]">
+                  ClippedAI combines state-of-the-art AI models with GPU-accelerated video processing to deliver broadcast-quality clips in minutes, not hours.
+                </p>
+
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <Link
+                    href="/dashboard"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:shadow-lg hover:shadow-violet-500/20"
+                    style={{ background: 'linear-gradient(135deg, #8B5CF6, #6366F1)' }}
+                  >
+                    Start clipping now
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h14m-7-7 7 7-7 7" />
+                    </svg>
+                  </Link>
+                  <Link
+                    href="#how-it-works"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white border border-slate-600 hover:border-violet-500/50 hover:bg-violet-500/5 transition-all duration-200"
+                  >
+                    See how it works
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right — tech stack pills */}
+              <div className="flex-shrink-0">
+                <div className="grid grid-cols-2 gap-3 w-[260px]">
+                  {[
+                    { name: 'Next.js 15', color: '#ffffff' },
+                    { name: 'Modal GPU', color: '#6366F1' },
+                    { name: 'AssemblyAI', color: '#06B6D4' },
+                    { name: 'Google Gemini', color: '#F59E0B' },
+                    { name: 'OpenCV', color: '#22C55E' },
+                    { name: 'PostgreSQL', color: '#3B82F6' },
+                  ].map((tech) => (
+                    <div
+                      key={tech.name}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-700/50 bg-slate-800/50"
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: tech.color }}
+                      />
+                      <span className="text-[13px] text-slate-300 font-medium">{tech.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          </ScrollReveal>
-          
-        </div>
+          </div>
+        </ScrollReveal>
       </div>
     </section>
   );

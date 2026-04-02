@@ -1,9 +1,9 @@
 import Navbar from "~/components/landing/layout/Navbar";
 import Hero from "~/components/landing/sections/Hero";
-import ClipAnything from "~/components/landing/sections/ClipAnything";
-import Autopilot from "~/components/landing/sections/Autopilot";
-import AIEditor from "~/components/landing/sections/AIEditor";
-import ScaleSection from "~/components/landing/sections/ScaleSection";
+import Features from "~/components/landing/sections/ClipAnything";
+import HowItWorks from "~/components/landing/sections/Autopilot";
+import OpenSourceSection from "~/components/landing/sections/AIEditor";
+import StatsSection from "~/components/landing/sections/ScaleSection";
 import FAQ from "~/components/landing/sections/FAQ";
 import CTASection from "~/components/landing/sections/CTASection";
 import Footer from "~/components/landing/layout/Footer";
@@ -13,15 +13,15 @@ import SharedLayoutProvider from "~/components/landing/animations/SharedLayoutPr
 
 export default function HomePage() {
   return (
-    <div className="dark" style={{ backgroundColor: "#09090b", color: "#ffffff", minHeight: "100vh" }}>
+    <div style={{ backgroundColor: "#0a0a0f", color: "#F8FAFC", minHeight: "100vh" }}>
       <SharedLayoutProvider>
         <Navbar />
         <main>
           <Hero />
-          <ClipAnything />
-          <Autopilot />
-          <AIEditor />
-          <ScaleSection />
+          <Features />
+          <HowItWorks />
+          <OpenSourceSection />
+          <StatsSection />
           <FAQ />
           <CTASection />
         </main>

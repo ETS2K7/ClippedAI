@@ -19,8 +19,8 @@ export default async function DashboardLayout({
 
   return (
     <SessionProvider session={session}>
-      <div className="flex min-h-screen flex-col bg-stone-50">
-        <main className="flex-1 w-full bg-stone-50">{children}</main>
+      <div className="flex min-h-screen flex-col bg-[#0a0a0f]">
+        <main className="flex-1 w-full">{children}</main>
         <Toaster />
       </div>
     </SessionProvider>

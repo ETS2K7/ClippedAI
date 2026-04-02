@@ -1,44 +1,55 @@
 'use client';
 
+import { HOW_IT_WORKS } from '~/lib/landing/constants';
 import ScrollReveal from '~/components/landing/animations/ScrollReveal';
 
-export default function Autopilot() {
+export default function HowItWorks() {
   return (
-    <section className="py-20 md:py-32 overflow-hidden bg-background">
-      <div className="padding-global">
-        <div className="container-1200">
-          
-          {/* Header */}
-          <ScrollReveal className="flex flex-col items-center text-center mb-12 md:mb-16">
-            <div className="flex items-center gap-2 text-[#999999] opacity-80 mb-4 md:mb-6 leading-none">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="19" fill="none" viewBox="0 0 18 19" className="text-white opacity-80">
-                <path fill="currentColor" d="M14.085 10.79a.75.75 0 0 1 1.455.368 6.756 6.756 0 0 1-12.238 1.981l-.353.907a.75.75 0 0 1-1.398-.545l1.062-2.725a.825.825 0 0 1 1.068-.47l2.726 1.062a.75.75 0 0 1-.545 1.399l-1.355-.53a5.256 5.256 0 0 0 9.578-1.448M8.99 2.75a6.75 6.75 0 0 1 5.756 3.218l.28-1.042a.75.75 0 0 1 1.448.388l-.756 2.826c-.118.44-.571.7-1.01.583l-2.826-.757a.75.75 0 1 1 .388-1.45l1.26.338A5.256 5.256 0 0 0 3.972 7.94l-.06.209a.75.75 0 0 1-1.45-.386l.077-.268A6.76 6.76 0 0 1 8.99 2.75"></path>
-              </svg>
-              <span className="text-[12px] md:text-[14px] font-semibold tracking-[0.05em] uppercase text-[#fff] opacity-80 font-mono">
-                Workflow automation
-              </span>
-            </div>
-            <h2 className="text-[32px] md:text-[48px] lg:text-[56px] font-bold leading-[1.1] tracking-tight mb-4 md:mb-6 max-w-[800px]">
-              Your video creation process — now on autopilot
-            </h2>
-            <p className="text-[16px] md:text-[20px] leading-[1.6] text-[#A1A1AA] max-w-[700px]">
-              Create and publish videos 5x faster with ClippedAI&apos;s web app and API, so you can go on vacation and still keep your content rolling.
-            </p>
-          </ScrollReveal>
+    <section id="how-it-works" className="py-24 md:py-32 relative">
+      <div className="max-w-[1200px] mx-auto px-6 md:px-8">
+        {/* Section header */}
+        <ScrollReveal className="text-center mb-16 md:mb-20">
+          <span className="inline-block text-[12px] md:text-[13px] font-semibold tracking-[0.15em] uppercase text-violet-400 mb-4">
+            How it works
+          </span>
+          <h2 className="text-[32px] md:text-[44px] lg:text-[52px] font-bold leading-[1.1] tracking-[-0.02em] text-white mb-5 max-w-[700px] mx-auto">
+            Three steps to viral clips
+          </h2>
+          <p className="text-[16px] md:text-[18px] leading-[1.7] text-slate-400 max-w-[560px] mx-auto">
+            No editing skills needed. ClippedAI does the heavy lifting so you can focus on creating.
+          </p>
+        </ScrollReveal>
 
-          {/* Workflow image/cards */}
-          <ScrollReveal delay={0.1} className="w-full flex justify-center">
-            <div className="w-full max-w-[1200px]">
-              <img
-                src="https://cdn.prod.website-files.com/6388604483b03a9ecb34d695/684dbfb6a4157e1095cf61af_workflow.avif"
-                alt="Your video creation process — now on autopilot"
-                loading="lazy"
-                width="1200"
-                height="501"
-                className="w-full h-auto object-contain"
-              />
-            </div>
-          </ScrollReveal>
+        {/* Steps */}
+        <div className="grid md:grid-cols-3 gap-8 lg:gap-12 relative">
+          {/* Connecting line (desktop only) */}
+          <div className="hidden md:block absolute top-[48px] left-[16.67%] right-[16.67%] h-[1px] bg-gradient-to-r from-slate-700/0 via-violet-500/30 to-slate-700/0" />
+
+          {HOW_IT_WORKS.map((step, index) => (
+            <ScrollReveal key={step.step} delay={index * 0.15} className="relative">
+              <div className="flex flex-col items-center text-center">
+                {/* Step number */}
+                <div className="relative z-10 w-24 h-24 rounded-2xl flex items-center justify-center mb-8 border border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
+                  <span
+                    className="text-[32px] font-bold bg-clip-text text-transparent"
+                    style={{
+                      backgroundImage: 'linear-gradient(135deg, #8B5CF6, #6366F1)',
+                    }}
+                  >
+                    {step.step}
+                  </span>
+                </div>
+
+                {/* Content */}
+                <h3 className="text-[20px] md:text-[22px] font-semibold text-white mb-3 tracking-tight">
+                  {step.title}
+                </h3>
+                <p className="text-[15px] leading-[1.7] text-slate-400 max-w-[320px]">
+                  {step.description}
+                </p>
+              </div>
+            </ScrollReveal>
+          ))}
         </div>
       </div>
     </section>

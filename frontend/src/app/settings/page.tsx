@@ -1,20 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Separator } from "~/components/ui/separator";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
 import { Switch } from "~/components/ui/switch";
-import { signOut, useSession } from "~/lib/auth-client";
+import { useSession } from "~/lib/auth-client";
 import { track } from "~/lib/datafast";
 import Link from "next/link";
 import { Type, Palette, CheckCircle, AlertCircle, Settings, ArrowLeft, Mail } from "lucide-react";
+import AppShell from "~/components/app-shell";
+import { PageTransition, MotionSkeleton, EASE_OUT_EXPO } from "~/components/motion";
 
 interface UserPreferences {
   fontFamily: string;
@@ -35,7 +37,6 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const { data: session, isPending } = useSession();
-  const isAdmin = Boolean((session?.user as { is_admin?: boolean } | undefined)?.is_admin);
 
   // Load available fonts from backend and inject them into the page
   useEffect(() => {
@@ -139,18 +140,13 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    window.location.href = "/login";
-  };
-
   if (isPending || isFetching) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
         <div className="space-y-4">
-          <Skeleton className="h-4 w-32 mx-auto" />
-          <Skeleton className="h-4 w-48 mx-auto" />
-          <Skeleton className="h-4 w-24 mx-auto" />
+          <MotionSkeleton className="mx-auto" width={128} height={16} />
+          <MotionSkeleton className="mx-auto" width={192} height={16} />
+          <MotionSkeleton className="mx-auto" width={96} height={16} />
         </div>
       </div>
     );
@@ -158,106 +154,98 @@ export default function SettingsPage() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-white">
-        <div className="max-w-4xl mx-auto px-4 py-24">
-          <div className="text-center">
-            <h1 className="text-3xl font-bold text-black mb-4">
-              Sign In Required
-            </h1>
-            <p className="text-gray-600 mb-8">
-              You need to sign in to access your settings
-            </p>
-            <Link href="/login">
-              <Button size="lg">Sign In</Button>
-            </Link>
-          </div>
+      <div className="min-h-screen bg-[#0a0a0f]">
+        <div className="max-w-4xl mx-auto px-4 py-24 text-center">
+          <h1 className="text-3xl font-bold text-white mb-4">Sign In Required</h1>
+          <p className="text-white/40 mb-8">You need to sign in to access your settings.</p>
+          <Link href="/login">
+            <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white">Sign In</Button>
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="border-b bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-            </Link>
-
-            <div className="flex items-center gap-3">
-              {isAdmin && (
-                <Link href="/admin">
-                  <Button variant="outline" size="sm">
-                    Admin
-                  </Button>
-                </Link>
-              )}
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                Sign Out
-              </Button>
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={session.user.image || ""} />
-                <AvatarFallback className="bg-gray-100 text-black text-sm">
-                  {session.user.name?.charAt(0) || session.user.email?.charAt(0) || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden sm:block">
-                <p className="text-sm font-medium text-black">{session.user.name}</p>
-                <p className="text-xs text-gray-500">{session.user.email}</p>
-              </div>
-            </div>
-          </div>
+    <AppShell>
+      <div className="min-h-screen">
+        {/* ── Ambient glows ── */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <motion.div
+            className="absolute -top-40 right-1/4 h-[400px] w-[400px] rounded-full bg-violet-600/[0.03] blur-[120px]"
+            animate={{ scale: [1, 1.12, 1], opacity: [0.4, 0.7, 0.4] }}
+            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+          />
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-16">
-        <div className="max-w-xl mx-auto">
-          <div className="mb-8">
-            <div className="flex items-center gap-2 mb-2">
-              <Settings className="w-6 h-6 text-black" />
-              <h2 className="text-2xl font-bold text-black">
-                Settings
-              </h2>
+        {/* ── Page header ── */}
+        <motion.div
+          className="border-b border-white/[0.06]"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: EASE_OUT_EXPO }}
+        >
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5">
+            <div className="flex items-center gap-3 mb-4">
+              <Link href="/dashboard">
+                <Button variant="ghost" size="sm" className="text-white/40 hover:text-white hover:bg-white/[0.06]">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
+              </Link>
             </div>
-            <p className="text-gray-600">
-              Configure your default preferences for video clip generation
+            <div className="flex items-center gap-2 mb-2">
+              <Settings className="w-5 h-5 text-violet-400" />
+              <h1 className="text-2xl font-bold text-white">Settings</h1>
+            </div>
+            <p className="text-sm text-white/35">
+              Configure your default preferences for video clip generation.
             </p>
           </div>
+        </motion.div>
 
-          <Separator className="my-8" />
+        {/* ── Main content ── */}
+        <PageTransition className="relative max-w-3xl mx-auto px-4 sm:px-6 py-8">
+          <motion.div
+            className="max-w-xl mx-auto space-y-8"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 1 },
+              visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
+            }}
+          >
 
-          <div className="space-y-8">
-            {/* Font Preferences Section */}
-            <div className="space-y-6">
+            {/* ── Font Preferences ── */}
+            <motion.div
+              className="glass-card rounded-xl p-6 space-y-6"
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}
+            >
               <div>
-                <h3 className="text-lg font-semibold text-black mb-1">
+                <h3 className="text-base font-semibold text-white mb-1">
                   Default Font Settings
                 </h3>
-                <p className="text-sm text-gray-600">
-                  These settings will be applied to all new video processing tasks
+                <p className="text-sm text-white/35">
+                  These settings will be applied to all new video processing tasks.
                 </p>
               </div>
 
               {/* Font Family Selector */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-black flex items-center gap-2">
-                  <Type className="w-4 h-4" />
+                <Label className="text-sm font-medium text-white/60 flex items-center gap-2">
+                  <Type className="w-4 h-4 text-violet-400" />
                   Font Family
                 </Label>
                 <Select value={fontFamily} onValueChange={setFontFamily} disabled={isLoading}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full glass-input rounded-lg border-white/[0.08]">
                     <SelectValue placeholder="Select font" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableFonts.map((font) => (
                       <SelectItem key={font.name} value={font.name}>
-                        {font.display_name}
+                        <span style={{ fontFamily: `'${font.name}', system-ui, sans-serif` }}>
+                          {font.display_name}
+                        </span>
                       </SelectItem>
                     ))}
                     {availableFonts.length === 0 && (
@@ -269,10 +257,10 @@ export default function SettingsPage() {
 
               {/* Font Size Slider */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-black">
+                <Label className="text-sm font-medium text-white/60">
                   Font Size: {fontSize}px
                 </Label>
-                <div className="px-2">
+                <div className="px-1">
                   <Slider
                     value={[fontSize]}
                     onValueChange={(value) => setFontSize(value[0])}
@@ -283,7 +271,7 @@ export default function SettingsPage() {
                     className="w-full"
                   />
                 </div>
-                <div className="flex justify-between text-xs text-gray-500">
+                <div className="flex justify-between text-xs text-white/20">
                   <span>12px</span>
                   <span>48px</span>
                 </div>
@@ -291,8 +279,8 @@ export default function SettingsPage() {
 
               {/* Font Color Picker */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-black flex items-center gap-2">
-                  <Palette className="w-4 h-4" />
+                <Label className="text-sm font-medium text-white/60 flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-violet-400" />
                   Font Color
                 </Label>
                 <div className="flex items-center gap-2">
@@ -301,7 +289,7 @@ export default function SettingsPage() {
                     value={fontColor}
                     onChange={(e) => setFontColor(e.target.value)}
                     disabled={isLoading}
-                    className="w-12 h-10 rounded border border-gray-300 cursor-pointer disabled:cursor-not-allowed"
+                    className="w-10 h-8 rounded border border-white/10 cursor-pointer disabled:cursor-not-allowed bg-transparent"
                   />
                   <Input
                     type="text"
@@ -309,18 +297,18 @@ export default function SettingsPage() {
                     onChange={(e) => setFontColor(e.target.value)}
                     disabled={isLoading}
                     placeholder="#FFFFFF"
-                    className="flex-1 h-10"
+                    className="flex-1 h-9 glass-input rounded-lg"
                     pattern="^#[0-9A-Fa-f]{6}$"
                   />
                 </div>
-                <div className="flex gap-2 mt-2">
+                <div className="flex gap-1.5 mt-1">
                   {["#FFFFFF", "#000000", "#FFD700", "#FF6B6B", "#4ECDC4", "#45B7D1"].map((color) => (
                     <button
                       key={color}
                       type="button"
                       onClick={() => setFontColor(color)}
                       disabled={isLoading}
-                      className="w-8 h-8 rounded border-2 border-gray-300 cursor-pointer hover:scale-110 transition-transform disabled:cursor-not-allowed"
+                      className="w-6 h-6 rounded-full border-2 border-white/10 cursor-pointer hover:scale-125 hover:border-white/30 transition-all disabled:cursor-not-allowed"
                       style={{ backgroundColor: color }}
                       title={color}
                     />
@@ -330,8 +318,8 @@ export default function SettingsPage() {
 
               {/* Preview */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-black">Preview</Label>
-                <div className="p-6 bg-black rounded-lg flex items-center justify-center min-h-[100px]">
+                <Label className="text-sm font-medium text-white/60">Preview</Label>
+                <div className="p-6 bg-black/60 rounded-xl border border-white/[0.06] flex items-center justify-center min-h-[100px]">
                   <p
                     style={{
                       color: fontColor,
@@ -346,24 +334,29 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Notifications Section */}
-            <div className="space-y-6">
+            {/* ── Notifications ── */}
+            <motion.div
+              className="glass-card rounded-xl p-6 space-y-5"
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}
+            >
               <div>
-                <h3 className="text-lg font-semibold text-black mb-1">
+                <h3 className="text-base font-semibold text-white mb-1">
                   Notifications
                 </h3>
-                <p className="text-sm text-gray-600">
-                  Manage how you receive updates about your clips
+                <p className="text-sm text-white/35">
+                  Manage how you receive updates about your clips.
                 </p>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="completion-emails" className="flex items-center gap-2 text-sm font-medium text-black cursor-pointer">
-                  <Mail className="w-4 h-4" />
-                  Completion emails
-                  <span className="text-gray-500 font-normal">— get notified when clips are ready</span>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                <Label htmlFor="completion-emails" className="flex items-center gap-3 text-sm font-medium text-white/80 cursor-pointer">
+                  <Mail className="w-4 h-4 text-violet-400" />
+                  <div>
+                    <span>Completion emails</span>
+                    <p className="text-xs text-white/30 font-normal mt-0.5">Get notified when clips are ready</p>
+                  </div>
                 </Label>
                 <Switch
                   id="completion-emails"
@@ -372,24 +365,24 @@ export default function SettingsPage() {
                   disabled={isLoading}
                 />
               </div>
-            </div>
+            </motion.div>
 
-            <Separator className="mb-4" />
+            <Separator className="bg-white/[0.06]" />
 
             {/* Success/Error Messages */}
             {success && (
-              <Alert className="border-green-200 bg-green-50">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <AlertDescription className="text-sm text-green-700">
+              <Alert className="border-emerald-500/20 bg-emerald-500/5">
+                <CheckCircle className="h-4 w-4 text-emerald-400" />
+                <AlertDescription className="text-sm text-emerald-400">
                   Preferences saved successfully!
                 </AlertDescription>
               </Alert>
             )}
 
             {error && (
-              <Alert className="border-red-200 bg-red-50">
-                <AlertCircle className="h-4 w-4 text-red-500" />
-                <AlertDescription className="text-sm text-red-700">
+              <Alert className="border-red-500/20 bg-red-500/5">
+                <AlertCircle className="h-4 w-4 text-red-400" />
+                <AlertDescription className="text-sm text-red-400">
                   {error}
                 </AlertDescription>
               </Alert>
@@ -399,13 +392,13 @@ export default function SettingsPage() {
             <Button
               onClick={handleSavePreferences}
               disabled={isLoading}
-              className="w-full h-11"
+              className="w-full h-12 text-base rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-all glow-violet-sm"
             >
               {isLoading ? "Saving..." : "Save Preferences"}
             </Button>
-          </div>
-        </div>
+          </motion.div>
+        </PageTransition>
       </div>
-    </div>
+    </AppShell>
   );
 }

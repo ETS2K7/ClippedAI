@@ -1,74 +1,78 @@
 'use client';
 
+import { FEATURES } from '~/lib/landing/constants';
 import ScrollReveal from '~/components/landing/animations/ScrollReveal';
 
-export default function ClipAnything() {
+function FeatureIcon({ name }: { name: string }) {
+  if (name === 'sparkles') {
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364-.707-.707M6.343 6.343l-.707-.707m12.728 0-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" />
+        <path fill="currentColor" d="M12 2a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 12 2Zm0 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" opacity="0.2" />
+      </svg>
+    );
+  }
+  if (name === 'crop') {
+    return (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+        <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6.13 1 6 16a2 2 0 0 0 2 2h15M1 6.13 16 6a2 2 0 0 1 2 2v15" />
+      </svg>
+    );
+  }
+  // subtitles
   return (
-    <section id="ai-editing-models" className="py-20 md:py-32 overflow-hidden bg-background">
-      <div className="padding-global">
-        <div className="container-1200">
-          
-          {/* Header */}
-          <ScrollReveal className="flex flex-col items-center text-center mb-12 md:mb-16">
-            <div className="flex items-center gap-2 text-[#999999] opacity-80 mb-4 md:mb-6 leading-none">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="19" fill="none" viewBox="0 0 18 19" className="text-white opacity-80">
-                <path fill="currentColor" d="M6.52 6.174c.528-1.549.793-2.323 1.185-2.536.34-.184.75-.184 1.09 0 .392.213.657.987 1.186 2.536l.306.899c.107.312.16.467.25.597q.12.174.293.293c.13.09.286.143.597.25l.899.306c1.549.53 2.323.794 2.536 1.186.184.34.184.75 0 1.09-.213.392-.987.657-2.536 1.186l-.899.306c-.311.107-.467.16-.597.25q-.174.12-.293.293c-.09.13-.143.286-.25.597l-.306.899c-.53 1.549-.794 2.323-1.186 2.536-.34.184-.75.184-1.09 0-.392-.213-.657-.987-1.186-2.536l-.307-.899c-.106-.311-.16-.467-.248-.597a1.1 1.1 0 0 0-.294-.293c-.13-.09-.285-.143-.597-.25l-.899-.306c-1.549-.53-2.323-.794-2.536-1.186a1.14 1.14 0 0 1 0-1.09c.213-.392.987-.657 2.536-1.186l.899-.307c.312-.106.467-.16.597-.248q.174-.12.293-.294c.09-.13.143-.285.25-.597zM13.098 3.281c.184-.682.277-1.023.397-1.133a.56.56 0 0 1 .76 0c.12.11.212.451.397 1.133.035.13.053.196.083.252.052.099.133.18.232.232.056.03.121.048.252.083.682.185 1.023.277 1.133.397a.56.56 0 0 1 0 .76c-.11.12-.451.212-1.133.397-.13.035-.196.053-.252.083a.56.56 0 0 0-.232.232c-.03.056-.048.121-.083.252-.184.682-.277 1.023-.397 1.133a.56.56 0 0 1-.76 0c-.12-.11-.212-.451-.397-1.133a1.2 1.2 0 0 0-.083-.252.56.56 0 0 0-.232-.232c-.056-.03-.121-.048-.252-.083-.682-.185-1.023-.277-1.133-.397a.56.56 0 0 1 0-.76c.11-.12.451-.212 1.133-.397.13-.035.196-.053.252-.083a.56.56 0 0 0 .232-.232c.03-.056.048-.121.083-.252"></path>
-              </svg>
-              <span className="text-[12px] md:text-[14px] font-semibold tracking-[0.05em] uppercase text-[#fff] opacity-80 font-mono">
-                AI editing models
-              </span>
-            </div>
-            <h2 className="text-[32px] md:text-[48px] lg:text-[56px] font-bold leading-[1.1] tracking-tight mb-4 md:mb-6 max-w-[800px]">
-              AI that understands every pixel of your video
-            </h2>
-            <p className="text-[16px] md:text-[20px] leading-[1.6] text-[#A1A1AA] max-w-[700px]">
-              The most powerful AI editing models that work on any video. Built for speed, accuracy, and creative flexibility.
-            </p>
-          </ScrollReveal>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+      <rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="1.5" />
+      <path stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" d="M7 13h4m-4 3h10m4-3h-6" />
+    </svg>
+  );
+}
 
-          {/* Features Grid */}
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
-            
-            {/* ClipAnything */}
-            <ScrollReveal delay={0.1} className="flex flex-col group cursor-pointer">
-              <div id="clip-anything" className="rounded-2xl lg:rounded-[32px] overflow-hidden mb-6 md:mb-8 bg-[#18181B]/50 border border-white/5 relative aspect-[1.47/1] sm:aspect-[4/3] w-full flex items-center justify-center p-0">
-                <img
-                  src="https://cdn.prod.website-files.com/6388604483b03a9ecb34d695/684c2798958314e4a8958d21_ClipAnything.avif"
-                  alt="ClipAnything"
-                  loading="lazy"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                />
-              </div>
-              <div className="px-2">
-                <h3 className="text-[24px] md:text-[28px] font-bold mb-3 md:mb-4 tracking-tight">ClipAnything</h3>
-                <p className="text-[15px] md:text-[16px] leading-[1.6] text-[#A1A1AA]">
-                  Every other AI clipping tool only works with video podcasts. ClipAnything is the only AI clipping model that turns any genre — vlogs, gaming, sports, interviews, explainer videos — into viral clips in 1 click.
-                </p>
+export default function Features() {
+  return (
+    <section id="features" className="py-24 md:py-32 relative">
+      {/* Subtle background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-800/20 to-transparent pointer-events-none" />
+
+      <div className="relative z-10 max-w-[1200px] mx-auto px-6 md:px-8">
+        {/* Section header */}
+        <ScrollReveal className="text-center mb-16 md:mb-20">
+          <span className="inline-block text-[12px] md:text-[13px] font-semibold tracking-[0.15em] uppercase text-violet-400 mb-4">
+            Features
+          </span>
+          <h2 className="text-[32px] md:text-[44px] lg:text-[52px] font-bold leading-[1.1] tracking-[-0.02em] text-white mb-5 max-w-[700px] mx-auto">
+            Everything happens automatically
+          </h2>
+          <p className="text-[16px] md:text-[18px] leading-[1.7] text-slate-400 max-w-[560px] mx-auto">
+            Drop your video, and ClippedAI handles transcription, clip selection, reframing, and subtitles in one pipeline.
+          </p>
+        </ScrollReveal>
+
+        {/* Feature cards */}
+        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+          {FEATURES.map((feature, index) => (
+            <ScrollReveal key={feature.title} delay={0.1 + index * 0.1}>
+              <div className="group relative h-full">
+                {/* Hover glow */}
+                <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-violet-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-[1px]" />
+                
+                <div className="relative h-full rounded-2xl border border-slate-700/50 bg-slate-800/30 backdrop-blur-sm p-8 transition-colors duration-300 group-hover:border-violet-500/30">
+                  {/* Icon */}
+                  <div className="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-6 group-hover:bg-violet-500/15 transition-colors">
+                    <FeatureIcon name={feature.icon} />
+                  </div>
+
+                  {/* Content */}
+                  <h3 className="text-[20px] font-semibold text-white mb-3 tracking-tight">
+                    {feature.title}
+                  </h3>
+                  <p className="text-[15px] leading-[1.7] text-slate-400">
+                    {feature.description}
+                  </p>
+                </div>
               </div>
             </ScrollReveal>
-
-            {/* ReframeAnything */}
-            <ScrollReveal delay={0.2} className="flex flex-col group cursor-pointer">
-              <div id="ai-reframe" className="rounded-2xl lg:rounded-[32px] overflow-hidden mb-6 md:mb-8 bg-[#18181B]/50 border border-white/5 relative aspect-[1.47/1] sm:aspect-[4/3] w-full flex items-center justify-center p-0">
-                <video
-                  poster="https://cdn.prod.website-files.com/6388604483b03a9ecb34d695/684c2bbbf8b365ec027deb37_ReframeAnything.avif"
-                  src="https://cdn.prod.website-files.com/6388604483b03a9ecb34d695%2F684c290acf00706f1ffb2fe4_20250613-163457-transcode.mp4"
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                />
-              </div>
-              <div className="px-2">
-                <h3 className="text-[24px] md:text-[28px] font-bold mb-3 md:mb-4 tracking-tight">ReframeAnything</h3>
-                <p className="text-[15px] md:text-[16px] leading-[1.6] text-[#A1A1AA]">
-                  The only AI reframe model that resizes any video for any platform and keeps moving subjects centered with AI object tracking. If you want more control, use manual tracking to instruct AI exactly what to follow.
-                </p>
-              </div>
-            </ScrollReveal>
-
-          </div>
+          ))}
         </div>
       </div>
     </section>

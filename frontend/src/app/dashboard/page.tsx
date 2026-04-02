@@ -1,26 +1,24 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Progress } from "~/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Separator } from "~/components/ui/separator";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Card, CardContent } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
-import { signOut, useSession } from "~/lib/auth-client";
+import { useSession } from "~/lib/auth-client";
 import { track } from "~/lib/datafast";
 import { formatSupportMessage, parseApiError } from "~/lib/api-error";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, Menu, X, LogOut, List, Shield, Settings } from "lucide-react";
+import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, LinkIcon } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
-import LandingPage from "~/components/landing-page";
-// import { isLandingOnlyModeEnabled } from "~/lib/app-flags";
+import AppShell from "~/components/app-shell";
+import { PageTransition, GlassCard, SpringButton, MotionSkeleton, EASE_OUT_EXPO, SPRING_SNAPPY } from "~/components/motion";
 
 interface LatestTask {
   id: string;
@@ -87,7 +85,6 @@ export default function Home() {
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { data: session, isPending } = useSession();
-  const isAdmin = Boolean((session?.user as { is_admin?: boolean } | undefined)?.is_admin);
 
   // Font customization states
   const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
@@ -126,8 +123,6 @@ export default function Home() {
   // Latest task state
   const [latestTask, setLatestTask] = useState<LatestTask | null>(null);
   const [isLoadingLatest, setIsLoadingLatest] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const taskApiUrl = "/api/tasks";
   const youtubeThumbnailUrl = sourceType === "youtube" ? getYouTubeThumbnailUrl(url) : null;
 
@@ -242,7 +237,7 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           if (data.tasks && data.tasks.length > 0) {
-            setLatestTask(data.tasks[0]); // Get the first (latest) task
+            setLatestTask(data.tasks[0]);
           }
         }
       } catch (error) {
@@ -338,26 +333,21 @@ export default function Home() {
 
   const canUploadCustomFonts = true;
 
-  const handleSignOut = async () => {
-    await signOut();
-    window.location.href = "/login";
-  };
-
   const getStepIcon = (step: string) => {
     const iconMap: Record<string, React.ReactElement> = {
-      validation: <Loader2 className="w-4 h-4 animate-spin text-blue-500" />,
-      user_check: <Loader2 className="w-4 h-4 animate-spin text-blue-500" />,
-      source_analysis: <Loader2 className="w-4 h-4 animate-spin text-blue-500" />,
-      youtube_info: <Youtube className="w-4 h-4 text-red-500" />,
-      database_save: <Loader2 className="w-4 h-4 animate-spin text-blue-500" />,
-      download: <Loader2 className="w-4 h-4 animate-spin text-green-500" />,
-      transcript: <Loader2 className="w-4 h-4 animate-spin text-purple-500" />,
-      ai_analysis: <Loader2 className="w-4 h-4 animate-spin text-orange-500" />,
-      clip_generation: <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />,
-      save_clips: <Loader2 className="w-4 h-4 animate-spin text-pink-500" />,
-      complete: <CheckCircle className="w-4 h-4 text-green-500" />,
+      validation: <Loader2 className="w-4 h-4 animate-spin text-violet-400" />,
+      user_check: <Loader2 className="w-4 h-4 animate-spin text-violet-400" />,
+      source_analysis: <Loader2 className="w-4 h-4 animate-spin text-violet-400" />,
+      youtube_info: <Youtube className="w-4 h-4 text-red-400" />,
+      database_save: <Loader2 className="w-4 h-4 animate-spin text-violet-400" />,
+      download: <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />,
+      transcript: <Loader2 className="w-4 h-4 animate-spin text-purple-400" />,
+      ai_analysis: <Loader2 className="w-4 h-4 animate-spin text-amber-400" />,
+      clip_generation: <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />,
+      save_clips: <Loader2 className="w-4 h-4 animate-spin text-pink-400" />,
+      complete: <CheckCircle className="w-4 h-4 text-emerald-500" />,
     };
-    return iconMap[step] || <Loader2 className="w-4 h-4 animate-spin text-gray-500" />;
+    return iconMap[step] || <Loader2 className="w-4 h-4 animate-spin text-white/40" />;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -405,7 +395,7 @@ export default function Home() {
         videoUrl = uploadResult.video_path;
       }
 
-      // Step 1: Start the task (using new refactored endpoint)
+      // Step 1: Start the task
       const startResponse = await fetch("/api/tasks/create", {
         method: 'POST',
         headers: {
@@ -469,314 +459,206 @@ export default function Home() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
         <div className="space-y-4">
-          <Skeleton className="h-4 w-32 mx-auto" />
-          <Skeleton className="h-4 w-48 mx-auto" />
-          <Skeleton className="h-4 w-24 mx-auto" />
+          <MotionSkeleton className="mx-auto" width={128} height={16} />
+          <MotionSkeleton className="mx-auto" width={192} height={16} />
+          <MotionSkeleton className="mx-auto" width={96} height={16} />
         </div>
       </div>
     );
   }
 
   if (!session?.user) {
-    return null; // Layout will handle redirect
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header */}
-      <div className="border-b bg-white relative">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <Image
-                src="/logo.png"
-                alt="ClippedAI"
-                width={24}
-                height={24}
-                className="rounded-lg"
-              />
-              <h1 className="text-xl font-bold text-black">ClippedAI</h1>
-            </div>
-
-            {/* Desktop nav */}
-            <div className="hidden md:flex items-center gap-2">
-              <Link href="/list">
-                <Button variant="outline" size="sm">
-                  All Generations
-                </Button>
-              </Link>
-              {isAdmin && (
-                <Link href="/admin">
-                  <Button variant="outline" size="sm">
-                    Admin
-                  </Button>
-                </Link>
-              )}
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                Sign Out
-              </Button>
-              <Link href="/settings" className="flex items-center gap-3 hover:bg-gray-50 rounded-lg px-3 py-2 transition-colors cursor-pointer">
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={session.user.image || ""} />
-                  <AvatarFallback className="bg-gray-100 text-black text-sm">
-                    {session.user.name?.charAt(0) || session.user.email?.charAt(0) || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-black">{session.user.name}</p>
-                  <p className="text-xs text-gray-500">{session.user.email}</p>
-                </div>
-              </Link>
-            </div>
-
-            {/* Mobile hamburger */}
-            <div className="flex items-center gap-2 md:hidden">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2"
-                aria-label="Toggle menu"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </Button>
-            </div>
-          </div>
+    <AppShell>
+      <div className="min-h-screen">
+        {/* ── Ambient Background Glows ── */}
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <motion.div
+            className="absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-violet-600/[0.04] blur-[150px]"
+            animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full bg-blue-600/[0.03] blur-[120px]"
+            animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.7, 0.4] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          />
         </div>
 
-        {/* Mobile menu dropdown */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t bg-white absolute left-0 right-0 z-50 shadow-lg">
-            <div className="px-4 py-3 space-y-1">
-              {/* User info */}
-              <Link
-                href="/settings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-gray-50 transition-colors"
-              >
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={session.user.image || ""} />
-                  <AvatarFallback className="bg-gray-100 text-black text-sm">
-                    {session.user.name?.charAt(0) || session.user.email?.charAt(0) || "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-black truncate">{session.user.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
-                </div>
-              </Link>
-
-              <Separator />
-
-
-              {/* Nav links */}
-              <Link
-                href="/list"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-stone-700 hover:bg-gray-50 transition-colors"
-              >
-                <List className="w-4 h-4 text-stone-400" />
-                All Generations
-              </Link>
-              {isAdmin && (
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-stone-700 hover:bg-gray-50 transition-colors"
-                >
-                  <Shield className="w-4 h-4 text-stone-400" />
-                  Admin
-                </Link>
-              )}
-              <Link
-                href="/settings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-stone-700 hover:bg-gray-50 transition-colors"
-              >
-                <Settings className="w-4 h-4 text-stone-400" />
-                Settings
-              </Link>
-
-              <Separator />
-
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  handleSignOut();
-                }}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
-              >
-                <LogOut className="w-4 h-4" />
-                Sign Out
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        {/* Latest Generation Banner */}
-        {latestTask && (
-          <Link href={`/tasks/${latestTask.id}`} className="block mb-8">
-            <div className="flex items-center justify-between p-4 rounded-xl border border-stone-200 bg-stone-50/50 hover:bg-stone-50 transition-colors group">
-              <div className="flex items-center gap-4 min-w-0">
-                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-stone-900 flex items-center justify-center">
-                  <Film className="w-5 h-5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-stone-900 truncate">
-                    {latestTask.source_title}
-                  </p>
-                  <div className="flex items-center gap-2 text-xs text-stone-500 mt-0.5">
-                    <span className="capitalize">{latestTask.source_type}</span>
-                    <span>&middot;</span>
-                    <span>{new Date(latestTask.created_at).toLocaleDateString()}</span>
-                    <span>&middot;</span>
-                    <span>{latestTask.clips_count} {latestTask.clips_count === 1 ? "clip" : "clips"}</span>
+        {/* ── Main Content ── */}
+        <PageTransition className="relative max-w-6xl mx-auto px-6 py-10">
+          {/* Latest Generation Banner */}
+          {latestTask && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: EASE_OUT_EXPO }}
+              className="mb-8"
+            >
+            <Link href={`/tasks/${latestTask.id}`} className="block">
+              <GlassCard className="p-4" hoverScale={1.005}>
+                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                    <Film className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white/90 truncate">
+                      {latestTask.source_title}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-white/40 mt-0.5">
+                      <span className="capitalize">{latestTask.source_type}</span>
+                      <span>&middot;</span>
+                      <span>{new Date(latestTask.created_at).toLocaleDateString()}</span>
+                      <span>&middot;</span>
+                      <span>{latestTask.clips_count} {latestTask.clips_count === 1 ? "clip" : "clips"}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                {latestTask.status === "completed" ? (
-                  <Badge className="bg-green-100 text-green-800 text-xs">
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Completed
-                  </Badge>
-                ) : latestTask.status === "processing" ? (
-                  <Badge className="bg-blue-100 text-blue-800 text-xs">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    Processing
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-xs">{latestTask.status}</Badge>
-                )}
-                <ArrowRight className="w-4 h-4 text-stone-400 group-hover:text-stone-600 transition-colors" />
-              </div>
-            </div>
-          </Link>
-        )}
-
-        {isLoadingLatest && (
-          <div className="mb-8 p-4 rounded-xl border border-stone-200">
-            <div className="flex items-center gap-4">
-              <Skeleton className="w-10 h-10 rounded-lg" />
-              <div>
-                <Skeleton className="h-4 w-48 mb-1.5" />
-                <Skeleton className="h-3 w-32" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Two Column Layout */}
-        <div className="flex flex-col lg:flex-row gap-10 items-start">
-          {/* Left Column — Form */}
-          <div className="flex-1 min-w-0">
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-stone-900 mb-2">
-                Create New Clip
-              </h2>
-              <p className="text-stone-500">
-                Paste a YouTube link or upload a video — AI handles the rest.
-              </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Source Type Tabs */}
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSourceType("youtube");
-                      setFileName(null);
-                      fileRef.current = null;
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    disabled={isLoading}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      sourceType === "youtube"
-                        ? "bg-stone-900 text-white shadow-sm"
-                        : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-                    }`}
-                  >
-                    <Youtube className="w-4 h-4" />
-                    YouTube URL
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSourceType("upload")}
-                    disabled={isLoading}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                      sourceType === "upload"
-                        ? "bg-stone-900 text-white shadow-sm"
-                        : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-                    }`}
-                  >
-                    <Upload className="w-4 h-4" />
-                    Upload Video
-                  </button>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  {latestTask.status === "completed" ? (
+                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Completed
+                    </Badge>
+                  ) : latestTask.status === "processing" ? (
+                    <Badge className="bg-violet-500/10 text-violet-400 border border-violet-500/20 text-xs">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      Processing
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs text-white/50 border-white/10">{latestTask.status}</Badge>
+                  )}
+                  <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
                 </div>
+              </div>
+              </GlassCard>
+            </Link>
+            </motion.div>
+          )}
 
-                {/* URL / Upload Input */}
-                {sourceType === "youtube" ? (
-                  <div className="relative">
-                    <Youtube className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
-                    <Input
-                      id="youtube-url"
-                      type="url"
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
+          {isLoadingLatest && (
+            <div className="mb-8 p-4 rounded-xl glass-card">
+              <div className="flex items-center gap-4">
+                <Skeleton className="w-10 h-10 rounded-lg bg-white/[0.06]" />
+                <div>
+                  <Skeleton className="h-4 w-48 mb-1.5 bg-white/[0.06]" />
+                  <Skeleton className="h-3 w-32 bg-white/[0.06]" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Two Column Layout */}
+          <div className="flex flex-col lg:flex-row gap-10 items-start">
+            {/* Left Column — Form */}
+            <div className="flex-1 min-w-0">
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  Create New Clip
+                </h2>
+                <p className="text-white/40">
+                  Paste a YouTube link or upload a video — AI handles the rest.
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Source Type Tabs */}
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSourceType("youtube");
+                        setFileName(null);
+                        fileRef.current = null;
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
                       disabled={isLoading}
-                      className="h-14 pl-12 text-base rounded-xl border-stone-300 focus:border-stone-500 placeholder:text-stone-400"
-                    />
-                  </div>
-                ) : (
-                  <div
-                    className="relative border-2 border-dashed border-stone-300 rounded-xl p-8 text-center hover:border-stone-400 transition-colors cursor-pointer"
-                    onClick={() => !isLoading && fileInputRef.current?.click()}
-                  >
-                    <input
-                      id="video-upload"
-                      type="file"
-                      accept="video/*"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        sourceType === "youtube"
+                          ? "bg-white/10 text-white border border-white/10 shadow-sm"
+                          : "bg-white/[0.03] text-white/40 border border-transparent hover:bg-white/[0.06] hover:text-white/60"
+                      }`}
+                    >
+                      <Youtube className="w-4 h-4" />
+                      YouTube URL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSourceType("upload")}
                       disabled={isLoading}
-                      className="hidden"
-                    />
-                    <Upload className="w-8 h-8 text-stone-400 mx-auto mb-3" />
-                    {fileName ? (
-                      <p className="text-sm font-medium text-stone-900">{fileName}</p>
-                    ) : (
-                      <>
-                        <p className="text-sm font-medium text-stone-700">Drop a video file here or click to browse</p>
-                        <p className="text-xs text-stone-400 mt-1">MP4, MOV, AVI up to 500MB</p>
-                      </>
-                    )}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                        sourceType === "upload"
+                          ? "bg-white/10 text-white border border-white/10 shadow-sm"
+                          : "bg-white/[0.03] text-white/40 border border-transparent hover:bg-white/[0.06] hover:text-white/60"
+                      }`}
+                    >
+                      <Upload className="w-4 h-4" />
+                      Upload Video
+                    </button>
                   </div>
-                )}
-              </div>
 
-              {/* Caption & Style Section */}
-              <Card className="border-stone-200">
-                <CardContent className="px-4 pt-0 pb-2.5 space-y-2.5">
-                  <div className="flex items-center gap-2 text-sm font-medium text-stone-900">
-                    <Sparkles className="w-4 h-4" />
+                  {/* URL / Upload Input */}
+                  {sourceType === "youtube" ? (
+                    <div className="relative">
+                      <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/25" />
+                      <Input
+                        id="youtube-url"
+                        type="url"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        disabled={isLoading}
+                        className="h-14 pl-12 text-base rounded-xl glass-input"
+                      />
+                    </div>
+                  ) : (
+                    <div
+                      className="relative border border-dashed border-white/10 rounded-xl p-8 text-center hover:border-white/20 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                      onClick={() => !isLoading && fileInputRef.current?.click()}
+                    >
+                      <input
+                        id="video-upload"
+                        type="file"
+                        accept="video/*"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        disabled={isLoading}
+                        className="hidden"
+                      />
+                      <Upload className="w-8 h-8 text-white/20 mx-auto mb-3" />
+                      {fileName ? (
+                        <p className="text-sm font-medium text-white/80">{fileName}</p>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium text-white/50">Drop a video file here or click to browse</p>
+                          <p className="text-xs text-white/25 mt-1">MP4, MOV, AVI up to 500MB</p>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Caption & Style Section */}
+                <div className="glass-card rounded-xl p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-medium text-white/80">
+                    <Sparkles className="w-4 h-4 text-violet-400" />
                     Style & Captions
                   </div>
 
                   {/* Caption Template Selector */}
                   <div className="space-y-2">
-                    <label className="text-sm text-stone-600">
+                    <label className="text-sm text-white/40">
                       Caption Style
                     </label>
                     <Select value={captionTemplate} onValueChange={handleTemplateChange} disabled={isLoading}>
-                      <SelectTrigger className="w-full h-11">
+                      <SelectTrigger className="w-full h-11 glass-input rounded-lg border-white/[0.08]">
                         <SelectValue>
                           {availableTemplates.find(t => t.id === captionTemplate)?.name || "Select style"}
                         </SelectValue>
@@ -786,7 +668,7 @@ export default function Home() {
                           availableTemplates.map((template) => (
                             <SelectItem key={template.id} value={template.id} className="py-3">
                               <span className="font-medium">{template.name}</span>
-                              <span className="text-xs text-gray-500 ml-2">{template.description}</span>
+                              <span className="text-xs text-white/40 ml-2">{template.description}</span>
                             </SelectItem>
                           ))
                         ) : (
@@ -798,12 +680,12 @@ export default function Home() {
 
                   {/* B-Roll Toggle */}
                   {brollAvailable && (
-                    <div className="flex items-center justify-between p-3 border rounded-lg bg-stone-50">
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                       <div className="flex items-center gap-3">
-                        <Film className="w-4 h-4 text-purple-500" />
+                        <Film className="w-4 h-4 text-purple-400" />
                         <div>
-                          <h3 className="text-sm font-medium text-stone-900">AI B-Roll</h3>
-                          <p className="text-xs text-stone-500">Auto-add stock footage from Pexels</p>
+                          <h3 className="text-sm font-medium text-white/80">AI B-Roll</h3>
+                          <p className="text-xs text-white/30">Auto-add stock footage from Pexels</p>
                         </div>
                       </div>
                       <Switch
@@ -815,12 +697,12 @@ export default function Home() {
                   )}
 
                   {/* Output format */}
-                  <div className="flex items-center justify-between p-3 border rounded-lg bg-stone-50">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                     <div className="flex items-center gap-3">
-                      <Monitor className="w-4 h-4 text-blue-500" />
+                      <Monitor className="w-4 h-4 text-blue-400" />
                       <div>
-                        <h3 className="text-sm font-medium text-stone-900">Wide format</h3>
-                        <p className="text-xs text-stone-500">Keep original aspect ratio instead of 9:16 vertical</p>
+                        <h3 className="text-sm font-medium text-white/80">Wide format</h3>
+                        <p className="text-xs text-white/30">Keep original aspect ratio instead of 9:16 vertical</p>
                       </div>
                     </div>
                     <Switch
@@ -831,12 +713,12 @@ export default function Home() {
                   </div>
 
                   {/* Add subtitles */}
-                  <div className="flex items-center justify-between p-3 border rounded-lg bg-stone-50">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
                     <div className="flex items-center gap-3">
-                      <Type className="w-4 h-4 text-emerald-500" />
+                      <Type className="w-4 h-4 text-emerald-400" />
                       <div>
-                        <h3 className="text-sm font-medium text-stone-900">Add subtitles</h3>
-                        <p className="text-xs text-stone-500">Burn captions onto clips (disable for faster processing)</p>
+                        <h3 className="text-sm font-medium text-white/80">Add subtitles</h3>
+                        <p className="text-xs text-white/30">Burn captions onto clips (disable for faster processing)</p>
                       </div>
                     </div>
                     <Switch
@@ -845,28 +727,26 @@ export default function Home() {
                       disabled={isLoading}
                     />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
 
-              {/* Font Customization Section */}
-              <div
-                className={`transition-all duration-500 ease-in-out overflow-hidden ${
-                  addSubtitles
-                    ? "max-h-[800px] opacity-100"
-                    : "max-h-0 opacity-0 pointer-events-none"
-                }`}
-              >
-              <Card className="border-stone-200">
-                <CardContent className="px-4 pt-0 pb-2.5 space-y-2.5">
+                {/* Font Customization Section */}
+                <div
+                  className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                    addSubtitles
+                      ? "max-h-[800px] opacity-100"
+                      : "max-h-0 opacity-0 pointer-events-none"
+                  }`}
+                >
+                <div className="glass-card rounded-xl p-4 space-y-3">
                   <div
                     className="flex items-center justify-between cursor-pointer"
                     onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
                   >
-                    <div className="flex items-center gap-2 text-sm font-medium text-stone-900">
-                      <Paintbrush className="w-4 h-4" />
+                    <div className="flex items-center gap-2 text-sm font-medium text-white/80">
+                      <Paintbrush className="w-4 h-4 text-violet-400" />
                       Font Customization
                     </div>
-                    <button type="button" className="text-xs text-stone-500 hover:text-stone-700 transition-colors">
+                    <button type="button" className="text-xs text-white/30 hover:text-white/50 transition-colors">
                       {showAdvancedOptions ? "Hide" : "Show"}
                     </button>
                   </div>
@@ -875,11 +755,11 @@ export default function Home() {
                     <div className="space-y-5 pt-1">
                       {/* Font Family Selector */}
                       <div className="space-y-2">
-                        <label className="text-sm text-stone-600 flex items-center gap-2">
+                        <label className="text-sm text-white/40 flex items-center gap-2">
                           <Type className="w-3.5 h-3.5" />
                           Font Family
                         </label>
-                        <div className="flex items-center justify-between gap-3 text-xs text-stone-500">
+                        <div className="flex items-center justify-between gap-3 text-xs text-white/30">
                           <span>{availableFonts.length} font{availableFonts.length === 1 ? "" : "s"} available</span>
                           <input
                             ref={fontUploadInputRef}
@@ -894,6 +774,7 @@ export default function Home() {
                             size="sm"
                             disabled={isLoading || isUploadingFont || !canUploadCustomFonts}
                             onClick={() => fontUploadInputRef.current?.click()}
+                            className="border-white/10 text-white/50 hover:text-white hover:bg-white/[0.06]"
                           >
                             {isUploadingFont ? "Uploading..." : "Upload Font"}
                           </Button>
@@ -905,9 +786,10 @@ export default function Home() {
                           onChange={(e) => setFontSearch(e.target.value)}
                           placeholder="Search fonts"
                           disabled={isLoading}
+                          className="glass-input rounded-lg"
                         />
                         <Select value={fontFamily} onValueChange={setFontFamily} disabled={isLoading}>
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full glass-input rounded-lg border-white/[0.08]">
                             <SelectValue placeholder="Select font" />
                           </SelectTrigger>
                           <SelectContent>
@@ -929,7 +811,7 @@ export default function Home() {
                           </SelectContent>
                         </Select>
                         {fontLoadError && (
-                          <p className="text-xs text-amber-700">{fontLoadError}</p>
+                          <p className="text-xs text-amber-400/80">{fontLoadError}</p>
                         )}
                       </div>
 
@@ -937,7 +819,7 @@ export default function Home() {
                       <div className="grid grid-cols-2 gap-4">
                         {/* Font Size Slider */}
                         <div className="space-y-2">
-                          <label className="text-sm text-stone-600">
+                          <label className="text-sm text-white/40">
                             Size: {fontSize}px
                           </label>
                           <div className="px-1">
@@ -951,7 +833,7 @@ export default function Home() {
                               className="w-full"
                             />
                           </div>
-                          <div className="flex justify-between text-xs text-stone-400">
+                          <div className="flex justify-between text-xs text-white/20">
                             <span>12px</span>
                             <span>48px</span>
                           </div>
@@ -959,7 +841,7 @@ export default function Home() {
 
                         {/* Font Color Picker */}
                         <div className="space-y-2">
-                          <label className="text-sm text-stone-600 flex items-center gap-1.5">
+                          <label className="text-sm text-white/40 flex items-center gap-1.5">
                             <Palette className="w-3.5 h-3.5" />
                             Color
                           </label>
@@ -969,7 +851,7 @@ export default function Home() {
                               value={fontColor}
                               onChange={(e) => setFontColor(e.target.value)}
                               disabled={isLoading}
-                              className="w-10 h-8 rounded border border-stone-300 cursor-pointer disabled:cursor-not-allowed"
+                              className="w-10 h-8 rounded border border-white/10 cursor-pointer disabled:cursor-not-allowed bg-transparent"
                             />
                             <Input
                               type="text"
@@ -977,7 +859,7 @@ export default function Home() {
                               onChange={(e) => setFontColor(e.target.value)}
                               disabled={isLoading}
                               placeholder="#FFFFFF"
-                              className="flex-1 h-8 text-xs"
+                              className="flex-1 h-8 text-xs glass-input rounded-lg"
                               pattern="^#[0-9A-Fa-f]{6}$"
                             />
                           </div>
@@ -988,7 +870,7 @@ export default function Home() {
                                 type="button"
                                 onClick={() => setFontColor(color)}
                                 disabled={isLoading}
-                                className="w-5 h-5 rounded border-2 border-stone-300 cursor-pointer hover:scale-110 transition-transform disabled:cursor-not-allowed"
+                                className="w-5 h-5 rounded-full border-2 border-white/10 cursor-pointer hover:scale-125 hover:border-white/30 transition-all disabled:cursor-not-allowed"
                                 style={{ backgroundColor: color }}
                                 title={color}
                               />
@@ -998,312 +880,301 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-              </div>
-
-              {isLoading && (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-stone-600">Processing</span>
-                      <span className="text-stone-900 font-medium">{progress}%</span>
-                    </div>
-                    <Progress value={progress} className="h-2" />
-                  </div>
-
-                  {currentStep && statusMessage && (
-                    <div className="bg-stone-50 rounded-xl p-4 space-y-3 border border-stone-200">
-                      <div className="flex items-center gap-3">
-                        {getStepIcon(currentStep)}
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-stone-900">{statusMessage}</p>
-                          {sourceTitle && (
-                            <p className="text-xs text-stone-500 mt-1">Processing: {sourceTitle}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'validation' || currentStep === 'user_check' ? 'bg-blue-100' : progress > 15 ? 'bg-green-100' : 'bg-stone-100'}`}>
-                          <CheckCircle className={`w-3 h-3 ${progress > 15 ? 'text-green-500' : 'text-stone-400'}`} />
-                          <span className={progress > 15 ? 'text-green-700' : 'text-stone-600'}>Validation</span>
-                        </div>
-                        <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'download' || currentStep === 'youtube_info' ? 'bg-green-100' : progress > 30 ? 'bg-green-100' : 'bg-stone-100'}`}>
-                          <CheckCircle className={`w-3 h-3 ${progress > 30 ? 'text-green-500' : 'text-stone-400'}`} />
-                          <span className={progress > 30 ? 'text-green-700' : 'text-stone-600'}>Download</span>
-                        </div>
-                        <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'transcript' ? 'bg-purple-100' : progress > 45 ? 'bg-green-100' : 'bg-stone-100'}`}>
-                          <CheckCircle className={`w-3 h-3 ${progress > 45 ? 'text-green-500' : 'text-stone-400'}`} />
-                          <span className={progress > 45 ? 'text-green-700' : 'text-stone-600'}>Transcript</span>
-                        </div>
-                        <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'ai_analysis' ? 'bg-orange-100' : progress > 60 ? 'bg-green-100' : 'bg-stone-100'}`}>
-                          <CheckCircle className={`w-3 h-3 ${progress > 60 ? 'text-green-500' : 'text-stone-400'}`} />
-                          <span className={progress > 60 ? 'text-green-700' : 'text-stone-600'}>AI Analysis</span>
-                        </div>
-                        <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'clip_generation' ? 'bg-indigo-100' : progress > 75 ? 'bg-green-100' : 'bg-stone-100'}`}>
-                          <CheckCircle className={`w-3 h-3 ${progress > 75 ? 'text-green-500' : 'text-stone-400'}`} />
-                          <span className={progress > 75 ? 'text-green-700' : 'text-stone-600'}>Create Clips</span>
-                        </div>
-                        <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'complete' ? 'bg-green-100' : progress >= 100 ? 'bg-green-100' : 'bg-stone-100'}`}>
-                          <CheckCircle className={`w-3 h-3 ${progress >= 100 ? 'text-green-500' : 'text-stone-400'}`} />
-                          <span className={progress >= 100 ? 'text-green-700' : 'text-stone-600'}>Complete</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              )}
+                </div>
 
-              {error && (
-                <Alert className="border-red-200 bg-red-50">
-                  <AlertCircle className="h-4 w-4 text-red-500" />
-                  <AlertDescription className="text-sm text-red-700">
-                    {error}
-                  </AlertDescription>
-                </Alert>
-              )}
+                {isLoading && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/40">Processing</span>
+                        <span className="text-white/70 font-medium">{progress}%</span>
+                      </div>
+                      <Progress value={progress} className="h-2" />
+                    </div>
 
-              <p className="text-xs text-stone-500">
-                Completion emails use your user preference in{" "}
-                <Link href="/settings" className="font-medium text-stone-700 underline underline-offset-2">
-                  Settings
-                </Link>.
-              </p>
+                    {currentStep && statusMessage && (
+                      <div className="glass-card rounded-xl p-4 space-y-3">
+                        <div className="flex items-center gap-3">
+                          {getStepIcon(currentStep)}
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-white/80">{statusMessage}</p>
+                            {sourceTitle && (
+                              <p className="text-xs text-white/30 mt-1">Processing: {sourceTitle}</p>
+                            )}
+                          </div>
+                        </div>
 
-              <Button
-                type="submit"
-                className="w-full h-12 text-base rounded-xl"
-                disabled={
-                  (sourceType === "youtube" && !url.trim()) ||
-                  (sourceType === "upload" && !fileRef.current) ||
-                  isLoading
-                }
-              >
-                {isLoading ? "Processing..." : "Process Video"}
-              </Button>
-            </form>
-          </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'validation' || currentStep === 'user_check' ? 'bg-violet-500/10' : progress > 15 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 15 ? 'text-emerald-400' : 'text-white/20'}`} />
+                            <span className={progress > 15 ? 'text-emerald-400' : 'text-white/30'}>Validation</span>
+                          </div>
+                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'download' || currentStep === 'youtube_info' ? 'bg-emerald-500/10' : progress > 30 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 30 ? 'text-emerald-400' : 'text-white/20'}`} />
+                            <span className={progress > 30 ? 'text-emerald-400' : 'text-white/30'}>Download</span>
+                          </div>
+                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'transcript' ? 'bg-purple-500/10' : progress > 45 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 45 ? 'text-emerald-400' : 'text-white/20'}`} />
+                            <span className={progress > 45 ? 'text-emerald-400' : 'text-white/30'}>Transcript</span>
+                          </div>
+                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'ai_analysis' ? 'bg-amber-500/10' : progress > 60 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 60 ? 'text-emerald-400' : 'text-white/20'}`} />
+                            <span className={progress > 60 ? 'text-emerald-400' : 'text-white/30'}>AI Analysis</span>
+                          </div>
+                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'clip_generation' ? 'bg-indigo-500/10' : progress > 75 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 75 ? 'text-emerald-400' : 'text-white/20'}`} />
+                            <span className={progress > 75 ? 'text-emerald-400' : 'text-white/30'}>Create Clips</span>
+                          </div>
+                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'complete' ? 'bg-emerald-500/10' : progress >= 100 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress >= 100 ? 'text-emerald-400' : 'text-white/20'}`} />
+                            <span className={progress >= 100 ? 'text-emerald-400' : 'text-white/30'}>Complete</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
-          {/* Right Column — Phone Preview */}
-          <div
-            className={`hidden lg:block flex-shrink-0 overflow-hidden transition-all duration-500 ease-in-out ${
-              sourceType === "upload"
-                ? "w-0 opacity-0"
-                : "w-[340px] opacity-100"
-            }`}
-          >
+                {error && (
+                  <Alert className="border-red-500/20 bg-red-500/5">
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                    <AlertDescription className="text-sm text-red-400">
+                      {error}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <p className="text-xs text-white/25">
+                  Completion emails use your user preference in{" "}
+                  <Link href="/settings" className="font-medium text-white/40 underline underline-offset-2 hover:text-white/60 transition-colors">
+                    Settings
+                  </Link>.
+                </p>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 text-base rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-all glow-violet-sm"
+                  disabled={
+                    (sourceType === "youtube" && !url.trim()) ||
+                    (sourceType === "upload" && !fileRef.current) ||
+                    isLoading
+                  }
+                >
+                  {isLoading ? "Processing..." : "Generate Clips"}
+                </Button>
+              </form>
+            </div>
+
+            {/* Right Column — Phone Preview */}
             <div
-              className={`w-[340px] transition-all duration-500 ease-in-out ${
+              className={`hidden lg:block flex-shrink-0 overflow-hidden transition-all duration-500 ease-in-out ${
                 sourceType === "upload"
-                  ? "translate-x-6 scale-[0.97] opacity-0"
-                  : "translate-x-0 scale-100 opacity-100"
+                  ? "w-0 opacity-0"
+                  : "w-[340px] opacity-100"
               }`}
             >
-            <div className="lg:sticky lg:top-8">
-              <div className="flex items-center justify-center gap-2 mb-5 text-sm text-stone-400">
-                <Monitor className="w-4 h-4" />
-                <span>Live Preview</span>
-              </div>
+              <div
+                className={`w-[340px] transition-all duration-500 ease-in-out ${
+                  sourceType === "upload"
+                    ? "translate-x-6 scale-[0.97] opacity-0"
+                    : "translate-x-0 scale-100 opacity-100"
+                }`}
+              >
+              <div className="lg:sticky lg:top-20">
+                <div className="flex items-center justify-center gap-2 mb-5 text-sm text-white/25">
+                  <Monitor className="w-4 h-4" />
+                  <span>Live Preview</span>
+                </div>
 
-              {/* Phone Frame — realistic iPhone style */}
-              <div className="mx-auto" style={{ maxWidth: "300px" }}>
-                <div
-                  className="relative bg-stone-950"
-                  style={{ borderRadius: "3rem", padding: "12px" }}
-                >
-                  {/* Screen with inner radius */}
+                {/* Phone Frame */}
+                <div className="mx-auto" style={{ maxWidth: "300px" }}>
                   <div
-                    className="relative overflow-hidden bg-black"
-                    style={{ borderRadius: "2.25rem", height: "580px" }}
+                    className="relative bg-[#1a1a1f] border border-white/[0.08]"
+                    style={{ borderRadius: "3rem", padding: "12px" }}
                   >
-                    {/* Status bar */}
-                    <div className="absolute top-0 left-0 right-0 z-20 px-6 pt-3 flex justify-between items-center">
-                      <span className="text-white text-xs font-semibold">9:41</span>
-                      {/* Dynamic Island */}
-                      <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-7 bg-black rounded-full" />
-                      <div className="flex items-center gap-1">
-                        {/* Signal */}
-                        <svg width="16" height="12" viewBox="0 0 16 12" className="text-white">
-                          <rect x="0" y="8" width="3" height="4" rx="0.5" fill="currentColor" />
-                          <rect x="4.5" y="5" width="3" height="7" rx="0.5" fill="currentColor" />
-                          <rect x="9" y="2" width="3" height="10" rx="0.5" fill="currentColor" />
-                          <rect x="13.5" y="0" width="3" height="12" rx="0.5" fill="currentColor" opacity="0.3" />
-                        </svg>
-                        {/* WiFi */}
-                        <svg width="14" height="12" viewBox="0 0 14 12" className="text-white ml-0.5">
-                          <path d="M7 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" fill="currentColor" />
-                          <path d="M3.5 8.5a5 5 0 017 0" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-                          <path d="M1 5.5a8.5 8.5 0 0112 0" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-                        </svg>
-                        {/* Battery */}
-                        <svg width="26" height="12" viewBox="0 0 26 12" className="text-white ml-0.5">
-                          <rect x="0" y="1" width="22" height="10" rx="2" stroke="currentColor" strokeWidth="1" fill="none" />
-                          <rect x="2" y="3" width="16" height="6" rx="1" fill="currentColor" />
-                          <rect x="23" y="4" width="2" height="4" rx="0.5" fill="currentColor" opacity="0.4" />
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* Video background */}
-                    {youtubeThumbnailUrl ? (
-                      <div
-                        className="absolute inset-0 bg-cover bg-center scale-105 blur-sm"
-                        style={{ backgroundImage: `url(${youtubeThumbnailUrl})` }}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-b from-stone-600 via-stone-500 to-stone-700" />
-                    )}
-                    <div className="absolute inset-0 bg-black/20" />
-                    {/* Bottom gradient for readability over lower UI */}
-                    <div className="absolute inset-x-0 bottom-0 h-60 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-[1]" />
-
-                    {/* TikTok-style top navigation */}
-                    <div className="absolute top-12 left-0 right-0 z-10 flex justify-center items-center gap-5">
-                      <span className="text-white/50 text-xs font-medium">Following</span>
-                      <span className="text-white text-xs font-semibold relative">
-                        For You
-                        <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full" />
-                      </span>
-                    </div>
-
-                    {/* Right side action buttons — TikTok style */}
-                    <div className="absolute right-3 space-y-5 z-10" style={{ bottom: "260px" }}>
-                      {/* Profile */}
-                      <div className="flex flex-col items-center gap-1">
-                        <div className="w-9 h-9 rounded-full bg-white/20 border-2 border-white/40" />
-                        <div className="w-4 h-4 rounded-full bg-red-500 -mt-3 border border-black flex items-center justify-center">
-                          <span className="text-white text-[7px] font-bold">+</span>
-                        </div>
-                      </div>
-                      {/* Heart */}
-                      <div className="flex flex-col items-center gap-0.5">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="white" className="opacity-90">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                        </svg>
-                        <span className="text-white text-[10px] font-semibold">24.5K</span>
-                      </div>
-                      {/* Comment */}
-                      <div className="flex flex-col items-center gap-0.5">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white" className="opacity-90">
-                          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-                        </svg>
-                        <span className="text-white text-[10px] font-semibold">482</span>
-                      </div>
-                      {/* Share */}
-                      <div className="flex flex-col items-center gap-0.5">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="white" className="opacity-90">
-                          <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
-                        </svg>
-                        <span className="text-white text-[10px] font-semibold">Share</span>
-                      </div>
-                    </div>
-
-                    {/* Subtitle area — positioned above creator info */}
-                    <div className="absolute left-0 right-0 z-10" style={{ bottom: "195px" }}>
-                      <div className="mx-4">
-                        <p
-                          style={{
-                            color: fontColor,
-                            fontSize: `${Math.max(Math.min(fontSize * 0.6, 22), 11)}px`,
-                            fontFamily: `'${fontFamily}', system-ui, -apple-system, sans-serif`,
-                            textAlign: 'center',
-                            lineHeight: '1.5',
-                            textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)',
-                          }}
-                          className="font-bold"
-                        >
-                          Your subtitle will look like this
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Bottom left — creator info */}
-                    <div className="absolute left-3 z-10 max-w-[60%]" style={{ bottom: "110px" }}>
-                      <p className="text-white text-xs font-bold mb-1">@creator_name</p>
-                      <p className="text-white/80 text-[10px] leading-snug">
-                        Check out this amazing clip generated by AI
-                      </p>
-                      <div className="flex items-center gap-1.5 mt-2">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="white" className="opacity-70">
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                        </svg>
-                        <span className="text-white/70 text-[9px]">Original Sound - creator_name</span>
-                      </div>
-                    </div>
-
-                    {/* Bottom nav bar */}
-                    <div className="absolute bottom-0 left-0 right-0 z-20 bg-black px-2 pt-2 pb-5">
-                      <div className="flex items-center justify-around">
-                        <div className="flex flex-col items-center gap-0.5">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
-                            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                    <div
+                      className="relative overflow-hidden bg-black"
+                      style={{ borderRadius: "2.25rem", height: "580px" }}
+                    >
+                      {/* Status bar */}
+                      <div className="absolute top-0 left-0 right-0 z-20 px-6 pt-3 flex justify-between items-center">
+                        <span className="text-white text-xs font-semibold">9:41</span>
+                        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-7 bg-black rounded-full" />
+                        <div className="flex items-center gap-1">
+                          <svg width="16" height="12" viewBox="0 0 16 12" className="text-white">
+                            <rect x="0" y="8" width="3" height="4" rx="0.5" fill="currentColor" />
+                            <rect x="4.5" y="5" width="3" height="7" rx="0.5" fill="currentColor" />
+                            <rect x="9" y="2" width="3" height="10" rx="0.5" fill="currentColor" />
+                            <rect x="13.5" y="0" width="3" height="12" rx="0.5" fill="currentColor" opacity="0.3" />
                           </svg>
-                          <span className="text-white text-[8px]">Home</span>
-                        </div>
-                        <div className="flex flex-col items-center gap-0.5">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="white" opacity="0.5">
-                            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5z"/>
+                          <svg width="14" height="12" viewBox="0 0 14 12" className="text-white ml-0.5">
+                            <path d="M7 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" fill="currentColor" />
+                            <path d="M3.5 8.5a5 5 0 017 0" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+                            <path d="M1 5.5a8.5 8.5 0 0112 0" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
                           </svg>
-                          <span className="text-white/50 text-[8px]">Discover</span>
+                          <svg width="26" height="12" viewBox="0 0 26 12" className="text-white ml-0.5">
+                            <rect x="0" y="1" width="22" height="10" rx="2" stroke="currentColor" strokeWidth="1" fill="none" />
+                            <rect x="2" y="3" width="16" height="6" rx="1" fill="currentColor" />
+                            <rect x="23" y="4" width="2" height="4" rx="0.5" fill="currentColor" opacity="0.4" />
+                          </svg>
                         </div>
-                        <div className="relative -mt-3">
-                          <div className="w-10 h-7 rounded-lg bg-white flex items-center justify-center">
-                            <span className="text-black text-lg font-bold leading-none">+</span>
+                      </div>
+
+                      {/* Video background */}
+                      {youtubeThumbnailUrl ? (
+                        <div
+                          className="absolute inset-0 bg-cover bg-center scale-105 blur-sm"
+                          style={{ backgroundImage: `url(${youtubeThumbnailUrl})` }}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-b from-zinc-700 via-zinc-600 to-zinc-800" />
+                      )}
+                      <div className="absolute inset-0 bg-black/20" />
+                      <div className="absolute inset-x-0 bottom-0 h-60 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-[1]" />
+
+                      {/* TikTok-style top navigation */}
+                      <div className="absolute top-12 left-0 right-0 z-10 flex justify-center items-center gap-5">
+                        <span className="text-white/50 text-xs font-medium">Following</span>
+                        <span className="text-white text-xs font-semibold relative">
+                          For You
+                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full" />
+                        </span>
+                      </div>
+
+                      {/* Right side action buttons */}
+                      <div className="absolute right-3 space-y-5 z-10" style={{ bottom: "260px" }}>
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="w-9 h-9 rounded-full bg-white/20 border-2 border-white/40" />
+                          <div className="w-4 h-4 rounded-full bg-red-500 -mt-3 border border-black flex items-center justify-center">
+                            <span className="text-white text-[7px] font-bold">+</span>
                           </div>
                         </div>
                         <div className="flex flex-col items-center gap-0.5">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="white" opacity="0.5">
-                            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                          <svg width="26" height="26" viewBox="0 0 24 24" fill="white" className="opacity-90">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                           </svg>
-                          <span className="text-white/50 text-[8px]">Inbox</span>
+                          <span className="text-white text-[10px] font-semibold">24.5K</span>
                         </div>
                         <div className="flex flex-col items-center gap-0.5">
-                          <div className="w-5 h-5 rounded-full bg-white/30" />
-                          <span className="text-white/50 text-[8px]">Me</span>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="white" className="opacity-90">
+                            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                          </svg>
+                          <span className="text-white text-[10px] font-semibold">482</span>
+                        </div>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="white" className="opacity-90">
+                            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
+                          </svg>
+                          <span className="text-white text-[10px] font-semibold">Share</span>
                         </div>
                       </div>
-                      {/* Home indicator */}
-                      <div className="w-28 h-1 bg-white/40 rounded-full mx-auto mt-2" />
-                    </div>
-                  </div>
-                </div>
 
-                {/* Caption info below phone */}
-                <div className="mt-6 space-y-3 px-2">
-                  <div className="flex items-center justify-between text-xs text-stone-500">
-                    <span>Font</span>
-                    <span className="text-stone-700 font-medium">
-                      {availableFonts.find(f => f.name === fontFamily)?.display_name || fontFamily}
-                    </span>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between text-xs text-stone-500">
-                    <span>Size</span>
-                    <span className="text-stone-700 font-medium">{fontSize}px</span>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between text-xs text-stone-500">
-                    <span>Color</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full border border-stone-300" style={{ backgroundColor: fontColor }} />
-                      <span className="text-stone-700 font-medium">{fontColor}</span>
+                      {/* Subtitle area */}
+                      <div className="absolute left-0 right-0 z-10" style={{ bottom: "195px" }}>
+                        <div className="mx-4">
+                          <p
+                            style={{
+                              color: fontColor,
+                              fontSize: `${Math.max(Math.min(fontSize * 0.6, 22), 11)}px`,
+                              fontFamily: `'${fontFamily}', system-ui, -apple-system, sans-serif`,
+                              textAlign: 'center',
+                              lineHeight: '1.5',
+                              textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)',
+                            }}
+                            className="font-bold"
+                          >
+                            Your subtitle will look like this
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Bottom left — creator info */}
+                      <div className="absolute left-3 z-10 max-w-[60%]" style={{ bottom: "110px" }}>
+                        <p className="text-white text-xs font-bold mb-1">@creator_name</p>
+                        <p className="text-white/80 text-[10px] leading-snug">
+                          Check out this amazing clip generated by AI
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-2">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="white" className="opacity-70">
+                            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                          </svg>
+                          <span className="text-white/70 text-[9px]">Original Sound - creator_name</span>
+                        </div>
+                      </div>
+
+                      {/* Bottom nav bar */}
+                      <div className="absolute bottom-0 left-0 right-0 z-20 bg-black px-2 pt-2 pb-5">
+                        <div className="flex items-center justify-around">
+                          <div className="flex flex-col items-center gap-0.5">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                              <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                            </svg>
+                            <span className="text-white text-[8px]">Home</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" opacity="0.5">
+                              <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5z"/>
+                            </svg>
+                            <span className="text-white/50 text-[8px]">Discover</span>
+                          </div>
+                          <div className="relative -mt-3">
+                            <div className="w-10 h-7 rounded-lg bg-white flex items-center justify-center">
+                              <span className="text-black text-lg font-bold leading-none">+</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" opacity="0.5">
+                              <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                            </svg>
+                            <span className="text-white/50 text-[8px]">Inbox</span>
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <div className="w-5 h-5 rounded-full bg-white/30" />
+                            <span className="text-white/50 text-[8px]">Me</span>
+                          </div>
+                        </div>
+                        <div className="w-28 h-1 bg-white/40 rounded-full mx-auto mt-2" />
+                      </div>
                     </div>
                   </div>
-                  <Separator />
-                  <div className="flex items-center justify-between text-xs text-stone-500">
-                    <span>Template</span>
-                    <span className="text-stone-700 font-medium">
-                      {availableTemplates.find(t => t.id === captionTemplate)?.name || "Default"}
-                    </span>
+
+                  {/* Caption info below phone */}
+                  <div className="mt-6 space-y-3 px-2">
+                    <div className="flex items-center justify-between text-xs text-white/30">
+                      <span>Font</span>
+                      <span className="text-white/50 font-medium">
+                        {availableFonts.find(f => f.name === fontFamily)?.display_name || fontFamily}
+                      </span>
+                    </div>
+                    <Separator className="bg-white/[0.06]" />
+                    <div className="flex items-center justify-between text-xs text-white/30">
+                      <span>Size</span>
+                      <span className="text-white/50 font-medium">{fontSize}px</span>
+                    </div>
+                    <Separator className="bg-white/[0.06]" />
+                    <div className="flex items-center justify-between text-xs text-white/30">
+                      <span>Color</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full border border-white/10" style={{ backgroundColor: fontColor }} />
+                        <span className="text-white/50 font-medium">{fontColor}</span>
+                      </div>
+                    </div>
+                    <Separator className="bg-white/[0.06]" />
+                    <div className="flex items-center justify-between text-xs text-white/30">
+                      <span>Template</span>
+                      <span className="text-white/50 font-medium">
+                        {availableTemplates.find(t => t.id === captionTemplate)?.name || "Default"}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+              </div>
             </div>
           </div>
-        </div>
+        </PageTransition>
       </div>
-    </div>
+    </AppShell>
   );
 }

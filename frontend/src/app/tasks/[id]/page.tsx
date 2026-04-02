@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -56,6 +57,8 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "~/comp
 import { Progress } from "~/components/ui/progress";
 import Link from "next/link";
 import DynamicVideoPlayer from "~/components/dynamic-video-player";
+import AppShell from "~/components/app-shell";
+import { MotionSkeleton, EASE_OUT_EXPO, SPRING_SNAPPY } from "~/components/motion";
 
 interface Clip {
   id: string;
@@ -350,21 +353,21 @@ export default function TaskPage() {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 0.8) return "bg-green-100 text-green-800";
-    if (score >= 0.6) return "bg-yellow-100 text-yellow-800";
-    return "bg-red-100 text-red-800";
+    if (score >= 0.8) return "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20";
+    if (score >= 0.6) return "bg-amber-500/15 text-amber-400 border border-amber-500/20";
+    return "bg-red-500/15 text-red-400 border border-red-500/20";
   };
 
   const getViralityColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-yellow-600";
-    if (score >= 40) return "text-orange-600";
-    return "text-red-600";
+    if (score >= 80) return "text-emerald-400";
+    if (score >= 60) return "text-amber-400";
+    if (score >= 40) return "text-orange-400";
+    return "text-red-400";
   };
 
   const getViralityBgColor = (score: number) => {
-    if (score >= 80) return "bg-green-500";
-    if (score >= 60) return "bg-yellow-500";
+    if (score >= 80) return "bg-emerald-500";
+    if (score >= 60) return "bg-amber-500";
     if (score >= 40) return "bg-orange-500";
     return "bg-red-500";
   };
@@ -589,21 +592,25 @@ export default function TaskPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white p-4">
+      <div className="min-h-screen bg-[#0a0a0f] p-4">
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
-            <Skeleton className="h-8 w-48 mb-2" />
-            <Skeleton className="h-4 w-96" />
+            <MotionSkeleton className="mb-2" width={192} height={32} />
+            <MotionSkeleton width={384} height={16} />
           </div>
           <div className="grid gap-6">
             {[1, 2, 3].map((i) => (
-              <Card key={i}>
-                <CardContent className="p-6">
-                  <Skeleton className="h-48 w-full mb-4" />
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-3/4" />
-                </CardContent>
-              </Card>
+              <motion.div
+                key={i}
+                className="rounded-xl glass-card p-6"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.35, delay: i * 0.08, ease: EASE_OUT_EXPO }}
+              >
+                <MotionSkeleton className="mb-4" height={192} />
+                <MotionSkeleton className="mb-2" height={16} />
+                <MotionSkeleton width="75%" height={16} />
+              </motion.div>
             ))}
           </div>
         </div>
@@ -613,13 +620,14 @@ export default function TaskPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white p-4">
+      <div className="min-h-screen bg-[#0a0a0f] p-4">
         <div className="max-w-6xl mx-auto">
-          <Alert>
-            <AlertDescription>{error}</AlertDescription>
+          <Alert className="border-red-500/20 bg-red-500/5">
+            <AlertCircle className="h-4 w-4 text-red-400" />
+            <AlertDescription className="text-red-400">{error}</AlertDescription>
           </Alert>
           <Link href="/dashboard" className="mt-4 inline-block">
-            <Button variant="outline">
+            <Button variant="outline" className="border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]">
               <ArrowLeft className="w-4 h-4" />
               Back to Home
             </Button>
@@ -630,16 +638,24 @@ export default function TaskPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <AppShell>
+    <div className="min-h-screen">
       {/* Header */}
-      <div className="border-b bg-white">
+      <motion.div
+        className="border-b border-white/[0.06]"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: EASE_OUT_EXPO }}
+      >
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center gap-4 mb-4">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
+            <Link href="/list">
+              <motion.div whileHover={{ x: -2 }} transition={SPRING_SNAPPY}>
+              <Button variant="ghost" size="sm" className="text-white/40 hover:text-white hover:bg-white/[0.06]">
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
+              </motion.div>
             </Link>
           </div>
 
@@ -651,15 +667,16 @@ export default function TaskPage() {
                     <Input
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      className="text-2xl font-bold h-auto py-1"
+                      className="text-2xl font-bold h-auto py-1 glass-input"
                       autoFocus
                     />
-                    <Button size="sm" onClick={handleEditTitle} disabled={!editedTitle.trim()}>
+                    <Button size="sm" onClick={handleEditTitle} disabled={!editedTitle.trim()} className="bg-violet-600 hover:bg-violet-500 text-white">
                       <Check className="w-4 h-4" />
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
+                      className="text-white/40 hover:text-white hover:bg-white/[0.06]"
                       onClick={() => {
                         setIsEditing(false);
                         setEditedTitle(task.source_title);
@@ -670,11 +687,12 @@ export default function TaskPage() {
                   </div>
                 ) : (
                   <>
-                    <h1 className={`text-2xl font-bold text-black ${task.status === "processing" || task.status === "queued" ? "shimmer" : ""}`}>{task.source_title}</h1>
+                    <h1 className={`text-2xl font-bold text-white ${task.status === "processing" || task.status === "queued" ? "shimmer" : ""}`}>{task.source_title}</h1>
                     <div className="flex items-center gap-1">
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="text-white/40 hover:text-white hover:bg-white/[0.06]"
                         onClick={() => {
                           setIsEditing(true);
                           setEditedTitle(task.source_title);
@@ -685,7 +703,7 @@ export default function TaskPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-red-400/70 hover:text-red-400 hover:bg-red-500/[0.06]"
                         onClick={() => setShowDeleteDialog(true)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -694,8 +712,8 @@ export default function TaskPage() {
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <Badge variant="outline" className="capitalize">
+              <div className="flex items-center gap-4 text-sm text-white/40">
+                <Badge variant="outline" className="capitalize text-white/50 border-white/10">
                   {task.source_type}
                 </Badge>
                 <TooltipProvider>
@@ -720,26 +738,26 @@ export default function TaskPage() {
                   </Tooltip>
                 </TooltipProvider>
                 {task.status === "completed" ? (
-                  <span>
+                  <span className="text-emerald-400">
                     {clips.length} {clips.length === 1 ? "clip" : "clips"} generated
                   </span>
                 ) : task.status === "processing" ? (
                   <div className="relative group">
-                    <Badge className="bg-blue-100 text-blue-800 cursor-default shimmer">Processing</Badge>
-                    <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md opacity-0 scale-95 transition-all group-hover:opacity-100 group-hover:scale-100 pointer-events-none">
+                    <Badge className="bg-violet-500/10 text-violet-400 border border-violet-500/20 cursor-default shimmer">Processing</Badge>
+                    <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1a1a2e] px-3 py-1.5 text-sm text-white/70 shadow-md opacity-0 scale-95 transition-all group-hover:opacity-100 group-hover:scale-100 pointer-events-none">
                       🔍&nbsp;&nbsp;We&apos;re currently processing your video. Check back in a couple minutes.
                     </div>
                   </div>
                 ) : task.status === "queued" ? (
-                  <Badge className="bg-yellow-100 text-yellow-800">Queued</Badge>
+                  <Badge className="bg-amber-500/10 text-amber-400 border border-amber-500/20">Queued</Badge>
                 ) : (
-                  <Badge variant="outline" className="capitalize">
+                  <Badge variant="outline" className="capitalize text-white/50 border-white/10">
                     {task.status}
                   </Badge>
                 )}
                 {task.status === "completed" && clips.length > 0 && (
                   <Link href={`/tasks/${task.id}/edit`}>
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" className="border-white/10 text-white/60 hover:text-white hover:bg-white/[0.06]">
                       <Clapperboard className="w-4 h-4" />
                       Open Editor
                     </Button>
@@ -777,39 +795,56 @@ export default function TaskPage() {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <motion.div
+        className="max-w-6xl mx-auto px-4 py-8"
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: EASE_OUT_EXPO, delay: 0.1 }}
+      >
         {task?.status === "processing" || task?.status === "queued" ? (
           <div className="space-y-8">
             {/* Progress indicator */}
             <div className="flex flex-col items-center py-8">
               {/* Minimal animated dots */}
               <div className="relative group flex items-center gap-1.5 mb-8 cursor-default">
-                <span className="w-2 h-2 bg-neutral-800 rounded-full animate-[pulse_1.4s_ease-in-out_infinite]" />
-                <span className="w-2 h-2 bg-neutral-800 rounded-full animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
-                <span className="w-2 h-2 bg-neutral-800 rounded-full animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
-                <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border bg-popover px-3 py-1.5 text-sm text-popover-foreground shadow-md opacity-0 scale-95 transition-all group-hover:opacity-100 group-hover:scale-100 pointer-events-none">
+                <motion.span
+                  className="w-2 h-2 bg-violet-400 rounded-full"
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: 0 }}
+                />
+                <motion.span
+                  className="w-2 h-2 bg-violet-400 rounded-full"
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+                />
+                <motion.span
+                  className="w-2 h-2 bg-violet-400 rounded-full"
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+                />
+                <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1a1a2e] px-3 py-1.5 text-sm text-white/70 shadow-md opacity-0 scale-95 transition-all group-hover:opacity-100 group-hover:scale-100 pointer-events-none">
                   ☕&nbsp;&nbsp;Grab a coffee, and come back to ready-to-post clips.
                 </div>
               </div>
 
               {/* Status message */}
-              <p className="shimmer text-neutral-600/60 text-sm tracking-wide mb-8">
+              <p className="shimmer text-white/40 text-sm tracking-wide mb-8">
                 {progressMessage || (task.status === "queued" ? "Waiting in queue" : "Processing")}
               </p>
 
               {/* Minimal progress bar */}
               {progress > 0 && (
                 <div className="w-48">
-                  <div className="h-px bg-neutral-200 w-full relative overflow-hidden">
+                  <div className="h-px bg-white/10 w-full relative overflow-hidden">
                     <div
-                      className="absolute inset-y-0 left-0 bg-neutral-800 transition-all duration-700 ease-out"
+                      className="absolute inset-y-0 left-0 bg-violet-500 transition-all duration-700 ease-out"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                  <p className="text-[11px] text-neutral-400 text-center mt-3 tabular-nums">{progress}%</p>
+                  <p className="text-[11px] text-white/30 text-center mt-3 tabular-nums">{progress}%</p>
                 </div>
               )}
             </div>
@@ -817,7 +852,7 @@ export default function TaskPage() {
             {/* Live clips grid — shows clips as they render */}
             {clips.length > 0 && (
               <div className="grid gap-6">
-                <p className="text-sm text-neutral-500 text-center">
+                <p className="text-sm text-white/40 text-center">
                   {clips.length} clip{clips.length !== 1 ? "s" : ""} ready
                 </p>
                 {clips.map((clip) => (
@@ -830,8 +865,8 @@ export default function TaskPage() {
                         <div className="p-6 flex-1">
                           <div className="flex items-start justify-between mb-4">
                             <div>
-                              <h3 className="font-semibold text-lg text-black mb-1">Clip {clip.clip_order}</h3>
-                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <h3 className="font-semibold text-lg text-white mb-1">Clip {clip.clip_order}</h3>
+                              <div className="flex items-center gap-2 text-sm text-white/40">
                                 <span>{clip.start_time} - {clip.end_time}</span>
                                 <span>•</span>
                                 <span>{formatDuration(clip.duration)}</span>
@@ -852,14 +887,14 @@ export default function TaskPage() {
                           </div>
                           {clip.text && (
                             <div className="mb-4">
-                              <h4 className="font-medium text-black mb-2">Transcript</h4>
-                              <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">{clip.text}</p>
+                              <h4 className="font-medium text-white/80 mb-2">Transcript</h4>
+                              <p className="text-sm text-white/50 bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg">{clip.text}</p>
                             </div>
                           )}
                           {clip.reasoning && (
                             <div className="mb-4">
-                              <h4 className="font-medium text-black mb-2">AI Analysis</h4>
-                              <p className="text-sm text-gray-600">{clip.reasoning}</p>
+                              <h4 className="font-medium text-white/80 mb-2">AI Analysis</h4>
+                              <p className="text-sm text-white/40">{clip.reasoning}</p>
                             </div>
                           )}
                           <Button size="sm" variant="outline" asChild>
@@ -879,21 +914,21 @@ export default function TaskPage() {
         ) : !task ? (
           <div className="flex flex-col items-center justify-center min-h-[50vh] py-16">
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-neutral-300 rounded-full animate-[pulse_1.4s_ease-in-out_infinite]" />
-              <span className="w-2 h-2 bg-neutral-300 rounded-full animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
-              <span className="w-2 h-2 bg-neutral-300 rounded-full animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
+              <span className="w-2 h-2 bg-violet-400/40 rounded-full animate-[pulse_1.4s_ease-in-out_infinite]" />
+              <span className="w-2 h-2 bg-violet-400/40 rounded-full animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
+              <span className="w-2 h-2 bg-violet-400/40 rounded-full animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
             </div>
           </div>
         ) : task?.status === "error" ? (
           <Card>
             <CardContent className="p-8 text-center">
-              <div className="text-red-600 mb-4">
+              <div className="text-red-400 mb-4">
                 <AlertCircle className="w-12 h-12 mx-auto mb-2" />
-                <h2 className="text-xl font-semibold">Processing Failed</h2>
+                <h2 className="text-xl font-semibold text-white">Processing Failed</h2>
               </div>
-              <p className="text-gray-600 mb-4">There was an error processing your video. Please try again.</p>
+              <p className="text-white/40 mb-4">There was an error processing your video. Please try again.</p>
               <Link href="/dashboard">
-                <Button>
+                <Button className="bg-violet-600 hover:bg-violet-500 text-white">
                   <ArrowLeft className="w-4 h-4" />
                   Back to Home
                 </Button>
@@ -905,16 +940,16 @@ export default function TaskPage() {
             <CardContent className="p-8 text-center">
               {task?.status === "completed" ? (
                 <>
-                  <div className="text-yellow-600 mb-4">
+                  <div className="text-amber-400 mb-4">
                     <AlertCircle className="w-12 h-12 mx-auto mb-2" />
-                    <h2 className="text-xl font-semibold">No Clips Generated</h2>
+                    <h2 className="text-xl font-semibold text-white">No Clips Generated</h2>
                   </div>
-                  <p className="text-gray-600 mb-4">
+                  <p className="text-white/40 mb-4">
                     The task completed but no clips were generated. The video may not have had suitable content for
                     clipping.
                   </p>
                   <Link href="/dashboard">
-                    <Button>
+                    <Button className="bg-violet-600 hover:bg-violet-500 text-white">
                       <ArrowLeft className="w-4 h-4" />
                       Try Another Video
                     </Button>
@@ -922,11 +957,11 @@ export default function TaskPage() {
                 </>
               ) : (
                 <>
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Clock className="w-8 h-8 text-blue-500 animate-pulse" />
+                  <div className="w-16 h-16 bg-violet-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-8 h-8 text-violet-400 animate-pulse" />
                   </div>
-                  <h2 className="text-xl font-semibold text-black mb-2">Still Generating...</h2>
-                  <p className="text-gray-600">
+                  <h2 className="text-xl font-semibold text-white mb-2">Still Generating...</h2>
+                  <p className="text-white/40">
                     Your clips are being generated. This page will refresh automatically when they&apos;re ready.
                   </p>
                 </>
@@ -949,20 +984,20 @@ export default function TaskPage() {
             </div>
 
             <Sheet open={settingsSheetOpen} onOpenChange={setSettingsSheetOpen}>
-              <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
+              <SheetContent side="right" className="sm:max-w-md overflow-y-auto bg-[#0a0a0f] border-white/[0.06]">
                 <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2">
-                    <Settings2 className="w-4 h-4" />
+                  <SheetTitle className="flex items-center gap-2 text-white">
+                    <Settings2 className="w-4 h-4 text-violet-400" />
                     Project Settings
                   </SheetTitle>
-                  <SheetDescription>
+                  <SheetDescription className="text-white/40">
                     Configure font, caption, and B-roll settings for this task&apos;s clips.
                   </SheetDescription>
                 </SheetHeader>
 
                 <div className="space-y-5 px-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-500">Font</label>
+                    <label className="text-xs font-medium text-white/40">Font</label>
                     <Select value={projectFontFamily} onValueChange={setProjectFontFamily}>
                       <SelectTrigger>
                         <SelectValue placeholder="Font family" />
@@ -984,7 +1019,7 @@ export default function TaskPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-500">Size</label>
+                    <label className="text-xs font-medium text-white/40">Size</label>
                     <Input
                       type="number"
                       min={12}
@@ -996,7 +1031,7 @@ export default function TaskPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-500">Color</label>
+                    <label className="text-xs font-medium text-white/40">Color</label>
                     <div className="flex items-center gap-2">
                       <input
                         type="color"
@@ -1013,7 +1048,7 @@ export default function TaskPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-gray-500">Caption Template</label>
+                    <label className="text-xs font-medium text-white/40">Caption Template</label>
                     <Select value={projectCaptionTemplate} onValueChange={setProjectCaptionTemplate}>
                       <SelectTrigger>
                         <SelectValue>
@@ -1025,7 +1060,7 @@ export default function TaskPage() {
                           <SelectItem key={template.id} value={template.id}>
                             <div>
                               <div className="font-medium">{template.name}</div>
-                              <div className="text-xs text-gray-500">{template.description}</div>
+                              <div className="text-xs text-white/40">{template.description}</div>
                             </div>
                           </SelectItem>
                         ))}
@@ -1034,12 +1069,12 @@ export default function TaskPage() {
                     </Select>
                   </div>
 
-                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <label className="flex items-center gap-2 text-sm text-white/60">
                     <input
                       type="checkbox"
                       checked={projectIncludeBroll}
                       onChange={(e) => setProjectIncludeBroll(e.target.checked)}
-                      className="rounded"
+                      className="rounded border-white/20"
                     />
                     Include B-roll
                   </label>
@@ -1047,7 +1082,7 @@ export default function TaskPage() {
 
                 <SheetFooter>
                   <Button
-                    className="w-full"
+                    className="w-full bg-violet-600 hover:bg-violet-500 text-white"
                     onClick={() => {
                       handleApplyProjectSettings();
                       setSettingsSheetOpen(false);
@@ -1073,7 +1108,7 @@ export default function TaskPage() {
                     <div className="p-6 flex-1">
                       <div className="flex items-start justify-between mb-4">
                         <div>
-                          <label className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                          <label className="flex items-center gap-2 text-xs text-white/40 mb-2">
                             <input
                               type="checkbox"
                               checked={selectedClipIds.includes(clip.id)}
@@ -1081,8 +1116,8 @@ export default function TaskPage() {
                             />
                             Select for merge
                           </label>
-                          <h3 className="font-semibold text-lg text-black mb-1">Clip {clip.clip_order}</h3>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <h3 className="font-semibold text-lg text-white mb-1">Clip {clip.clip_order}</h3>
+                          <div className="flex items-center gap-2 text-sm text-white/40">
                             <span>
                               {clip.start_time} - {clip.end_time}
                             </span>
@@ -1107,10 +1142,10 @@ export default function TaskPage() {
 
                       {/* Virality Score Breakdown */}
                       {clip.virality_score > 0 && (
-                        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                        <div className="mb-4 p-3 bg-white/[0.03] border border-white/[0.06] rounded-lg">
                           <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-medium text-black text-sm flex items-center gap-2">
-                              <Zap className="w-4 h-4" />
+                            <h4 className="font-medium text-white text-sm flex items-center gap-2">
+                              <Zap className="w-4 h-4 text-violet-400" />
                               Virality Score
                             </h4>
                             <span className={`text-lg font-bold ${getViralityColor(clip.virality_score)}`}>
@@ -1122,7 +1157,7 @@ export default function TaskPage() {
                             {/* Hook Score */}
                             <div className="space-y-1">
                               <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-1 text-gray-600">
+                                <span className="flex items-center gap-1 text-white/40">
                                   <MessageSquare className="w-3 h-3" />
                                   Hook
                                 </span>
@@ -1134,7 +1169,7 @@ export default function TaskPage() {
                             {/* Engagement Score */}
                             <div className="space-y-1">
                               <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-1 text-gray-600">
+                                <span className="flex items-center gap-1 text-white/40">
                                   <TrendingUp className="w-3 h-3" />
                                   Engagement
                                 </span>
@@ -1146,7 +1181,7 @@ export default function TaskPage() {
                             {/* Value Score */}
                             <div className="space-y-1">
                               <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-1 text-gray-600">
+                                <span className="flex items-center gap-1 text-white/40">
                                   <Star className="w-3 h-3" />
                                   Value
                                 </span>
@@ -1158,7 +1193,7 @@ export default function TaskPage() {
                             {/* Shareability Score */}
                             <div className="space-y-1">
                               <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-1 text-gray-600">
+                                <span className="flex items-center gap-1 text-white/40">
                                   <Share2 className="w-3 h-3" />
                                   Shareability
                                 </span>
@@ -1180,15 +1215,15 @@ export default function TaskPage() {
 
                       {clip.text && (
                         <div className="mb-4">
-                          <h4 className="font-medium text-black mb-2">Transcript</h4>
-                          <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">{clip.text}</p>
+                          <h4 className="font-medium text-white/80 mb-2">Transcript</h4>
+                          <p className="text-sm text-white/50 bg-white/[0.03] border border-white/[0.06] p-3 rounded-lg">{clip.text}</p>
                         </div>
                       )}
 
                       {clip.reasoning && (
                         <div className="mb-4">
-                          <h4 className="font-medium text-black mb-2">AI Analysis</h4>
-                          <p className="text-sm text-gray-600">{clip.reasoning}</p>
+                          <h4 className="font-medium text-white/80 mb-2">AI Analysis</h4>
+                          <p className="text-sm text-white/40">{clip.reasoning}</p>
                         </div>
                       )}
 
@@ -1216,7 +1251,7 @@ export default function TaskPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                          className="text-red-400/80 hover:text-red-400 hover:bg-red-500/[0.06] border-red-500/20"
                           onClick={() => setDeletingClipId(clip.id)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1236,7 +1271,7 @@ export default function TaskPage() {
                       </div>
 
                       {editingClipId === clip.id && (
-                        <div className="mt-4 p-3 border rounded-lg space-y-3 bg-gray-50">
+                        <div className="mt-4 p-3 border border-white/[0.06] rounded-lg space-y-3 bg-white/[0.02]">
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                             <Input
                               value={startOffset}
@@ -1303,7 +1338,7 @@ export default function TaskPage() {
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Delete Task Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
@@ -1345,5 +1380,6 @@ export default function TaskPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </AppShell>
   );
 }
