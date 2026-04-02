@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Progress } from "~/components/ui/progress";
@@ -18,7 +17,6 @@ import Link from "next/link";
 import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, LinkIcon } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
 import AppShell from "~/components/app-shell";
-import { PageTransition, GlassCard, SpringButton, MotionSkeleton, EASE_OUT_EXPO, SPRING_SNAPPY } from "~/components/motion";
 
 interface LatestTask {
   id: string;
@@ -461,9 +459,9 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
         <div className="space-y-4">
-          <MotionSkeleton className="mx-auto" width={128} height={16} />
-          <MotionSkeleton className="mx-auto" width={192} height={16} />
-          <MotionSkeleton className="mx-auto" width={96} height={16} />
+          <Skeleton className="h-4 w-32 mx-auto bg-white/[0.06]" />
+          <Skeleton className="h-4 w-48 mx-auto bg-white/[0.06]" />
+          <Skeleton className="h-4 w-24 mx-auto bg-white/[0.06]" />
         </div>
       </div>
     );
@@ -478,31 +476,16 @@ export default function Home() {
       <div className="min-h-screen">
         {/* ── Ambient Background Glows ── */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <motion.div
-            className="absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-violet-600/[0.04] blur-[150px]"
-            animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          />
-          <motion.div
-            className="absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full bg-blue-600/[0.03] blur-[120px]"
-            animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.7, 0.4] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          />
+          <div className="absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-violet-600/[0.04] blur-[150px]" />
+          <div className="absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full bg-blue-600/[0.03] blur-[120px]" />
         </div>
 
         {/* ── Main Content ── */}
-        <PageTransition className="relative max-w-6xl mx-auto px-6 py-10">
+        <div className="relative max-w-6xl mx-auto px-6 py-10">
           {/* Latest Generation Banner */}
           {latestTask && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: EASE_OUT_EXPO }}
-              className="mb-8"
-            >
-            <Link href={`/tasks/${latestTask.id}`} className="block">
-              <GlassCard className="p-4" hoverScale={1.005}>
-                <div className="flex items-center justify-between">
+            <Link href={`/tasks/${latestTask.id}`} className="block mb-8">
+              <div className="flex items-center justify-between p-4 rounded-xl glass-card-hover group">
                 <div className="flex items-center gap-4 min-w-0">
                   <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
                     <Film className="w-5 h-5 text-violet-400" />
@@ -537,9 +520,7 @@ export default function Home() {
                   <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
                 </div>
               </div>
-              </GlassCard>
             </Link>
-            </motion.div>
           )}
 
           {isLoadingLatest && (
@@ -1173,7 +1154,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </PageTransition>
+        </div>
       </div>
     </AppShell>
   );

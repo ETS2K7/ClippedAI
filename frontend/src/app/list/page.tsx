@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -41,7 +40,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import AppShell from "~/components/app-shell";
-import { PageTransition, MotionSkeleton, SPRING_SNAPPY, EASE_OUT_EXPO, popUp } from "~/components/motion";
 
 interface Task {
   id: string;
@@ -336,9 +334,9 @@ export default function ListPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
         <div className="space-y-4">
-          <MotionSkeleton className="mx-auto" width={128} height={16} />
-          <MotionSkeleton className="mx-auto" width={192} height={16} />
-          <MotionSkeleton className="mx-auto" width={96} height={16} />
+          <Skeleton className="h-4 w-32 mx-auto bg-white/[0.06]" />
+          <Skeleton className="h-4 w-48 mx-auto bg-white/[0.06]" />
+          <Skeleton className="h-4 w-24 mx-auto bg-white/[0.06]" />
         </div>
       </div>
     );
@@ -390,13 +388,8 @@ export default function ListPage() {
   return (
     <AppShell>
       <div className="min-h-screen">
-        {/* ── Page header ─────────────────────────────────────────────── */}
-        <motion.div
-          className="border-b border-white/[0.06]"
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: EASE_OUT_EXPO }}
-        >
+        {/* ── Page header ──────────────────────────────────────── */}
+        <div className="border-b border-white/[0.06]">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
             <div className="flex items-center gap-3 mb-4">
               <Link href="/dashboard">
@@ -441,10 +434,10 @@ export default function ListPage() {
               )}
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* ── Content ────────────────────────────────────────────────── */}
-        <PageTransition className={cn("max-w-5xl mx-auto px-4 sm:px-6 py-6", selectedCount > 0 && "pb-28")}>
+        {/* ── Content ──────────────────────────────────────────── */}
+        <div className={cn("max-w-5xl mx-auto px-4 sm:px-6 py-6", selectedCount > 0 && "pb-28")}>
           {/* Batch notice */}
           {batchNotice && (
             <Alert
@@ -469,20 +462,17 @@ export default function ListPage() {
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3, 4].map((i) => (
-                <motion.div
+                <div
                   key={i}
                   className="flex items-center gap-4 rounded-xl glass-card p-4"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: i * 0.07, ease: EASE_OUT_EXPO }}
                 >
-                  <MotionSkeleton width={20} height={20} className="rounded" />
+                  <Skeleton className="h-5 w-5 rounded bg-white/[0.06]" />
                   <div className="flex-1 space-y-2">
-                    <MotionSkeleton width={256} height={16} />
-                    <MotionSkeleton width={160} height={12} />
+                    <Skeleton className="h-4 w-64 bg-white/[0.06]" />
+                    <Skeleton className="h-3 w-40 bg-white/[0.06]" />
                   </div>
-                  <MotionSkeleton width={80} height={24} className="rounded-full" />
-                </motion.div>
+                  <Skeleton className="h-6 w-20 rounded-full bg-white/[0.06]" />
+                </div>
               ))}
             </div>
           ) : error ? (
@@ -521,30 +511,16 @@ export default function ListPage() {
                 </span>
               </div>
 
-              {/* ── Task list ─────────────────────────────────── */}
-              <motion.div
-                className="space-y-2"
-                initial="hidden"
-                animate="visible"
-                variants={{
-                  hidden: { opacity: 1 },
-                  visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
-                }}
-              >
+              {/* ── Task list ───────────────────────────────────── */}
+              <div className="space-y-2">
                 {tasks.map((task) => {
                   const isSelected = selectedTaskIds.includes(task.id);
 
                   return (
-                    <motion.div
+                    <div
                       key={task.id}
-                      variants={{
-                        hidden: { opacity: 0, y: 12 },
-                        visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE_OUT_EXPO } },
-                      }}
-                      whileHover={{ y: -1 }}
-                      transition={SPRING_SNAPPY}
                       className={cn(
-                        "group relative flex items-start gap-4 rounded-xl border p-4 transition-colors duration-150",
+                        "group relative flex items-start gap-4 rounded-xl border p-4 transition-all duration-150",
                         isSelected
                           ? "border-violet-500/20 bg-violet-500/[0.04] ring-1 ring-violet-500/10"
                           : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]",
@@ -601,26 +577,23 @@ export default function ListPage() {
                           </div>
                         </div>
                       </Link>
-                    </motion.div>
+                    </div>
                   );
                 })}
-              </motion.div>
+              </div>
             </>
           )}
-          </PageTransition>
+        </div>
 
-        {/* ── Floating batch command bar ───────────────────────── */}
-        <AnimatePresence>
+        {/* ── Floating batch command bar ────────────────────────── */}
         {selectedCount > 0 && (
-          <motion.div
+          <div
             className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-5 pointer-events-none"
-            variants={popUp}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
+            style={{ animation: "command-bar-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both" }}
           >
             <div
               className="pointer-events-auto flex items-center gap-1 rounded-2xl border border-white/[0.08] bg-[#0a0a0f]/95 backdrop-blur-xl px-2 py-2 shadow-2xl"
+              style={{ animation: "command-bar-pulse 3s ease-in-out infinite" }}
             >
               {/* Select all checkbox */}
               <div className="flex items-center gap-2.5 pl-2 pr-3">
@@ -742,9 +715,8 @@ export default function ListPage() {
                 </TooltipContent>
               </Tooltip>
             </div>
-          </motion.div>
+          </div>
         )}
-        </AnimatePresence>
 
         {/* ── Delete confirmation dialog ────────────────────────── */}
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

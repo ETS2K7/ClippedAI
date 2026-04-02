@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useParams, useRouter } from "next/navigation";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
@@ -58,7 +57,6 @@ import { Progress } from "~/components/ui/progress";
 import Link from "next/link";
 import DynamicVideoPlayer from "~/components/dynamic-video-player";
 import AppShell from "~/components/app-shell";
-import { MotionSkeleton, EASE_OUT_EXPO, SPRING_SNAPPY } from "~/components/motion";
 
 interface Clip {
   id: string;
@@ -595,22 +593,16 @@ export default function TaskPage() {
       <div className="min-h-screen bg-[#0a0a0f] p-4">
         <div className="max-w-6xl mx-auto">
           <div className="mb-6">
-            <MotionSkeleton className="mb-2" width={192} height={32} />
-            <MotionSkeleton width={384} height={16} />
+            <Skeleton className="h-8 w-48 mb-2 bg-white/[0.06]" />
+            <Skeleton className="h-4 w-96 bg-white/[0.06]" />
           </div>
           <div className="grid gap-6">
             {[1, 2, 3].map((i) => (
-              <motion.div
-                key={i}
-                className="rounded-xl glass-card p-6"
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: i * 0.08, ease: EASE_OUT_EXPO }}
-              >
-                <MotionSkeleton className="mb-4" height={192} />
-                <MotionSkeleton className="mb-2" height={16} />
-                <MotionSkeleton width="75%" height={16} />
-              </motion.div>
+              <div key={i} className="rounded-xl glass-card p-6">
+                <Skeleton className="h-48 w-full mb-4 bg-white/[0.06]" />
+                <Skeleton className="h-4 w-full mb-2 bg-white/[0.06]" />
+                <Skeleton className="h-4 w-3/4 bg-white/[0.06]" />
+              </div>
             ))}
           </div>
         </div>
@@ -641,21 +633,14 @@ export default function TaskPage() {
     <AppShell>
     <div className="min-h-screen">
       {/* Header */}
-      <motion.div
-        className="border-b border-white/[0.06]"
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: EASE_OUT_EXPO }}
-      >
+      <div className="border-b border-white/[0.06]">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center gap-4 mb-4">
             <Link href="/list">
-              <motion.div whileHover={{ x: -2 }} transition={SPRING_SNAPPY}>
               <Button variant="ghost" size="sm" className="text-white/40 hover:text-white hover:bg-white/[0.06]">
                 <ArrowLeft className="w-4 h-4" />
                 Back
               </Button>
-              </motion.div>
             </Link>
           </div>
 
@@ -795,36 +780,19 @@ export default function TaskPage() {
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Main Content */}
-      <motion.div
-        className="max-w-6xl mx-auto px-4 py-8"
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: EASE_OUT_EXPO, delay: 0.1 }}
-      >
+      <div className="max-w-6xl mx-auto px-4 py-8">
         {task?.status === "processing" || task?.status === "queued" ? (
           <div className="space-y-8">
             {/* Progress indicator */}
             <div className="flex flex-col items-center py-8">
               {/* Minimal animated dots */}
               <div className="relative group flex items-center gap-1.5 mb-8 cursor-default">
-                <motion.span
-                  className="w-2 h-2 bg-violet-400 rounded-full"
-                  animate={{ scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: 0 }}
-                />
-                <motion.span
-                  className="w-2 h-2 bg-violet-400 rounded-full"
-                  animate={{ scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-                />
-                <motion.span
-                  className="w-2 h-2 bg-violet-400 rounded-full"
-                  animate={{ scale: [1, 1.5, 1], opacity: [0.6, 1, 0.6] }}
-                  transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
-                />
+                <span className="w-2 h-2 bg-violet-400 rounded-full animate-[pulse_1.4s_ease-in-out_infinite]" />
+                <span className="w-2 h-2 bg-violet-400 rounded-full animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
+                <span className="w-2 h-2 bg-violet-400 rounded-full animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
                 <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-[#1a1a2e] px-3 py-1.5 text-sm text-white/70 shadow-md opacity-0 scale-95 transition-all group-hover:opacity-100 group-hover:scale-100 pointer-events-none">
                   ☕&nbsp;&nbsp;Grab a coffee, and come back to ready-to-post clips.
                 </div>
@@ -1338,7 +1306,7 @@ export default function TaskPage() {
             ))}
           </div>
         )}
-      </motion.div>
+      </div>
 
       {/* Delete Task Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>

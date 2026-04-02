@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -16,7 +15,6 @@ import { track } from "~/lib/datafast";
 import Link from "next/link";
 import { Type, Palette, CheckCircle, AlertCircle, Settings, ArrowLeft, Mail } from "lucide-react";
 import AppShell from "~/components/app-shell";
-import { PageTransition, MotionSkeleton, EASE_OUT_EXPO } from "~/components/motion";
 
 interface UserPreferences {
   fontFamily: string;
@@ -144,9 +142,9 @@ export default function SettingsPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
         <div className="space-y-4">
-          <MotionSkeleton className="mx-auto" width={128} height={16} />
-          <MotionSkeleton className="mx-auto" width={192} height={16} />
-          <MotionSkeleton className="mx-auto" width={96} height={16} />
+          <Skeleton className="h-4 w-32 mx-auto bg-white/[0.06]" />
+          <Skeleton className="h-4 w-48 mx-auto bg-white/[0.06]" />
+          <Skeleton className="h-4 w-24 mx-auto bg-white/[0.06]" />
         </div>
       </div>
     );
@@ -171,20 +169,11 @@ export default function SettingsPage() {
       <div className="min-h-screen">
         {/* ── Ambient glows ── */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <motion.div
-            className="absolute -top-40 right-1/4 h-[400px] w-[400px] rounded-full bg-violet-600/[0.03] blur-[120px]"
-            animate={{ scale: [1, 1.12, 1], opacity: [0.4, 0.7, 0.4] }}
-            transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-          />
+          <div className="absolute -top-40 right-1/4 h-[400px] w-[400px] rounded-full bg-violet-600/[0.03] blur-[120px]" />
         </div>
 
         {/* ── Page header ── */}
-        <motion.div
-          className="border-b border-white/[0.06]"
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: EASE_OUT_EXPO }}
-        >
+        <div className="border-b border-white/[0.06]">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5">
             <div className="flex items-center gap-3 mb-4">
               <Link href="/dashboard">
@@ -202,25 +191,14 @@ export default function SettingsPage() {
               Configure your default preferences for video clip generation.
             </p>
           </div>
-        </motion.div>
+        </div>
 
         {/* ── Main content ── */}
-        <PageTransition className="relative max-w-3xl mx-auto px-4 sm:px-6 py-8">
-          <motion.div
-            className="max-w-xl mx-auto space-y-8"
-            initial="hidden"
-            animate="visible"
-            variants={{
-              hidden: { opacity: 1 },
-              visible: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.1 } },
-            }}
-          >
+        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-8">
+          <div className="max-w-xl mx-auto space-y-8">
 
             {/* ── Font Preferences ── */}
-            <motion.div
-              className="glass-card rounded-xl p-6 space-y-6"
-              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}
-            >
+            <div className="glass-card rounded-xl p-6 space-y-6">
               <div>
                 <h3 className="text-base font-semibold text-white mb-1">
                   Default Font Settings
@@ -334,13 +312,10 @@ export default function SettingsPage() {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
 
             {/* ── Notifications ── */}
-            <motion.div
-              className="glass-card rounded-xl p-6 space-y-5"
-              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } } }}
-            >
+            <div className="glass-card rounded-xl p-6 space-y-5">
               <div>
                 <h3 className="text-base font-semibold text-white mb-1">
                   Notifications
@@ -365,7 +340,7 @@ export default function SettingsPage() {
                   disabled={isLoading}
                 />
               </div>
-            </motion.div>
+            </div>
 
             <Separator className="bg-white/[0.06]" />
 
@@ -396,8 +371,8 @@ export default function SettingsPage() {
             >
               {isLoading ? "Saving..." : "Save Preferences"}
             </Button>
-          </motion.div>
-        </PageTransition>
+          </div>
+        </div>
       </div>
     </AppShell>
   );
