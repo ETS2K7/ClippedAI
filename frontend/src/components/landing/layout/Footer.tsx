@@ -54,7 +54,7 @@ function InstagramIcon() {
   );
 }
 
-const socialIcons: Record<string, () => JSX.Element> = {
+const socialIcons: Record<string, () => React.JSX.Element> = {
   YouTube: YouTubeIcon,
   TikTok: TikTokIcon,
   Twitter: XIcon,

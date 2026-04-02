@@ -1,28 +1,21 @@
 import os
 import time
-import json
-import hashlib
 import requests
 from typing import List, Dict, Any
 from config import get_logger, ASSEMBLYAI_KEY
 
 logger = get_logger(__name__)
 
+# Maximum polls before timeout (~10 minutes at 3s intervals)
+MAX_POLL_ATTEMPTS = 200
+
 
 def transcribe(video_path: str, video_url: str) -> List[Dict[str, Any]]:
     """
-    Transcribes video using AssemblyAI and caches the result locally.
-    Enables speaker diarization via 'speaker_labels=True'.
+    Transcribes video using AssemblyAI with speaker diarization.
+    Returns a list of word-level dicts with timestamps and speaker labels.
     """
     logger.info("==================== PHASE 2: TRANSCRIPTION ====================")
-
-    url_hash = hashlib.md5(video_url.encode()).hexdigest()[:8]
-    cache_file = f"assemblyai_diarized_cache_{url_hash}.json"
-
-    if os.path.exists(cache_file):
-        logger.info("Loading transcript from cache...")
-        with open(cache_file, "r") as f:
-            return json.load(f)
 
     logger.info("Uploading to AssemblyAI...")
     headers = {"authorization": ASSEMBLYAI_KEY}
@@ -53,7 +46,7 @@ def transcribe(video_path: str, video_url: str) -> List[Dict[str, Any]]:
     transcript_id = res.json()["id"]
 
     logger.info(f"Polling transcription {transcript_id}...")
-    while True:
+    for attempt in range(MAX_POLL_ATTEMPTS):
         res = requests.get(
             f"https://api.assemblyai.com/v2/transcript/{transcript_id}", headers=headers
         )
@@ -62,11 +55,13 @@ def transcribe(video_path: str, video_url: str) -> List[Dict[str, Any]]:
 
         if status == "completed":
             words = data["words"]
-            with open(cache_file, "w") as f:
-                json.dump(words, f)
             logger.info("Transcription complete.")
             return words
         elif status == "error":
             raise RuntimeError(f"AssemblyAI Error: {data.get('error')}")
 
         time.sleep(3)
+
+    raise RuntimeError(
+        f"Transcription timed out after {MAX_POLL_ATTEMPTS * 3}s for transcript {transcript_id}"
+    )

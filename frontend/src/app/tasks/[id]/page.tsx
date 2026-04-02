@@ -318,14 +318,13 @@ export default function TaskPage() {
       }
     });
 
-    eventSource.addEventListener("close", async (e) => {
-      const data = JSON.parse(e.data);
+    eventSource.addEventListener("close", (e) => {
+      const data = JSON.parse((e as MessageEvent<string>).data);
       console.log("✅ Task completed:", data.status);
       eventSource.close();
 
       // Refresh task and clips
-      await fetchTaskStatus();
-      triggerAutoRefresh();
+      void fetchTaskStatus().then(() => triggerAutoRefresh());
     });
 
     eventSource.addEventListener("error", (e) => {

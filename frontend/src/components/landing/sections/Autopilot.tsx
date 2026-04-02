@@ -22,7 +22,7 @@ export default function Autopilot() {
               Your video creation process — now on autopilot
             </h2>
             <p className="text-[16px] md:text-[20px] leading-[1.6] text-[#A1A1AA] max-w-[700px]">
-              Create and publish videos 5x faster with ClippedAI's web app and API, so you can go on vacation and still keep your content rolling.
+              Create and publish videos 5x faster with ClippedAI&apos;s web app and API, so you can go on vacation and still keep your content rolling.
             </p>
           </ScrollReveal>
 

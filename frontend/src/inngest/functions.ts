@@ -79,7 +79,11 @@ export const processVideo = inngest.createFunction(
           data: { status: "processed" },
         });
       });
-    } catch {
+    } catch (error) {
+      console.error(
+        `[Inngest] processVideo failed for uploadedFileId=${uploadedFileId}:`,
+        error instanceof Error ? error.message : error,
+      );
       await db.uploadedFile.update({
         where: { id: uploadedFileId },
         data: { status: "failed" },

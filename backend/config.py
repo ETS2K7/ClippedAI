@@ -25,7 +25,3 @@ GEMINI_KEY = os.getenv("GEMINI_KEY")
 if not GEMINI_KEY:
     raise ValueError("GEMINI_KEY must be set in the .env file.")
 
-# Global configurations
-OUTPUT_DIR = "output"
-MASTER_VIDEO_TMPL = "master_video.%(ext)s"
-MASTER_VIDEO_FILE = "master_video.mp4"

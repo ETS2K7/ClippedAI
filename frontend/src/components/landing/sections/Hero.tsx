@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { HERO_CONTENT } from '~/lib/landing/constants';
 import FadeIn from '~/components/landing/animations/FadeIn';
 import HeroCarousel from '~/components/landing/ui/HeroCarousel';

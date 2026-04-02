@@ -51,6 +51,19 @@ output/
 test_podcast.mp4
 .turbo/
 tsconfig.tsbuildinfo
+.ruff_cache/
+
+# ─── Backend cache / debug ────────────────────────────────────────────────
+backend/assemblyai_diarized_cache_*.json
+backend/asd_debug_output.json
+backend/master_video.mp4
+
+# ─── Prisma dev databases ─────────────────────────────────────────────────
+frontend/prisma/dev.db
+
+# ─── IDE / tools ──────────────────────────────────────────────────────────
+.idea/
+.gemini/
 
 # ─── OCI / deploy keys ────────────────────────────────────────────────────
 deploy/oci_api_key*.pem

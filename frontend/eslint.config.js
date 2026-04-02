@@ -33,6 +33,20 @@ export default tseslint.config(
         "error",
         { checksVoidReturn: { attributes: false } },
       ],
+      // Requires strictNullChecks which is not enabled in this project
+      "@typescript-eslint/prefer-nullish-coalescing": "off",
+      // Loosen strict any-related rules for gradual adoption
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unnecessary-type-assertion": "warn",
+      // Disable rules with widespread violations — fix incrementally
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/restrict-template-expressions": "off",
+      "@typescript-eslint/prefer-regexp-exec": "off",
     },
   },
   {

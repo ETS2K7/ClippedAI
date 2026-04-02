@@ -47,7 +47,7 @@ const extractYouTubeVideoId = (value: string): string | null => {
     const host = parsed.hostname.replace(/^www\./, "");
 
     if (host === "youtu.be") {
-      const id = parsed.pathname.split("/").filter(Boolean)[0];
+      const id = parsed.pathname.split("/").find(Boolean);
       return id && id.length === 11 ? id : null;
     }
 

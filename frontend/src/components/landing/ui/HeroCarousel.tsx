@@ -105,7 +105,7 @@ export default function HeroCarousel() {
           {carouselItems.map((item, index) => {
             // Determine relative position (-1, 0, 1)
             // Since we removed infinite loop, strictly use bounded difference
-            let offset = index - currentIndex;
+            const offset = index - currentIndex;
 
             // Only render -1, 0, 1 for performance
             if (Math.abs(offset) > 1) return null;

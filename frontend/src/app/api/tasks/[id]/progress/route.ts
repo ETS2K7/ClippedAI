@@ -81,7 +81,7 @@ export async function GET(
           });
 
           if (polls < MAX_POLLS) {
-            setTimeout(poll, 4000); // poll every 4s
+            setTimeout(() => void poll(), 4000); // poll every 4s
           } else {
             // Timed out — tell client to stop
             send("status", {

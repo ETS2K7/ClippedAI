@@ -1,6 +1,6 @@
 'use client';
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
 interface AuthModalProps {
@@ -118,7 +118,7 @@ export default function AuthModal({ onClose }: AuthModalProps) {
 
           {/* Footer Terms */}
           <p className="text-[12px] text-[#555555] max-w-[300px] leading-relaxed mx-auto">
-            By continuing, you agree to ClippedAI's <button className="underline hover:text-[#888888] transition-colors cursor-pointer">Terms of Service</button>.
+            By continuing, you agree to ClippedAI&apos;s <button className="underline hover:text-[#888888] transition-colors cursor-pointer">Terms of Service</button>.
             <br />
             Read our <button className="underline hover:text-[#888888] transition-colors cursor-pointer">Privacy Policy</button>.
           </p>

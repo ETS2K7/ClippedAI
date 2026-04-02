@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   }
 
   // Intercept and create a DB record for YouTube URLs
-  let uploadedFileId = sourceUrl;
+  const uploadedFileId = sourceUrl;
   
   if (sourceUrl.startsWith("http")) {
     // Determine title from URL

@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { isLandingOnlyModeEnabled } from "~/lib/app-flags";
 
-const HOSTED_APP_URL = "https://clippedai.com";
+const HOSTED_APP_URL = "https://clippedai.app";
 
 function ScrollReveal({
   children,
@@ -137,7 +137,7 @@ function getPlans() {
         "Full source code access",
       ],
       cta: "View on GitHub",
-      ctaHref: "https://github.com/FujiwaraChoki/supoclip",
+      ctaHref: "https://github.com/ETS2K7/ClippedAI",
       highlighted: false,
       isUnlimited: false,
     },
@@ -259,12 +259,12 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-3">
             {authEnabled ? (
               <>
-                <Link href="/sign-in">
+                <Link href="/login">
                   <Button variant="ghost" size="sm">
                     Sign In
                   </Button>
                 </Link>
-                <Link href="/sign-up">
+                <Link href="/signup">
                   <Button size="sm">Get Started</Button>
                 </Link>
               </>
@@ -326,12 +326,12 @@ export default function LandingPage() {
               <div className="flex flex-col gap-2 px-3 pt-1">
                 {authEnabled ? (
                   <>
-                    <Link href="/sign-in" onClick={() => setMobileNavOpen(false)}>
+                    <Link href="/login" onClick={() => setMobileNavOpen(false)}>
                       <Button variant="outline" size="sm" className="w-full">
                         Sign In
                       </Button>
                     </Link>
-                    <Link href="/sign-up" onClick={() => setMobileNavOpen(false)}>
+                    <Link href="/signup" onClick={() => setMobileNavOpen(false)}>
                       <Button size="sm" className="w-full">Get Started</Button>
                     </Link>
                   </>
@@ -405,7 +405,7 @@ export default function LandingPage() {
                 }}
               >
                 {authEnabled ? (
-                  <Link href="/sign-up">
+                  <Link href="/signup">
                     <Button size="lg" className="px-8 h-12 text-sm">
                       Start Clipping
                       <ArrowRight className="w-4 h-4" />
@@ -420,7 +420,7 @@ export default function LandingPage() {
                   </a>
                 )}
                 <a
-                  href="https://github.com/FujiwaraChoki/supoclip"
+                  href="https://github.com/ETS2K7/ClippedAI"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -697,7 +697,7 @@ export default function LandingPage() {
                         </Button>
                       </a>
                     ) : authEnabled ? (
-                      <Link href="/sign-up">
+                      <Link href="/signup">
                         <Button
                           className={`w-full h-11 text-sm ${
                             plan.highlighted
@@ -785,7 +785,7 @@ export default function LandingPage() {
                     <span className="opacity-50">$</span>{" "}
                     git clone{" "}
                     <span className="opacity-40">
-                      https://github.com/FujiwaraChoki/supoclip
+                      https://github.com/ETS2K7/ClippedAI
                     </span>
                   </div>
                   <div>
@@ -801,7 +801,7 @@ export default function LandingPage() {
 
                 <div className="flex flex-wrap gap-3 mt-6">
                   <a
-                    href="https://github.com/FujiwaraChoki/supoclip"
+                    href="https://github.com/ETS2K7/ClippedAI"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
@@ -812,7 +812,7 @@ export default function LandingPage() {
                     </Button>
                   </a>
                   {authEnabled ? (
-                    <Link href="/sign-up">
+                    <Link href="/signup">
                       <Button variant="outline">
                         Try the hosted version
                         <ArrowRight className="w-4 h-4" />
@@ -849,7 +849,7 @@ export default function LandingPage() {
             no credit card required.
           </p>
           {authEnabled ? (
-            <Link href="/sign-up">
+            <Link href="/signup">
               <Button size="lg" className="px-10 h-12 text-sm">
                 Get Started Free
                 <ArrowRight className="w-4 h-4" />
@@ -887,7 +887,7 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-6 text-xs text-muted-foreground">
             <a
-              href="https://github.com/FujiwaraChoki/supoclip"
+              href="https://github.com/ETS2K7/ClippedAI"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground transition-colors"

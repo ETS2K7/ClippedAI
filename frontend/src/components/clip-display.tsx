@@ -14,7 +14,7 @@ function ClipCard({ clip }: { clip: Clip }) {
     async function fetchPlayUrl() {
       try {
         const result = await getClipPlayUrl(clip.id);
-        if (result.succes && result.url) {
+        if (result.success && result.url) {
           setPlayUrl(result.url);
         } else if (result.error) {
           console.error("Failed to get play url: " + result.error);
