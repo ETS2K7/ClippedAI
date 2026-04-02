@@ -85,11 +85,11 @@ jobs:
             # (transition from prisma db push to prisma migrate deploy)
             echo "==> Checking migration baseline..."
             MIGRATE_TABLE=$(docker compose exec -T db psql -U postgres clippedai -tAc \
-              "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='_prisma_migrations');" 2>/dev/null || echo "f")
+              "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='_prisma_migrations');" < /dev/null 2>/dev/null || echo "f")
             if [ "$MIGRATE_TABLE" = "f" ]; then
               echo "==> First deploy with migrations — baselining..."
               docker compose run --rm -T app sh -c \
-                "node node_modules/prisma/build/index.js migrate resolve --applied 20260402_cleanup_remove_post_add_indexes"
+                "node node_modules/prisma/build/index.js migrate resolve --applied 20260402_cleanup_remove_post_add_indexes" < /dev/null
               echo "✓ Migration baselined"
             fi
 
