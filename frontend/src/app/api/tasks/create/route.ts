@@ -21,23 +21,27 @@ export async function POST(req: Request) {
   if (sourceUrl.startsWith("http")) {
     const videoIdMatch = sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
     const videoId = videoIdMatch ? videoIdMatch[1] : "video";
-
     const generatedS3Key = `youtube-downloads/${session.user.id}-${Date.now()}/${videoId}/original.mp4`;
 
-    const newFile = await db.uploadedFile.create({
-      data: {
-        userId: session.user.id,
-        s3Key: generatedS3Key,
-        status: "processing",
-        uploaded: true,
-      },
-    });
+    try {
+      const newFile = await db.uploadedFile.create({
+        data: {
+          userId: session.user.id,
+          s3Key: generatedS3Key,
+          status: "processing",
+          uploaded: true,
+        },
+      });
 
-    // Fire-and-forget — Modal will call our webhook when done
-    fireModalJob(generatedS3Key, newFile.id, session.user.id, sourceUrl);
-
-    return NextResponse.json({ task_id: newFile.id });
+      // Fire-and-forget — Modal will call our webhook when done
+      fireModalJob(generatedS3Key, newFile.id, session.user.id, sourceUrl);
+      return NextResponse.json({ task_id: newFile.id });
+    } catch (err) {
+      console.error("[tasks/create] YouTube DB create failed:", err);
+      return NextResponse.json({ error: "Failed to create task. Please sign out and sign in again." }, { status: 500 });
+    }
   }
+
 
   // Uploaded file — find existing DB record
   const uploadedFileId = sourceUrl;
