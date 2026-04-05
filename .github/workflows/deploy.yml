@@ -85,20 +85,25 @@ jobs:
             set -euo pipefail
             cd /opt/clippedai
 
-            # Baseline Prisma migration if _prisma_migrations table doesn't exist yet
-            # (transition from prisma db push to prisma migrate deploy)
-            echo "==> Checking migration baseline..."
-            MIGRATE_TABLE=$(docker compose exec -T db psql -U postgres clippedai -tAc \
-              "SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_name='_prisma_migrations');" < /dev/null 2>/dev/null || echo "f")
-            if [ "$MIGRATE_TABLE" = "f" ]; then
-              echo "==> First deploy with migrations — baselining..."
-              docker compose run --rm -T app sh -c \
-                "node node_modules/prisma/build/index.js migrate resolve --applied 20260402_cleanup_remove_post_add_indexes" < /dev/null
-              echo "✓ Migration baselined"
-            fi
+            # Persist POSTGRES_PASSWORD so docker compose always has it (survives reboots)
+            echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" > .env
 
-            echo "==> Rebuilding app container..."
-            POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" docker compose up -d --build app
+            # ── Start DB and wait for it to be healthy ───────────────────
+            echo "==> Starting database..."
+            docker compose up -d db
+            for i in $(seq 1 12); do
+              if docker compose exec -T db pg_isready -U postgres > /dev/null 2>&1; then
+                echo "✓ Database ready"
+                break
+              fi
+              [ $i -eq 12 ] && echo "✗ DB health check timeout" && docker compose logs db --tail=20 && exit 1
+              echo "  Waiting for DB... ($((i*5))s)"
+              sleep 5
+            done
+
+            # ── Build and start app (prisma migrate deploy runs inside container) ──
+            echo "==> Building and starting app..."
+            docker compose up -d --build app
 
             echo "==> Waiting for app to be healthy..."
             for i in $(seq 1 18); do
@@ -114,7 +119,7 @@ jobs:
             echo "==> Deploy complete!"
             docker compose ps
 
-            # Sync Nginx config if changed
+            # ── Sync Nginx config if changed ─────────────────────────────
             if ! diff -q /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai > /dev/null 2>&1; then
               echo "==> Updating Nginx config..."
               sudo cp /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai
