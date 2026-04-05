@@ -7,6 +7,14 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
 
+  const user = await db.user.findUnique({ where: { id: session.user.id } });
+  if (!user?.isAdmin) {
+    return new NextResponse(
+      JSON.stringify({ error: "Access Denied: Video processing is currently restricted to administrators only." }),
+      { status: 403 }
+    );
+  }
+
   const body = await req.json();
   const sourceUrl: string | undefined = body?.source?.url;
 
