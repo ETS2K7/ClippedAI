@@ -935,14 +935,21 @@ export default function Home() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 text-base rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-all glow-violet-sm"
+                  className="w-full h-12 text-base rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-all glow-violet-sm disabled:opacity-50"
                   disabled={
                     (sourceType === "youtube" && !url.trim()) ||
                     (sourceType === "upload" && !fileRef.current) ||
-                    isLoading
+                    isLoading ||
+                    // @ts-ignore
+                    !session?.user?.isAdmin
                   }
                 >
-                  {isLoading ? "Processing..." : "Generate Clips"}
+                  {
+                    // @ts-ignore
+                    !session?.user?.isAdmin
+                    ? "Reserved for Administrators"
+                    : isLoading ? "Processing..." : "Generate Clips"
+                  }
                 </Button>
               </form>
             </div>
