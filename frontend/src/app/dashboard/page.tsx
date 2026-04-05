@@ -83,6 +83,7 @@ export default function Home() {
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { data: session, isPending } = useSession();
+  const isAdmin = Boolean((session?.user as any)?.isAdmin);
 
   // Font customization states
   const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
@@ -940,13 +941,11 @@ export default function Home() {
                     (sourceType === "youtube" && !url.trim()) ||
                     (sourceType === "upload" && !fileRef.current) ||
                     isLoading ||
-                    // @ts-ignore
-                    !session?.user?.isAdmin
+                    !isAdmin
                   }
                 >
                   {
-                    // @ts-ignore
-                    !session?.user?.isAdmin
+                    !isAdmin
                     ? "Reserved for Administrators"
                     : isLoading ? "Processing..." : "Generate Clips"
                   }
