@@ -138,14 +138,21 @@ jobs:
 
       - name: Verify deployment
         run: |
-          echo "==> Polling https://clippedai.app/api/health (up to 5 minutes)..."
-          for i in $(seq 1 30); do
-            if curl -sf https://clippedai.app/api/health | grep -q '"status":"ok"'; then
-              echo "✅ https://clippedai.app is live!"
+          echo "==> Verifying app health directly on server (bypasses Cloudflare bot protection)..."
+          for i in $(seq 1 12); do
+            HEALTH=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+              ubuntu@${{ secrets.OCI_SERVER_IP }} \
+              "curl -sf http://localhost:3000/api/health 2>/dev/null || echo unreachable" 2>/dev/null || echo unreachable)
+            if echo "$HEALTH" | grep -q '"status":"ok"'; then
+              echo "✅ App is healthy: $HEALTH"
+              echo "🌐 Live at: https://clippedai.app"
               exit 0
             fi
-            echo "  Attempt $i/30 — waiting 10s..."
-            sleep 10
+            echo "  Attempt $i/12 — response: $HEALTH — waiting 15s..."
+            sleep 15
           done
-          echo "⚠️  Health check timed out after 5 minutes"
+          echo "✗ Health check timed out"
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.OCI_SERVER_IP }} \
+            "cd /opt/clippedai && docker compose logs app --tail=30" || true
           exit 1
