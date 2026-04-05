@@ -8,6 +8,6 @@ scipy==1.13.0
 scenedetect==0.6.3
 python-dotenv==1.0.1
 boto3==1.34.111
-yt-dlp==2025.3.31
+apify-client==1.6.4
 fastapi==0.115.12
 assemblyai==0.37.0

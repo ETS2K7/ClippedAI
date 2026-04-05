@@ -33,6 +33,7 @@ class ProcessVideoRequest(BaseModel):
 image = (modal.Image.debian_slim(python_version="3.10")
     .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget"])
     .pip_install_from_requirements("requirements.txt")
+    .pip_install("apify-client")
     .add_local_dir("src", remote_path="/root/src", copy=True)
     .add_local_file("config.py", remote_path="/root/config.py", copy=True)
 )
@@ -42,29 +43,66 @@ app = modal.App("clippedai", image=image)
 auth_scheme = HTTPBearer()
 
 def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
-    """Download YouTube video using yt-dlp with optional cookies for IP bypass."""
-    cookie_path = "/run/secrets/youtube-cookies/cookies.txt"
+    """Download YouTube video using Apify API to bypass datacenter IP bans."""
+    from apify_client import ApifyClient
+    import requests
+    import shutil
 
-    cmd = [
-        "yt-dlp",
-        "-f", "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
-        "--merge-output-format", "mp4",
-        "--no-playlist",
-        "-o", str(video_path),
-    ]
+    apify_token = os.environ.get("APIFY_TOKEN")
+    if not apify_token:
+        raise RuntimeError("APIFY_TOKEN is missing from environment secrets.")
 
-    if os.path.exists(cookie_path):
-        logger.info("Using YouTube cookies for authenticated download")
-        cmd += ["--cookies", cookie_path]
-    else:
-        logger.warning("No YouTube cookies found — download may fail on data center IPs")
+    logger.info(f"Starting Apify youtube downloader for {youtube_url}")
+    client = ApifyClient(apify_token)
 
-    cmd.append(youtube_url)
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        logger.error(f"yt-dlp stderr: {result.stderr[-2000:]}")
-        raise RuntimeError(f"yt-dlp failed (exit {result.returncode}): {result.stderr[-500:]}")
+    run_input = {
+        "videos": [{"url": youtube_url}],
+        "s3Bucket": "clippedai-7137",
+        "s3AccessKeyId": os.environ.get("AWS_ACCESS_KEY_ID"),
+        "s3SecretAccessKey": os.environ.get("AWS_SECRET_ACCESS_KEY"),
+        "s3Region": "us-east-1",
+        "preferQuality": "720p",
+        "preferFormat": "mp4"
+    }
 
+    try:
+        run = client.actor("streamers/youtube-video-downloader").call(run_input=run_input)
+        logger.info(f"Apify run finished with status: {run.get('status')}")
+
+        dataset = client.dataset(run["defaultDatasetId"])
+        items = dataset.list_items().items
+        if not items:
+            raise RuntimeError("Apify actor did not return any dataset items (download failed)")
+
+        item = items[0]
+        file_key = item.get("fileKey")
+        if not file_key:
+            raise RuntimeError(f"No fileKey in Apify output: {item}")
+
+        logger.info(f"Downloading video from S3 via Apify fileKey: {file_key}")
+        
+        # Download the file from our S3 bucket directly to video_path,
+        # which the rest of the Modal pipeline will use
+        import boto3
+        s3 = boto3.client(
+            "s3",
+            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+            region_name="us-east-1",
+        )
+        s3.download_file("clippedai-7137", file_key, str(video_path))
+        
+        # Clean up the intermediate Apify file in S3 to prevent root-level bucket clutter
+        try:
+            s3.delete_object(Bucket="clippedai-7137", Key=file_key)
+        except Exception as cleanup_err:
+            logger.warning(f"Failed to cleanup intermediate Apify file {file_key}: {cleanup_err}")
+            
+        logger.info("Successfully fetched YouTube video via Apify")
+        
+    except Exception as e:
+        logger.error(f"Apify download failed: {str(e)}")
+        raise RuntimeError(f"YouTube download failed via Apify: {str(e)}")
 
 def _process_video_pipeline(
     s3_key: str,

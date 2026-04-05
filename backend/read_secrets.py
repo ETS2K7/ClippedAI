@@ -10,6 +10,7 @@ def read_secrets():
         "GEMINI_KEY": os.environ.get("GEMINI_KEY", ""),
         "AWS_ACCESS_KEY_ID": os.environ.get("AWS_ACCESS_KEY_ID", ""),
         "AWS_SECRET_ACCESS_KEY": os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
+        "APIFY_TOKEN": os.environ.get("APIFY_TOKEN", ""),
     }
 
 @app.local_entrypoint()
