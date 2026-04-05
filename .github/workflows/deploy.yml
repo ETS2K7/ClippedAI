@@ -78,55 +78,61 @@ jobs:
             ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/frontend/.env.production
 
       # ── Rebuild on server ────────────────────────────────────────────────
+      - name: Write server deploy script
+        run: |
+          cat > /tmp/server-deploy.sh << 'SCRIPTEOF'
+          #!/bin/bash
+          set -euo pipefail
+          cd /opt/clippedai
+
+          echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" > .env
+
+          echo "==> Starting database..."
+          docker compose up -d db
+          for i in $(seq 1 12); do
+            if docker compose exec -T db pg_isready -U postgres > /dev/null 2>&1; then
+              echo "✓ Database ready"; break
+            fi
+            [ "$i" -eq 12 ] && echo "✗ DB timeout" && docker compose logs db --tail=20 && exit 1
+            echo "  Waiting for DB ($((i*5))s)..."; sleep 5
+          done
+
+          echo "==> Building app image..."
+          docker compose build app
+
+          echo "==> Starting app..."
+          docker compose up -d app
+
+          echo "==> Waiting for app health (Docker healthcheck)..."
+          for i in $(seq 1 24); do
+            H=$(docker inspect --format='{{.State.Health.Status}}' clippedai-app-1 2>/dev/null || echo 'missing')
+            echo "  attempt $i/24: $H"
+            [ "$H" = "healthy" ] && echo "✓ App is healthy!" && break
+            [ "$i" -eq 24 ] && echo "✗ Health check timeout" && docker compose logs app --tail=50 && exit 1
+            sleep 15
+          done
+
+          echo "==> Deploy complete!"
+          docker compose ps
+
+          if ! diff -q /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai > /dev/null 2>&1; then
+            echo "==> Syncing nginx config..."
+            sudo cp /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai
+            sudo nginx -t && sudo systemctl reload nginx && echo "✓ Nginx reloaded"
+          fi
+          SCRIPTEOF
+          sed -i 's/^          //' /tmp/server-deploy.sh
+          chmod +x /tmp/server-deploy.sh
+          echo "✓ Deploy script written"
+
       - name: Deploy on server
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ubuntu@${{ secrets.OCI_SERVER_IP }} \
-            "POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' bash -s" << 'ENDSSH'
-            set -euo pipefail
-            cd /opt/clippedai
-
-            # Persist POSTGRES_PASSWORD so docker compose always has it (survives reboots)
-            echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" > .env
-
-            # ── Start DB and wait for it to be healthy ───────────────────
-            echo "==> Starting database..."
-            docker compose up -d db
-            for i in $(seq 1 12); do
-              if docker compose exec -T db pg_isready -U postgres > /dev/null 2>&1; then
-                echo "✓ Database ready"
-                break
-              fi
-              [ $i -eq 12 ] && echo "✗ DB health check timeout" && docker compose logs db --tail=20 && exit 1
-              echo "  Waiting for DB... ($((i*5))s)"
-              sleep 5
-            done
-
-            # ── Build and start app (prisma migrate deploy runs inside container) ──
-            echo "==> Building and starting app..."
-            docker compose up -d --build app
-
-            echo "==> Waiting for app to be healthy..."
-            for i in $(seq 1 18); do
-              if docker compose exec -T app wget -qO- http://127.0.0.1:3000/api/health 2>/dev/null | grep -q '"status":"ok"'; then
-                echo "✓ App is healthy"
-                break
-              fi
-              [ $i -eq 18 ] && echo "✗ Health check timeout" && docker compose logs app --tail=50 && exit 1
-              echo "  Waiting... ($((i*10))s)"
-              sleep 10
-            done
-
-            echo "==> Deploy complete!"
-            docker compose ps
-
-            # ── Sync Nginx config if changed ─────────────────────────────
-            if ! diff -q /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai > /dev/null 2>&1; then
-              echo "==> Updating Nginx config..."
-              sudo cp /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai
-              sudo nginx -t && sudo systemctl reload nginx
-              echo "✓ Nginx config updated"
-            fi
-          ENDSSH
+          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            /tmp/server-deploy.sh \
+            ubuntu@${{ secrets.OCI_SERVER_IP }}:/tmp/server-deploy.sh
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.OCI_SERVER_IP }} \
+            "POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' bash /tmp/server-deploy.sh"
 
       - name: Verify deployment
         run: |
