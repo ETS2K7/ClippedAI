@@ -10,10 +10,14 @@ logger = get_logger(__name__)
 MAX_POLL_ATTEMPTS = 200
 
 
-def transcribe(video_path: str, video_url: str) -> List[Dict[str, Any]]:
+def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
     """
     Transcribes video using AssemblyAI with speaker diarization.
     Returns a list of word-level dicts with timestamps and speaker labels.
+
+    Args:
+        video_path: Local path to the video/audio file to transcribe.
+        _video_url: Unused — kept for call-site compatibility.
     """
     logger.info("==================== PHASE 2: TRANSCRIPTION ====================")
 
@@ -33,7 +37,8 @@ def transcribe(video_path: str, video_url: str) -> List[Dict[str, Any]]:
     logger.info("Requesting transcription...")
     json_payload = {
         "audio_url": upload_url,
-        "speech_models": ["universal-2"],
+        # AssemblyAI v2: singular string key, value is the model name
+        "speech_model": "universal_2",
         "speaker_labels": True,
     }
 

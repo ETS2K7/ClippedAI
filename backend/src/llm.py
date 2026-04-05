@@ -6,8 +6,16 @@ from config import get_logger, GEMINI_KEY
 
 logger = get_logger(__name__)
 
-# Initialize the Gemini client
-gemini_client = genai.Client(api_key=GEMINI_KEY)
+# Lazy-initialised so importing this module doesn't crash when GEMINI_KEY is
+# absent (e.g. during unit tests or static analysis).
+_gemini_client = None
+
+
+def _get_gemini_client():
+    global _gemini_client
+    if _gemini_client is None:
+        _gemini_client = genai.Client(api_key=GEMINI_KEY)
+    return _gemini_client
 
 
 class ClipSelection(BaseModel):
@@ -63,7 +71,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     )
 
     logger.info("Calling Gemini 2.5 Flash for clip selection...")
-    response = gemini_client.models.generate_content(
+    response = _get_gemini_client().models.generate_content(
         model="gemini-2.5-flash",
         contents=prompt,
         config={

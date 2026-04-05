@@ -678,35 +678,37 @@ def track_speaker_and_frame(
 
     # ── 10. Render ─────────────────────────────────────────────────────────────
     cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-    for fidx in range(frames_count):
-        ret, frame = cap.read()
-        if not ret or frame is None:
-            break
+    try:
+        for fidx in range(frames_count):
+            ret, frame = cap.read()
+            if not ret or frame is None:
+                break
 
-        n  = int(stable_n[fidx])
-        cx = smooth_spk_cx[fidx]   # shape (4,) cx per speaker slot
-        cy = smooth_spk_cy[fidx]   # shape (4,) cy per speaker slot
+            n  = int(stable_n[fidx])
+            cx = smooth_spk_cx[fidx]   # shape (4,) cx per speaker slot
+            cy = smooth_spk_cy[fidx]   # shape (4,) cy per speaker slot
 
-        if n == 4:
-            # 2×2 grid: full-height crops (608×1080), scale axes match for 540×960
-            out_frame = _render_split_4(frame, cx[0], cx[1], cx[2], cx[3])
+            if n == 4:
+                # 2×2 grid: full-height crops (608×1080), scale axes match for 540×960
+                out_frame = _render_split_4(frame, cx[0], cx[1], cx[2], cx[3])
 
-        elif n == 3:
-            # 1 + 2: top cell uses face-centred 541px vertical crop; sides are full height
-            # cx[0]=leftmost, cx[1]=middle (featured top), cx[2]=rightmost
-            out_frame = _render_split_3(frame, cx[1], cx[0], cx[2], cy[1])
+            elif n == 3:
+                # 1 + 2: top cell uses face-centred 541px vertical crop; sides are full height
+                # cx[0]=leftmost, cx[1]=middle (featured top), cx[2]=rightmost
+                out_frame = _render_split_3(frame, cx[1], cx[0], cx[2], cy[1])
 
-        elif n == 2:
-            # Vertical stack: each cell is 608×541 face-centred crop → 1080×960
-            out_frame = _render_split_2(frame, cx[0], cx[1], cy[0], cy[1])
+            elif n == 2:
+                # Vertical stack: each cell is 608×541 face-centred crop → 1080×960
+                out_frame = _render_split_2(frame, cx[0], cx[1], cy[0], cy[1])
 
-        else:
-            # Single speaker: full 9:16 crop (608×1080 → 1080×1920)
-            out_frame = _cell_full(frame, cx[0])
+            else:
+                # Single speaker: full 9:16 crop (608×1080 → 1080×1920)
+                out_frame = _cell_full(frame, cx[0])
 
-        writer.write(out_frame)
+            writer.write(out_frame)
+    finally:
+        writer.release()
+        cap.release()
 
-    writer.release()
-    cap.release()
     logger.info(f"Tracking complete. Output: {out_path}")
     return out_path, chunk_meta

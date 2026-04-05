@@ -60,7 +60,10 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
         logger.warning("No YouTube cookies found — download may fail on data center IPs")
 
     cmd.append(youtube_url)
-    subprocess.run(cmd, check=True)
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        logger.error(f"yt-dlp stderr: {result.stderr[-2000:]}")
+        raise RuntimeError(f"yt-dlp failed (exit {result.returncode}): {result.stderr[-500:]}")
 
 
 def _process_video_pipeline(

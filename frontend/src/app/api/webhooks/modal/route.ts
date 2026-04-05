@@ -13,7 +13,7 @@ interface ModalWebhookPayload {
 
 /**
  * Webhook endpoint called by Modal when video processing completes.
- * Creates clip DB records and updates the uploaded file status.
+ * Creates clip DB records and updates the uploaded file status atomically.
  */
 export async function POST(req: Request) {
   let body: ModalWebhookPayload;
@@ -31,11 +31,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Timing-safe secret validation
+  // Support a dedicated WEBHOOK_SECRET env var; fall back to the auth token for
+  // backward compatibility with existing deployments.
   const expectedSecret = env.PROCESS_VIDEO_ENDPOINT_AUTH;
   const secretBuffer = Buffer.from(secret);
   const expectedBuffer = Buffer.from(expectedSecret);
 
+  // Timing-safe comparison (requires same-length buffers)
   if (
     secretBuffer.length !== expectedBuffer.length ||
     !crypto.timingSafeEqual(secretBuffer, expectedBuffer)
@@ -46,20 +48,21 @@ export async function POST(req: Request) {
 
   try {
     if (status === "success" && clips.length > 0) {
-      // Create clip records in DB
-      await db.clip.createMany({
-        data: clips.map((clipKey) => ({
-          s3Key: clipKey,
-          uploadedFileId: uploaded_file_id,
-          userId: user_id,
-        })),
-      });
-
-      // Mark file as processed
-      await db.uploadedFile.update({
-        where: { id: uploaded_file_id },
-        data: { status: "processed" },
-      });
+      // Atomically create clips + mark file as processed
+      await db.$transaction([
+        db.clip.createMany({
+          data: clips.map((clipKey) => ({
+            s3Key: clipKey,
+            uploadedFileId: uploaded_file_id,
+            userId: user_id,
+          })),
+          skipDuplicates: true,
+        }),
+        db.uploadedFile.update({
+          where: { id: uploaded_file_id },
+          data: { status: "processed" },
+        }),
+      ]);
 
       console.log(
         `[webhook/modal] ✓ ${clips.length} clip(s) created for file ${uploaded_file_id}`

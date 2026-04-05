@@ -15,8 +15,7 @@ declare module "next-auth" {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      // ...other properties
-      // role: UserRole;
+      isAdmin: boolean;
     } & DefaultSession["user"];
   }
 }
@@ -51,6 +50,9 @@ export const authConfig = {
           return null;
         }
 
+        // OAuth-created accounts have no password — credentials login not allowed
+        if (!user.password) return null;
+
         const passwordMatch = await comparePasswords(password, user.password);
         if (!passwordMatch) return null;
 
@@ -66,11 +68,15 @@ export const authConfig = {
       user: {
         ...session.user,
         id: token.sub,
+        isAdmin: (token.isAdmin as boolean) ?? false,
       },
     }),
     jwt: ({ token, user }) => {
+      // Persist isAdmin into the JWT so the session callback can read it
       if (user) {
-        token.id = user.id;
+        // user here is the DB record returned by authorize()
+        const dbUser = user as { isAdmin?: boolean };
+        token.isAdmin = dbUser.isAdmin ?? false;
       }
       return token;
     },

@@ -44,13 +44,21 @@ model User {
     name          String?
     email         String    @unique
     emailVerified DateTime?
-    password      String
+    /// Nullable so OAuth providers (Google, GitHub) can create accounts without a password
+    password      String?
     image         String?
+    /// Grants access to admin-only routes and the /admin dashboard
+    isAdmin       Boolean   @default(false)
     accounts      Account[]
     sessions      Session[]
 
     uploadedFiles UploadedFile[]
     clips         Clip[]
+
+    /// Caption / font preferences — persisted by PATCH /api/preferences
+    prefFontFamily String  @default("TikTokSans-Regular")
+    prefFontSize   Int     @default(24)
+    prefFontColor  String  @default("#FFFFFF")
 }
 
 model UploadedFile {

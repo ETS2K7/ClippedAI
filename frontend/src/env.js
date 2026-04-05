@@ -25,6 +25,11 @@ export const env = createEnv({
 
   client: {
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+    // Analytics (optional — for self-hosted, leave unset)
+    NEXT_PUBLIC_DATAFAST_WEBSITE_ID: z.string().optional(),
+    NEXT_PUBLIC_DATAFAST_DOMAIN: z.string().optional(),
+    // Set to "false" to enable monetization in self-hosted mode
+    NEXT_PUBLIC_SELF_HOST: z.string().optional(),
   },
 
   runtimeEnv: {
@@ -41,6 +46,9 @@ export const env = createEnv({
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+    NEXT_PUBLIC_DATAFAST_WEBSITE_ID: process.env.NEXT_PUBLIC_DATAFAST_WEBSITE_ID,
+    NEXT_PUBLIC_DATAFAST_DOMAIN: process.env.NEXT_PUBLIC_DATAFAST_DOMAIN,
+    NEXT_PUBLIC_SELF_HOST: process.env.NEXT_PUBLIC_SELF_HOST,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
