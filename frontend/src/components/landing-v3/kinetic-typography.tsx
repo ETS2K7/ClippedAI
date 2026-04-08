@@ -19,7 +19,7 @@ export const KineticTypography = () => {
       
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.05)_0,rgba(0,0,0,1)_100%)] pointer-events-none z-10" />
 
-      <h2 className="text-center text-sm font-bold tracking-widest uppercase mb-16 z-20 text-white/70">The Clipped Promise</h2>
+      <h2 className="text-center text-sm font-bold tracking-widest uppercase mb-16 z-20 text-white/70">The ClippedAI Promise</h2>
 
       <div className="flex flex-col gap-4 w-[200vw] -ml-[50vw]">
         

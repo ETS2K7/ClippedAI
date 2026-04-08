@@ -12,10 +12,26 @@ export const StickyNarrative = () => {
     offset: ["start start", "end end"],
   });
 
-  // Phases
-  const rawPhase = useTransform(scrollYProgress, [0, 0.25, 0.35], [1, 1, 0]);
-  const analysisPhase = useTransform(scrollYProgress, [0.3, 0.5, 0.65], [0, 1, 0]);
-  const finalPhase = useTransform(scrollYProgress, [0.6, 0.8, 1], [0, 1, 1]);
+  // Helper: piecewise linear interpolation with clamping (avoids Framer Motion spline overshoot)
+  const lerp = (v: number, input: number[], output: number[]) => {
+    if (v <= input[0]) return output[0];
+    if (v >= input[input.length - 1]) return output[output.length - 1];
+    for (let i = 0; i < input.length - 1; i++) {
+      if (v >= input[i] && v <= input[i + 1]) {
+        const t = (v - input[i]) / (input[i + 1] - input[i]);
+        return output[i] + t * (output[i + 1] - output[i]);
+      }
+    }
+    return output[output.length - 1];
+  };
+
+  // Phases — using transform functions with manual linear interpolation to prevent overshoot
+  // Phase 1: fully visible 0–0.25, fades out 0.25–0.35
+  const rawPhase = useTransform(scrollYProgress, (v) => lerp(v, [0, 0.25, 0.35, 1], [1, 1, 0, 0]));
+  // Phase 2: fades in 0.30–0.50, peaks 0.50–0.72, fades out 0.72–0.73
+  const analysisPhase = useTransform(scrollYProgress, (v) => lerp(v, [0, 0.29, 0.3, 0.5, 0.72, 0.73, 1], [0, 0, 0, 1, 1, 0, 0]));
+  // Phase 3: fades in 0.70–1.00, reaches full opacity exactly when the bar fills
+  const finalPhase = useTransform(scrollYProgress, (v) => lerp(v, [0, 0.69, 0.7, 1], [0, 0, 0, 1]));
 
   // 3D Glass Device transforms
   const rotateX = useTransform(scrollYProgress, [0, 0.5, 1], [15, 0, -5]);
