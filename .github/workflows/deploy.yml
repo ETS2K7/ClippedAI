@@ -24,11 +24,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.OCI_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          # Non-fatal: fresh servers may not respond to keyscan immediately
-          ssh-keyscan -T 10 -H "${{ secrets.OCI_SERVER_IP }}" >> ~/.ssh/known_hosts 2>/dev/null || true
-          echo "StrictHostKeyChecking no" >> ~/.ssh/config
-          echo "UserKnownHostsFile /dev/null" >> ~/.ssh/config
-          echo "LogLevel ERROR" >> ~/.ssh/config
+          ssh-keyscan -T 10 -H "${{ secrets.OCI_SERVER_IP }}" >> ~/.ssh/known_hosts
 
       # ── Write .env.production locally ──────────────────────────────────
       - name: Write .env.production
@@ -54,7 +50,13 @@ jobs:
           EOF
           # Strip leading whitespace from heredoc
           sed -i 's/^[[:space:]]*//' /tmp/env.production
-          echo "✓ .env.production written"
+
+          cat > /tmp/root.env << EOF
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          EOF
+          sed -i 's/^[[:space:]]*//' /tmp/root.env
+
+          echo "✓ Environments written"
 
       # ── Rsync checked-out code to server (excludes .env* so it's safe) ─
       - name: Sync code to server
@@ -67,15 +69,18 @@ jobs:
             --exclude='frontend/node_modules' \
             --exclude='frontend/.env*' \
             --exclude='.env*' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            -e "ssh -i ~/.ssh/deploy_key" \
             ./ ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/
 
-      # ── Upload .env.production AFTER rsync so it's never deleted ───────
-      - name: Upload .env.production to server
+      # ── Upload .env.production and root .env AFTER rsync so they're never deleted ───────
+      - name: Upload env files to server
         run: |
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          scp -i ~/.ssh/deploy_key \
             /tmp/env.production \
             ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/frontend/.env.production
+          scp -i ~/.ssh/deploy_key \
+            /tmp/root.env \
+            ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/.env
 
       # ── Rebuild on server ────────────────────────────────────────────────
       - name: Write server deploy script
@@ -84,8 +89,6 @@ jobs:
           #!/bin/bash
           set -euo pipefail
           cd /opt/clippedai
-
-          echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" > .env
 
           echo "==> Starting database..."
           docker compose up -d db
@@ -129,18 +132,18 @@ jobs:
 
       - name: Deploy on server
         run: |
-          scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          scp -i ~/.ssh/deploy_key \
             /tmp/server-deploy.sh \
             ubuntu@${{ secrets.OCI_SERVER_IP }}:/tmp/server-deploy.sh
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ssh -i ~/.ssh/deploy_key \
             ubuntu@${{ secrets.OCI_SERVER_IP }} \
-            "POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' bash /tmp/server-deploy.sh"
+            "bash /tmp/server-deploy.sh"
 
       - name: Verify deployment
         run: |
           echo "==> Verifying app health directly on server (bypasses Cloudflare bot protection)..."
           for i in $(seq 1 12); do
-            HEALTH=$(ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            HEALTH=$(ssh -i ~/.ssh/deploy_key \
               ubuntu@${{ secrets.OCI_SERVER_IP }} \
               "curl -sf http://localhost:3000/api/health 2>/dev/null || echo unreachable" 2>/dev/null || echo unreachable)
             if echo "$HEALTH" | grep -q '"status":"ok"'; then
@@ -152,7 +155,7 @@ jobs:
             sleep 15
           done
           echo "✗ Health check timed out"
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+          ssh -i ~/.ssh/deploy_key \
             ubuntu@${{ secrets.OCI_SERVER_IP }} \
             "cd /opt/clippedai && docker compose logs app --tail=30" || true
           exit 1

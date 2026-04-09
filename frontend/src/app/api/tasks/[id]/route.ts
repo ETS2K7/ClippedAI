@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env";
 import { s3Client } from "~/server/s3";
@@ -104,9 +104,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   });
 }
 
+
+
 /**
  * DELETE /api/tasks/[id]
- * Deletes the task and all associated clips (cascade via Prisma schema).
+ * Deletes the task, all associated S3 objects, and all DB clips (cascade via Prisma schema).
  */
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -115,10 +117,34 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
   const file = await db.uploadedFile.findUnique({
     where: { id, userId: session.user.id },
-    select: { id: true },
+    select: { id: true, s3Key: true, clips: { select: { s3Key: true, thumbnailKey: true } } },
   });
 
   if (!file) return new NextResponse(null, { status: 404 });
+
+  // Gather all S3 keys to delete
+  const keysToDelete = [file.s3Key];
+  for (const clip of file.clips) {
+    if (clip.s3Key) keysToDelete.push(clip.s3Key);
+    if (clip.thumbnailKey) keysToDelete.push(clip.thumbnailKey);
+  }
+
+  // Delete associated files from S3
+  if (keysToDelete.length > 0) {
+    try {
+      await s3Client.send(
+        new DeleteObjectsCommand({
+          Bucket: env.S3_BUCKET_NAME,
+          Delete: {
+            Objects: keysToDelete.map((k) => ({ Key: k })),
+            Quiet: true,
+          },
+        })
+      );
+    } catch (err) {
+      console.error("[tasks/DELETE] Failed to cleanup S3 objects:", err);
+    }
+  }
 
   // Clips are cascade-deleted via Prisma schema (onDelete: Cascade)
   await db.uploadedFile.delete({ where: { id } });
