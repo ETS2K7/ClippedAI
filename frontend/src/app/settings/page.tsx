@@ -27,6 +27,8 @@ export default function SettingsPage() {
   const [fontColor, setFontColor] = useState("#FFFFFF");
   const [completionEmails, setCompletionEmails] = useState(true);
   const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { data: session, isPending } = useSession();
 
   // SWR: Global Data Fetching
