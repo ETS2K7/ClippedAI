@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ArrowRight, Loader2, Play, Scissors, Volume2, Zap, RotateCcw } from "lucide-react";
+import { ArrowRight, Loader2, Scissors, Volume2, Zap, RotateCcw } from "lucide-react";
 import { cn } from "~/lib/utils";
 
 const processingSteps = [

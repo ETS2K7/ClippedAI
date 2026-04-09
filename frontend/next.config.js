@@ -53,7 +53,10 @@ const config = {
     // ESLint runs in CI; don't block production Docker builds on lint warnings
     ignoreDuringBuilds: true,
   },
+  // Security headers are set by nginx in production.
+  // Only apply them from Next.js in development to avoid duplicate headers.
   async headers() {
+    if (!isDev) return [];
     return [
       {
         source: "/(.*)",

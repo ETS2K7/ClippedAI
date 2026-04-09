@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "~/server/auth";
-import { S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { env } from "~/env";
 import { db } from "~/server/db";
+import { s3Client } from "~/server/s3";
 import crypto from "crypto";
 
 /** Accepted video MIME types */
@@ -21,6 +21,32 @@ const ALLOWED_MIME_TYPES = new Set([
 
 /** 500 MB hard cap */
 const MAX_FILE_SIZE_BYTES = 500 * 1024 * 1024;
+
+/**
+ * Known video container magic bytes.
+ * Validated server-side to prevent spoofed Content-Type uploads.
+ */
+const VIDEO_MAGIC_BYTES: { prefix: number[]; offset?: number }[] = [
+  // MP4 / MOV / 3GP — "ftyp" at offset 4
+  { prefix: [0x66, 0x74, 0x79, 0x70], offset: 4 },
+  // WebM / MKV — EBML header
+  { prefix: [0x1a, 0x45, 0xdf, 0xa3] },
+  // AVI — "RIFF"
+  { prefix: [0x52, 0x49, 0x46, 0x46] },
+  // WMV / ASF — ASF header GUID
+  { prefix: [0x30, 0x26, 0xb2, 0x75] },
+  // MPEG-TS
+  { prefix: [0x47] },
+  // MPEG-PS
+  { prefix: [0x00, 0x00, 0x01, 0xba] },
+];
+
+function hasValidMagicBytes(header: Uint8Array): boolean {
+  return VIDEO_MAGIC_BYTES.some(({ prefix, offset = 0 }) => {
+    if (header.length < offset + prefix.length) return false;
+    return prefix.every((byte, i) => header[offset + i] === byte);
+  });
+}
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -52,15 +78,17 @@ export async function POST(req: Request) {
     );
   }
 
-  try {
-    const s3Client = new S3Client({
-      region: env.AWS_REGION,
-      credentials: {
-        accessKeyId: env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
+  // ── Magic-byte validation (prevents spoofed Content-Type) ───────────────
+  const headerSlice = await file.slice(0, 12).arrayBuffer();
+  const header = new Uint8Array(headerSlice);
+  if (!hasValidMagicBytes(header)) {
+    return NextResponse.json(
+      { error: "File does not appear to be a valid video. The file header does not match any known video format." },
+      { status: 415 },
+    );
+  }
 
+  try {
     const fileId = crypto.randomUUID();
     const folderName = `${session.user.id}-${fileId}`;
     const s3Key = `${folderName}/original.mp4`;
@@ -96,3 +124,4 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }
+

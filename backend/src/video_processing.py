@@ -79,7 +79,7 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
     logger.info(
         f"==================== PHASE 7: FINAL MERGE & CLEANUP (Clip {idx}) ===================="
     )
-    out_file = f"output/clip_{idx + 1}.mp4"
+    out_file = f"output/clip_{idx}.mp4"
     cmd = [
         "ffmpeg", "-y",
         "-i", tracked_vid, "-i", extract_vid,
@@ -342,12 +342,8 @@ def track_speaker_and_frame(
     if w < CROP_W_1:
         logger.warning(
             f"Video width ({w}px) is narrower than crop width ({CROP_W_1}px). "
-            f"Adjusting crop width to match video."
+            f"Output will use full frame width."
         )
-        # Override the crop width for this clip — use the full frame width
-        effective_crop_w = w
-    else:
-        effective_crop_w = CROP_W_1
 
     logger.info(f"Video: {w}x{h} @ {fps}fps, {frames_count} frames")
 

@@ -37,7 +37,7 @@ export async function GET() {
   const files = await db.uploadedFile.findMany({
     where: { userId: session.user.id },
     orderBy: { createdAt: "desc" },
-    include: { clips: true },
+    include: { _count: { select: { clips: true } } },
   });
 
   const tasks = files.map((file) => ({
@@ -45,7 +45,7 @@ export async function GET() {
     source_title: getSourceTitle(file),
     source_type: getSourceType(file.s3Key),
     status: mapStatus(file.status),
-    clips_count: file.clips.length,
+    clips_count: file._count.clips,
     created_at: file.createdAt.toISOString(),
   }));
 

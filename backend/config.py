@@ -41,27 +41,8 @@ def _get_gemini_key() -> str:
 
 
 # Public accessors used by other modules — lazy-validated on first call
-class _LazyKey:
-    """Descriptor that defers key validation to first access."""
-    def __init__(self, getter):
-        self._getter = getter
-    def __str__(self):
-        return self._getter()
-    def __repr__(self):
-        return self._getter()
-    def __eq__(self, other):
-        return str(self) == str(other)
-    def __hash__(self):
-        return hash(str(self))
-    def __bool__(self):
-        try:
-            return bool(self._getter())
-        except ValueError:
-            return False
-
-
-ASSEMBLYAI_KEY = _get_assemblyai_key  # Call as ASSEMBLYAI_KEY() or use property
-GEMINI_KEY = _get_gemini_key          # Call as GEMINI_KEY() or use property
+ASSEMBLYAI_KEY = _get_assemblyai_key  # Call as ASSEMBLYAI_KEY()
+GEMINI_KEY = _get_gemini_key          # Call as GEMINI_KEY()
 
 
 # Local pipeline video paths (used by downloader.py and run_local.py)

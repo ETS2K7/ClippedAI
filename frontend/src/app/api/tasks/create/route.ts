@@ -43,7 +43,18 @@ export async function POST(req: Request) {
 
   if (parsedUrl && (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") && YOUTUBE_HOSTS.has(parsedUrl.hostname)) {
     const videoIdMatch = sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
-    const videoId = videoIdMatch ? videoIdMatch[1] : "video";
+    const videoId = videoIdMatch ? videoIdMatch[1] : null;
+
+    if (!videoId) {
+      return NextResponse.json(
+        { error: "Could not extract a valid YouTube video ID from the URL." },
+        { status: 400 },
+      );
+    }
+
+    // Reconstruct a canonical YouTube URL from the validated video ID
+    // instead of forwarding raw user input to Modal
+    const canonicalYoutubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const generatedS3Key = `youtube-downloads/${session.user.id}-${Date.now()}/${videoId}/original.mp4`;
 
     try {
@@ -57,7 +68,7 @@ export async function POST(req: Request) {
       });
 
       // Fire-and-forget — Modal will call our webhook when done
-      fireModalJob(generatedS3Key, newFile.id, session.user.id, sourceUrl);
+      fireModalJob(generatedS3Key, newFile.id, session.user.id, canonicalYoutubeUrl);
       return NextResponse.json({ task_id: newFile.id });
     } catch (err) {
       console.error("[tasks/create] YouTube DB create failed:", err);

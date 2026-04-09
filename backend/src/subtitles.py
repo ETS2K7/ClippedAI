@@ -34,7 +34,7 @@ def generate_subtitles(
         for meta in framing_meta:
             if meta["start_ms"] <= ms <= meta["end_ms"]:
                 return meta["flag"]
-        return "STATIONARY"
+        return "SINGLE"
 
     clip_words = [
         w for w in words if w.get("start", 0) >= start_ms and w.get("end", 0) <= end_ms

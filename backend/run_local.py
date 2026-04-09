@@ -57,10 +57,10 @@ def run(url: str):
         # Phase 7: Merge and write to output/
         merge_and_cleanup(trk_vid, ext_vid, sub_file, index)
 
-        final_path = f"output/clip_{index + 1}.mp4"
+        final_path = f"output/clip_{index}.mp4"
         if os.path.exists(final_path):
             # Copy to the root /output folder for easy access
-            dest = output_dir / f"clip_{index + 1}.mp4"
+            dest = output_dir / f"clip_{index}.mp4"
             shutil.copy2(final_path, dest)
             logger.info(f"✅ Saved: {dest.resolve()}")
         else:

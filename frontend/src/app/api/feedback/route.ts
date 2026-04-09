@@ -1,8 +1,6 @@
-"use server";
 
 import { NextResponse } from "next/server";
 import { auth } from "~/server/auth";
-import { db } from "~/server/db";
 import { z } from "zod";
 
 const feedbackSchema = z.object({

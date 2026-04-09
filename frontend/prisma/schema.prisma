@@ -76,7 +76,7 @@ model UploadedFile {
     userId String
 
     @@index([s3Key])
-    @@index([userId])
+    @@index([userId, createdAt])
 }
 
 model Clip {
@@ -96,4 +96,13 @@ model Clip {
     @@index([s3Key])
     @@index([userId])
     @@index([uploadedFileId])
+}
+
+/// Required by NextAuth Prisma adapter for email verification flows
+model VerificationToken {
+    identifier String
+    token      String   @unique
+    expires    DateTime
+
+    @@unique([identifier, token])
 }

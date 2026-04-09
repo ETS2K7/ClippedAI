@@ -5,9 +5,7 @@ export function useSession() {
     const session = nextAuthUseSession();
     return { data: session?.data || null, isPending: session?.status === "loading" };
   } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[auth-client] Session hook error:", error);
-    }
+    console.warn("[auth-client] Session hook error:", error);
     return { data: null, isPending: false };
   }
 }

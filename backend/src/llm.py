@@ -80,6 +80,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     import time as _time
     MAX_RETRIES = 3
     last_error = None
+    response = None
 
     for attempt in range(MAX_RETRIES):
         try:

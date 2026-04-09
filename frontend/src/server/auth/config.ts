@@ -93,7 +93,13 @@ export const authConfig = {
           select: { id: true, isAdmin: true },
         });
         if (!exists) {
-          return { ...session, user: undefined as unknown as typeof session.user };
+          // User was deleted — invalidate session by clearing required fields.
+          // This forces NextAuth to treat the session as unauthenticated.
+          return {
+            ...session,
+            user: { ...session.user, id: "", isAdmin: false },
+            expires: new Date(0).toISOString(),
+          };
         }
         return {
           ...session,

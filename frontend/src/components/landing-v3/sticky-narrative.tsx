@@ -15,19 +15,19 @@ export const StickyNarrative = () => {
   // Helper: piecewise linear interpolation with clamping (avoids Framer Motion spline overshoot)
   const lerp = (v: number, input: number[], output: number[]): number => {
     if (input.length === 0 || output.length === 0) return 0;
-    const firstIn = input[0] as number;
-    const lastIn = input[input.length - 1] as number;
-    const firstOut = output[0] as number;
-    const lastOut = output[output.length - 1] as number;
+    const firstIn = input[0]!;
+    const lastIn = input[input.length - 1]!;
+    const firstOut = output[0]!;
+    const lastOut = output[output.length - 1]!;
     
     if (v <= firstIn) return firstOut;
     if (v >= lastIn) return lastOut;
     
     for (let i = 0; i < input.length - 1; i++) {
-      const inI = input[i] as number;
-      const inNext = input[i + 1] as number;
-      const outI = output[i] as number;
-      const outNext = output[i + 1] as number;
+      const inI = input[i]!;
+      const inNext = input[i + 1]!;
+      const outI = output[i]!;
+      const outNext = output[i + 1]!;
       
       if (v >= inI && v <= inNext) {
         const t = (v - inI) / (inNext - inI);

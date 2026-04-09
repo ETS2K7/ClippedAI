@@ -37,6 +37,15 @@ interface FontOption {
   format?: string;
 }
 
+interface CaptionTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  font_family?: string;
+  font_size?: number;
+  font_color?: string;
+}
+
 const extractYouTubeVideoId = (value: string): string | null => {
   const input = value.trim();
   if (!input) return null;
@@ -86,7 +95,7 @@ export default function Home() {
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { data: session, isPending } = useSession();
-  const isAdminSession = Boolean((session?.user as any)?.isAdmin);
+  const isAdminSession = Boolean(session?.user?.isAdmin);
 
   const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
   const [fontSize, setFontSize] = useState(24);
@@ -108,7 +117,7 @@ export default function Home() {
   const availableFonts: FontOption[] = fontsData?.fonts || [];
   const isAdmin = prefsData?.isAdmin ?? isAdminSession;
   const fontLoadError = fontError ? "Could not load fonts right now." : null;
-  const availableTemplates: any[] = templatesData?.templates || [];
+  const availableTemplates: CaptionTemplate[] = templatesData?.templates || [];
   const brollAvailable = brollData?.configured || false;
   const latestTask: LatestTask | null = tasksData?.tasks?.[0] || null;
 
@@ -118,7 +127,6 @@ export default function Home() {
   const [outputFormat, setOutputFormat] = useState<"vertical" | "original">("vertical");
   const [addSubtitles, setAddSubtitles] = useState(true);
 
-  const taskApiUrl = "/api/tasks";
   const youtubeThumbnailUrl = sourceType === "youtube" ? getYouTubeThumbnailUrl(url) : null;
 
   // On preferences loaded, set initial local values

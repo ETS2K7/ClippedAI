@@ -45,8 +45,6 @@ auth_scheme = HTTPBearer()
 def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
     """Download YouTube video using Apify API to bypass datacenter IP bans."""
     from apify_client import ApifyClient
-    import requests
-    import shutil
 
     apify_token = os.environ.get("APIFY_TOKEN")
     if not apify_token:
@@ -83,7 +81,6 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
         
         # Download the file from our S3 bucket directly to video_path,
         # which the rest of the Modal pipeline will use
-        import boto3
         s3 = boto3.client(
             "s3",
             aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
@@ -144,7 +141,7 @@ def _process_video_pipeline(
             sub_file = generate_subtitles(words, clip, index, chunk_meta)
             merge_and_cleanup(trk_vid, ext_vid, sub_file, index)
 
-            clip_out_path = f"output/clip_{index + 1}.mp4"
+            clip_out_path = f"output/clip_{index}.mp4"
             s3_key_dir = os.path.dirname(s3_key)
             output_s3_key = f"{s3_key_dir}/clip_{index}.mp4"
 

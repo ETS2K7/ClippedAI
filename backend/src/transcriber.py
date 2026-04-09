@@ -44,7 +44,8 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
     }
 
     res = requests.post(
-        "https://api.assemblyai.com/v2/transcript", headers=headers, json=json_payload
+        "https://api.assemblyai.com/v2/transcript", headers=headers, json=json_payload,
+        timeout=60,
     )
     if res.status_code != 200:
         raise RuntimeError(f"Transcription start failed: {res.text}")

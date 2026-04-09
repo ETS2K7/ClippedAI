@@ -8,16 +8,12 @@ import { signOut, useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, LogOut, List, Settings, Plus, Shield } from "lucide-react";
-import useSWR from "swr";
-import { fetcher } from "~/lib/fetcher";
 
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
-  const { data: prefsData } = useSWR(session?.user ? "/api/preferences" : null, fetcher);
-  const isAdmin = prefsData?.isAdmin ?? Boolean(session?.user?.isAdmin);
+  const isAdmin = Boolean(session?.user?.isAdmin);
 
   const handleSignOut = async () => {
     await signOut();
@@ -89,7 +85,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   asChild
                   className="text-white/50 hover:text-white hover:bg-white/[0.04] text-[11px] font-bold uppercase tracking-widest font-mono rounded-full transition-all duration-200 h-8"
                 >
-                  <a href="/admin">ADMIN</a>
+                  <Link href="/admin">ADMIN</Link>
                 </Button>
               )}
             </nav>
@@ -181,14 +177,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 Generations
               </Link>
               {isAdmin && (
-                <a
+                <Link
                   href="/admin"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
                 >
                   <Shield className="w-4 h-4 text-white/30" />
                   Admin
-                </a>
+                </Link>
               )}
               <Link
                 href="/settings"
