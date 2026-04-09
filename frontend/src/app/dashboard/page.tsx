@@ -86,7 +86,7 @@ export default function Home() {
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { data: session, isPending } = useSession();
-  const isAdminSession = Boolean((session?.user as any)?.isAdmin);
+  const isAdmin = Boolean((session?.user as any)?.isAdmin);
 
   const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
   const [fontSize, setFontSize] = useState(24);
@@ -105,6 +105,7 @@ export default function Home() {
   const { data: tasksData, isLoading: isLoadingLatest } = useSWR(session?.user ? "/api/tasks/" : null, fetcher, swrOptions);
 
   // Derived application state
+  const availableFonts: FontOption[] = fontsData?.fonts || [];
   const isAdmin = prefsData?.isAdmin ?? isAdminSession;
   const fontLoadError = fontError ? "Could not load fonts right now." : null;
   const availableTemplates: any[] = templatesData?.templates || [];
