@@ -64,19 +64,30 @@ export const authConfig = {
   adapter: PrismaAdapter(db),
   callbacks: {
     session: async ({ session, token }) => {
-      // Guard against stale JWTs pointing to deleted/wiped users.
-      // If the user no longer exists in the DB, return an empty session
-      // so NextAuth middleware redirects to login instead of 500ing downstream.
       if (token.sub) {
+        // isAdmin is baked into the JWT at sign-in (see jwt callback below).
+        // Only re-query the DB if the flag is missing from the token entirely,
+        // which avoids a DB hit on every single session check (was causing 429s).
+        if (typeof token.isAdmin !== "undefined") {
+          return {
+            ...session,
+            user: {
+              ...session.user,
+              id: token.sub,
+              isAdmin: token.isAdmin as boolean,
+            },
+          };
+        }
+
+        // Fallback: token is missing isAdmin (e.g. old sessions pre-migration).
+        // Query the DB once, and the next JWT refresh will populate the flag.
         const exists = await db.user.findUnique({
           where: { id: token.sub },
           select: { id: true, isAdmin: true },
         });
         if (!exists) {
-          // Return a session with no user — NextAuth will treat this as unauthenticated
           return { ...session, user: undefined as unknown as typeof session.user };
         }
-        // Refresh isAdmin from DB on each session check (handles role changes)
         return {
           ...session,
           user: {
@@ -88,6 +99,7 @@ export const authConfig = {
       }
       return session;
     },
+
     jwt: ({ token, user }) => {
       // Persist isAdmin into the JWT so the session callback can read it
       if (user) {
