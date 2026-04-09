@@ -15,7 +15,8 @@ import {
   Clapperboard,
   Shield,
   ShieldAlert,
-  ArrowLeft
+  ArrowLeft,
+  Trash2
 } from "lucide-react";
 import Link from "next/link";
 
@@ -89,13 +90,49 @@ export default function AdminPage() {
         const data = await res.json() as { error?: string };
         alert(data.error ?? "Failed to toggle admin status.");
       } else {
-        await mutateUsers();
+        await mutateUsers(
+          users?.map(u => u.id === user.id ? { ...u, isAdmin: !user.isAdmin } : u),
+          { revalidate: false }
+        );
       }
     } catch (err) {
       console.error(err);
       alert("A network error occurred.");
     } finally {
       setTogglingAdminId(null);
+    }
+  };
+
+  const deleteUser = async (user: AdminUser) => {
+    if (user.id === session?.user?.id) {
+      alert("You cannot delete your own account.");
+      return;
+    }
+
+    if (!confirm(`Are you absolutely sure you want to permanently delete ${user.email}?\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingUserId(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, {
+        method: "DELETE"
+      });
+
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        alert(data.error ?? "Failed to delete user.");
+      } else {
+        await mutateUsers(
+          users?.filter(u => u.id !== user.id),
+          { revalidate: false }
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      alert("A network error occurred.");
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -220,11 +257,11 @@ export default function AdminPage() {
                         <td className="px-6 py-4 whitespace-nowrap tabular-nums">
                           {user._count.clips}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={togglingAdminId === user.id || user.id === session?.user?.id}
+                            disabled={togglingAdminId === user.id || deletingUserId === user.id || user.id === session?.user?.id}
                             onClick={() => toggleAdminStatus(user)}
                             className={`rounded-md font-mono text-[10px] uppercase tracking-widest transition-all ${
                               user.isAdmin 
@@ -243,6 +280,18 @@ export default function AdminPage() {
                               "Promote"
                             )}
                           </Button>
+
+                          {user.id !== session?.user?.id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={deletingUserId === user.id}
+                              onClick={() => deleteUser(user)}
+                              className="rounded-md font-mono text-[10px] uppercase tracking-widest transition-all bg-transparent text-red-500/50 border-red-500/20 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-500"
+                            >
+                              {deletingUserId === user.id ? "..." : <Trash2 className="w-4 h-4" />}
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}

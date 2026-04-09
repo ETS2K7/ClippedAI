@@ -56,7 +56,7 @@ export function SignupForm({
           "Account created but couldn't sign in automatically. Please try again.",
         );
       } else {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
       }
     } catch {
       setError("An unexpected error occurred");
