@@ -81,33 +81,33 @@ const STATUS_CONFIG: Record<
   { label: string; dotClass: string; bgClass: string; textClass: string }
 > = {
   completed: {
-    label: "Completed",
-    dotClass: "bg-emerald-400",
-    bgClass: "bg-emerald-500/10 border-emerald-500/20",
-    textClass: "text-emerald-400",
+    label: "COMPLETED",
+    dotClass: "bg-black",
+    bgClass: "bg-white border text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    textClass: "text-black",
   },
   processing: {
-    label: "Processing",
-    dotClass: "bg-violet-400 animate-pulse",
-    bgClass: "bg-violet-500/10 border-violet-500/20",
-    textClass: "text-violet-400",
+    label: "PROCESSING",
+    dotClass: "bg-white animate-pulse",
+    bgClass: "bg-transparent border border-white/30 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    textClass: "text-white",
   },
   queued: {
-    label: "Queued",
-    dotClass: "bg-amber-400",
-    bgClass: "bg-amber-500/10 border-amber-500/20",
-    textClass: "text-amber-400",
+    label: "QUEUED",
+    dotClass: "bg-white/70",
+    bgClass: "bg-transparent border border-white/20 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    textClass: "text-white/70",
   },
   error: {
-    label: "Error",
-    dotClass: "bg-red-400",
-    bgClass: "bg-red-500/10 border-red-500/20",
-    textClass: "text-red-400",
+    label: "ERROR",
+    dotClass: "bg-white",
+    bgClass: "bg-red-500 border-red-500 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    textClass: "text-white",
   },
   cancelled: {
-    label: "Cancelled",
-    dotClass: "bg-white/30",
-    bgClass: "bg-white/[0.04] border-white/[0.08]",
+    label: "CANCELLED",
+    dotClass: "bg-white/40",
+    bgClass: "bg-transparent border-white/10 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
     textClass: "text-white/40",
   },
 };
@@ -332,11 +332,11 @@ export default function ListPage() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="space-y-4">
-          <Skeleton className="h-4 w-32 mx-auto bg-white/[0.06]" />
-          <Skeleton className="h-4 w-48 mx-auto bg-white/[0.06]" />
-          <Skeleton className="h-4 w-24 mx-auto bg-white/[0.06]" />
+          <Skeleton className="h-4 w-32 mx-auto rounded-md bg-white/[0.1]" />
+          <Skeleton className="h-4 w-48 mx-auto rounded-md bg-white/[0.1]" />
+          <Skeleton className="h-4 w-24 mx-auto rounded-md bg-white/[0.1]" />
         </div>
       </div>
     );
@@ -344,14 +344,14 @@ export default function ListPage() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f]">
+      <div className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-24 text-center">
-          <h1 className="text-3xl font-bold text-white mb-4">Sign In Required</h1>
-          <p className="text-white/40 mb-8">
+          <h1 className="text-4xl md:text-5xl font-black font-syne uppercase text-white mb-4">SIGN IN REQUIRED.</h1>
+          <p className="text-white/40 mb-8 font-mono tracking-widest text-xs uppercase">
             You need to be signed in to view your generations.
           </p>
           <Link href="/login">
-            <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white">Sign In</Button>
+            <Button size="lg" className="bg-white hover:bg-white/90 text-black font-black uppercase font-syne tracking-widest rounded-md">Sign In</Button>
           </Link>
         </div>
       </div>
@@ -372,7 +372,7 @@ export default function ListPage() {
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+          "inline-flex items-center gap-1.5",
           config.bgClass,
           config.textClass,
         )}
@@ -400,12 +400,12 @@ export default function ListPage() {
               </Link>
             </div>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between pt-4">
               <div>
-                <h1 className="font-[var(--font-syne)] text-2xl font-bold tracking-tight text-white">
-                  Generations
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-syne uppercase tracking-tighter text-white leading-none">
+                  GENERATIONS.
                 </h1>
-                <p className="mt-1 text-sm text-white/35">
+                <p className="mt-3 sm:mt-4 text-[10px] sm:text-xs font-mono tracking-widest uppercase text-white/40">
                   {tasks.length} total &middot; manage and review your clips
                 </p>
               </div>
@@ -413,19 +413,19 @@ export default function ListPage() {
               {!isLoading && !error && tasks.length > 0 && (
                 <div className="flex items-center gap-2">
                   {completedCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-xs font-medium text-emerald-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    <span className="inline-flex items-center gap-1.5 bg-white text-black px-2.5 py-0.5 text-[10px] font-bold font-mono uppercase tracking-widest">
+                      <span className="h-1.5 w-1.5 rounded-full bg-black" />
                       {completedCount} done
                     </span>
                   )}
                   {activeCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 px-2.5 py-1 text-xs font-medium text-violet-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
+                    <span className="inline-flex items-center gap-1.5 border border-white/30 text-white px-2.5 py-0.5 text-[10px] font-bold font-mono uppercase tracking-widest">
+                      <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
                       {activeCount} active
                     </span>
                   )}
                   {attentionCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 border border-red-500/20 px-2.5 py-1 text-xs font-medium text-red-400">
+                    <span className="inline-flex items-center gap-1.5 border border-red-500/50 bg-red-500/10 text-red-500 px-2.5 py-0.5 text-[10px] font-bold font-mono uppercase tracking-widest">
                       <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
                       {attentionCount} need attention
                     </span>
@@ -464,14 +464,14 @@ export default function ListPage() {
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-4 rounded-xl glass-card p-4"
+                  className="flex items-center gap-4 brutal-card p-4"
                 >
-                  <Skeleton className="h-5 w-5 rounded bg-white/[0.06]" />
+                  <Skeleton className="h-5 w-5 rounded-md bg-white/[0.1]" />
                   <div className="flex-1 space-y-2">
-                    <Skeleton className="h-4 w-64 bg-white/[0.06]" />
-                    <Skeleton className="h-3 w-40 bg-white/[0.06]" />
+                    <Skeleton className="h-4 w-64 rounded-md bg-white/[0.1]" />
+                    <Skeleton className="h-3 w-40 rounded-md bg-white/[0.1]" />
                   </div>
-                  <Skeleton className="h-6 w-20 rounded-full bg-white/[0.06]" />
+                  <Skeleton className="h-6 w-20 rounded-md bg-white/[0.1]" />
                 </div>
               ))}
             </div>
@@ -481,17 +481,17 @@ export default function ListPage() {
               <AlertDescription className="text-white/70">{error}</AlertDescription>
             </Alert>
           ) : tasks.length === 0 ? (
-            <Card className="glass-card border-white/[0.06]">
+            <Card className="brutal-card border-white/10">
               <CardContent className="p-12 text-center">
-                <div className="w-16 h-16 bg-white/[0.04] rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <PlayCircle className="w-8 h-8 text-white/20" />
+                <div className="w-16 h-16 bg-white/[0.04] rounded-md flex items-center justify-center mx-auto mb-4 border border-white/10">
+                  <PlayCircle className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-xl font-semibold text-white mb-2">No generations yet</h2>
-                <p className="text-white/35 mb-6 text-sm">
+                <h2 className="text-xl font-syne uppercase font-bold text-white mb-2">No generations yet</h2>
+                <p className="text-white/35 font-mono uppercase tracking-widest text-xs mb-6">
                   Start by processing your first video to create clips.
                 </p>
                 <Link href="/dashboard">
-                  <Button className="bg-violet-600 hover:bg-violet-500 text-white">Create New Generation</Button>
+                  <Button className="bg-white hover:bg-white/90 text-black font-black uppercase font-syne tracking-widest rounded-md">Create New Generation</Button>
                 </Link>
               </CardContent>
             </Card>
@@ -504,7 +504,7 @@ export default function ListPage() {
                   onCheckedChange={handleToggleAllVisible}
                   disabled={activeBatchAction !== null}
                   aria-label="Select all generations"
-                  className="border-white/20 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600 data-[state=indeterminate]:bg-white/20 data-[state=indeterminate]:border-white/20"
+                  className="border-white/20 rounded-md data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=checked]:border-white data-[state=indeterminate]:bg-white/20 data-[state=indeterminate]:border-white/20"
                 />
                 <span className="text-xs font-medium uppercase tracking-widest text-white/25">
                   {selectedCount > 0 ? `${selectedCount} of ${tasks.length} selected` : "Select"}
@@ -520,17 +520,17 @@ export default function ListPage() {
                     <div
                       key={task.id}
                       className={cn(
-                        "group relative flex items-start gap-4 rounded-xl border p-4 transition-all duration-150",
+                        "group relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 transition-all duration-150 brutal-card",
                         isSelected
-                          ? "border-violet-500/20 bg-violet-500/[0.04] ring-1 ring-violet-500/10"
-                          : "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.1] hover:bg-white/[0.04]",
+                          ? "border-white border-bg-white/5 ring-1 ring-white/10"
+                          : "border-white/[0.1] bg-black hover:border-white/[0.3] hover:bg-white/[0.02]",
                       )}
                     >
                       {/* Selection indicator bar */}
                       <div
                         className={cn(
-                          "absolute left-0 top-3 bottom-3 w-0.5 rounded-full transition-all duration-150",
-                          isSelected ? "bg-violet-500" : "bg-transparent",
+                          "absolute left-0 top-3 bottom-3 w-0.5 transition-all duration-150",
+                          isSelected ? "bg-white" : "bg-transparent",
                         )}
                       />
 
@@ -545,7 +545,7 @@ export default function ListPage() {
                               ? `Deselect ${task.source_title}`
                               : `Select ${task.source_title}`
                           }
-                          className="border-white/20 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600"
+                          className="border-white/20 rounded-md data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=checked]:border-white"
                         />
                       </div>
 
@@ -553,7 +553,7 @@ export default function ListPage() {
                       <Link href={`/tasks/${task.id}`} className="flex-1 min-w-0">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
-                            <h3 className="truncate text-sm font-semibold text-white/90 transition-colors group-hover:text-white">
+                            <h3 className="truncate text-xs sm:text-sm font-semibold text-white/90 transition-colors group-hover:text-white">
                               {task.source_title}
                             </h3>
                             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/25">
@@ -592,8 +592,7 @@ export default function ListPage() {
             style={{ animation: "command-bar-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both" }}
           >
             <div
-              className="pointer-events-auto flex items-center gap-1 rounded-2xl border border-white/[0.08] bg-[#0a0a0f]/95 backdrop-blur-xl px-2 py-2 shadow-2xl"
-              style={{ animation: "command-bar-pulse 3s ease-in-out infinite" }}
+              className="pointer-events-auto flex items-center gap-1 border border-white/[0.2] bg-black px-2 py-2"
             >
               {/* Select all checkbox */}
               <div className="flex items-center gap-2.5 pl-2 pr-3">
@@ -602,7 +601,7 @@ export default function ListPage() {
                   onCheckedChange={handleToggleAllVisible}
                   disabled={activeBatchAction !== null}
                   aria-label="Select all"
-                  className="border-white/20 data-[state=checked]:bg-violet-600 data-[state=checked]:border-violet-600 data-[state=indeterminate]:bg-white/20 data-[state=indeterminate]:border-white/20"
+                  className="border-white/20 rounded-md data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=checked]:border-white data-[state=indeterminate]:bg-white/20 data-[state=indeterminate]:border-white/20"
                 />
                 <span className="text-sm font-medium text-white tabular-nums">
                   {selectedCount}
@@ -733,15 +732,15 @@ export default function ListPage() {
               <AlertDialogAction
                 onClick={() => void handleDeleteSelected()}
                 disabled={activeBatchAction === "delete" || selectedCount === 0}
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-white hover:bg-red-600 text-black rounded-md uppercase font-syne font-bold tracking-widest"
               >
                 {activeBatchAction === "delete" ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Deleting...
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    DELETING...
                   </>
                 ) : (
-                  "Delete"
+                  "DELETE"
                 )}
               </AlertDialogAction>
             </AlertDialogFooter>

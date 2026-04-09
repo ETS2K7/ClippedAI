@@ -45,49 +45,49 @@
 
 /* ===== Midnight Forge — Dark-first Design System ===== */
 :root {
-  --radius: 0.75rem;
-  /* Near-black with slight blue undertone */
-  --background: oklch(0.098 0.01 270);
-  --foreground: oklch(0.97 0.005 270);
-  /* Glass surface cards */
-  --card: oklch(0.145 0.012 270);
-  --card-foreground: oklch(0.97 0.005 270);
+  --radius: 0.5rem; /* Soft edges requested by user */
+  /* Pure Pitch Black */
+  --background: #000000;
+  --foreground: #FFFFFF;
+  /* Glass surface cards - slightly elevated black */
+  --card: rgba(255,255,255,0.02);
+  --card-foreground: #FFFFFF;
   /* Popovers & dropdowns */
-  --popover: oklch(0.155 0.014 270);
-  --popover-foreground: oklch(0.97 0.005 270);
-  /* Primary — Violet 500 accent */
-  --primary: oklch(0.65 0.25 290);
-  --primary-foreground: oklch(0.98 0 0);
+  --popover: #0a0a0a;
+  --popover-foreground: #FFFFFF;
+  /* Primary — High contrast white/black instead of Violet */
+  --primary: #FFFFFF;
+  --primary-foreground: #000000;
   /* Secondary — Subtle glass */
-  --secondary: oklch(0.18 0.01 270);
-  --secondary-foreground: oklch(0.88 0.01 270);
+  --secondary: rgba(255,255,255,0.05);
+  --secondary-foreground: rgba(255,255,255,0.8);
   /* Muted */
-  --muted: oklch(0.18 0.008 270);
-  --muted-foreground: oklch(0.55 0.015 265);
+  --muted: rgba(255,255,255,0.05);
+  --muted-foreground: rgba(255,255,255,0.4);
   /* Accent */
-  --accent: oklch(0.20 0.015 270);
-  --accent-foreground: oklch(0.97 0.005 270);
+  --accent: rgba(255,255,255,0.1);
+  --accent-foreground: #FFFFFF;
   /* Destructive */
   --destructive: oklch(0.577 0.245 27.325);
-  /* Borders & inputs */
-  --border: oklch(1 0 0 / 8%);
-  --input: oklch(1 0 0 / 10%);
-  --ring: oklch(0.65 0.25 290);
+  /* Borders & inputs - Sharp contrast */
+  --border: rgba(255,255,255,0.1);
+  --input: rgba(255,255,255,0.1);
+  --ring: rgba(255,255,255,0.3);
   /* Charts */
-  --chart-1: oklch(0.65 0.25 290);
+  --chart-1: #FFFFFF;
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
   /* Sidebar */
-  --sidebar: oklch(0.12 0.01 270);
-  --sidebar-foreground: oklch(0.97 0.005 270);
-  --sidebar-primary: oklch(0.65 0.25 290);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.18 0.012 270);
-  --sidebar-accent-foreground: oklch(0.97 0.005 270);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: oklch(0.65 0.25 290);
+  --sidebar: #000000;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-primary: #FFFFFF;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: rgba(255,255,255,0.05);
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: rgba(255,255,255,0.1);
+  --sidebar-ring: rgba(255,255,255,0.3);
 }
 
 /* Light mode override for landing page sections if needed */
@@ -129,50 +129,8 @@
 }
 
 /* ===== Midnight Forge Utility Classes ===== */
+/* (Glass card, input, and brutalist utilities are defined at end of file) */
 
-/* Glass card surface */
-.glass-card {
-  background: oklch(1 0 0 / 3%);
-  border: 1px solid oklch(1 0 0 / 6%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.glass-card-hover {
-  background: oklch(1 0 0 / 3%);
-  border: 1px solid oklch(1 0 0 / 6%);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  transition: all 0.2s ease;
-}
-.glass-card-hover:hover {
-  background: oklch(1 0 0 / 5%);
-  border-color: oklch(1 0 0 / 12%);
-  box-shadow: 0 0 30px oklch(0.65 0.25 290 / 5%);
-}
-
-/* Glass input */
-.glass-input {
-  background: oklch(1 0 0 / 5%);
-  border: 1px solid oklch(1 0 0 / 10%);
-  color: oklch(0.97 0.005 270);
-}
-.glass-input::placeholder {
-  color: oklch(1 0 0 / 30%);
-}
-.glass-input:focus {
-  border-color: oklch(0.65 0.25 290 / 50%);
-  box-shadow: 0 0 0 2px oklch(0.65 0.25 290 / 15%);
-  outline: none;
-}
-
-/* Ambient glow effects */
-.glow-violet {
-  box-shadow: 0 0 60px oklch(0.65 0.25 290 / 10%), 0 0 120px oklch(0.65 0.25 290 / 5%);
-}
-.glow-violet-sm {
-  box-shadow: 0 0 20px oklch(0.65 0.25 290 / 8%);
-}
 
 /* Shimmer animation for processing states */
 @keyframes shimmer {
@@ -192,7 +150,7 @@
 
 /* Gradient text */
 .text-gradient-violet {
-  background: linear-gradient(135deg, oklch(0.75 0.2 290), oklch(0.6 0.25 280));
+  background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.5));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -258,8 +216,8 @@
 }
 
 @keyframes command-bar-pulse {
-  0%, 100% { box-shadow: 0 -4px 30px oklch(0.65 0.25 290 / 0.12); }
-  50% { box-shadow: 0 -4px 30px oklch(0.65 0.25 290 / 0.22); }
+  0%, 100% { box-shadow: 0 -4px 30px rgba(255,255,255,0.06); }
+  50% { box-shadow: 0 -4px 30px rgba(255,255,255,0.12); }
 }
 
 /* ===== Landing Page Fonts ===== */
@@ -294,6 +252,38 @@
 .animate-float { animation: float 3s ease-in-out infinite; }
 
 .bg-gradient-radial { background: radial-gradient(var(--tw-gradient-stops)); }
-.shadow-glow-sm { box-shadow: 0 0 8px rgba(103,35,255,0.2); }
-.shadow-glow-md { box-shadow: 0 0 16px rgba(103,35,255,0.267); }
-.shadow-glow-lg { box-shadow: 0 0 32px rgba(103,35,255,0.267); }
+.shadow-glow-sm { box-shadow: 0 0 8px rgba(255,255,255,0.06); }
+.shadow-glow-md { box-shadow: 0 0 16px rgba(255,255,255,0.08); }
+.shadow-glow-lg { box-shadow: 0 0 32px rgba(255,255,255,0.08); }
+
+/* ===== Premium Dark UI System ===== */
+.brutal-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  border-radius: 1rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s ease-out;
+}
+.brutal-card:hover {
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+}
+.brutal-input {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 0.75rem;
+  color: #FFFFFF;
+  transition: all 0.2s ease-out;
+}
+.brutal-input:focus {
+  border-color: rgba(255,255,255,0.2);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.06);
+  outline: none;
+}
+.glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 1rem; backdrop-filter: blur(12px); }
+.glass-card-hover { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 1rem; transition: all 0.2s; }
+.glass-card-hover:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+.glass-input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.75rem; }
+

@@ -17,6 +17,7 @@ import Link from "next/link";
 import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, LinkIcon } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
 import AppShell from "~/components/app-shell";
+import { motion } from "framer-motion";
 
 interface LatestTask {
   id: string;
@@ -458,7 +459,7 @@ export default function Home() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="space-y-4">
           <Skeleton className="h-4 w-32 mx-auto bg-white/[0.06]" />
           <Skeleton className="h-4 w-48 mx-auto bg-white/[0.06]" />
@@ -475,30 +476,23 @@ export default function Home() {
   return (
     <AppShell>
       <div className="min-h-screen">
-        {/* ── Ambient Background Glows ── */}
-        <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute -top-40 left-1/4 h-[500px] w-[500px] rounded-full bg-violet-600/[0.04] blur-[150px]" />
-          <div className="absolute top-1/3 right-0 h-[400px] w-[400px] rounded-full bg-blue-600/[0.03] blur-[120px]" />
-        </div>
 
         {/* ── Main Content ── */}
-        <div className="relative max-w-6xl mx-auto px-6 py-10">
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
           {/* Latest Generation Banner */}
           {latestTask && (
             <Link href={`/tasks/${latestTask.id}`} className="block mb-8">
-              <div className="flex items-center justify-between p-4 rounded-xl glass-card-hover group">
+              <div className="flex items-center justify-between p-3 sm:p-4 brutal-card group">
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                    <Film className="w-5 h-5 text-violet-400" />
+                  <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
+                    <Film className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white/90 truncate">
+                    <p className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider sm:tracking-widest text-white truncate">
                       {latestTask.source_title}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-white/40 mt-0.5">
-                      <span className="capitalize">{latestTask.source_type}</span>
-                      <span>&middot;</span>
-                      <span>{new Date(latestTask.created_at).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-white/40 mt-0.5 font-mono">
+                      <span className="uppercase tracking-wider">{latestTask.source_type}</span>
                       <span>&middot;</span>
                       <span>{latestTask.clips_count} {latestTask.clips_count === 1 ? "clip" : "clips"}</span>
                     </div>
@@ -506,17 +500,17 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   {latestTask.status === "completed" ? (
-                    <Badge className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs">
+                    <Badge className="bg-white text-black hover:bg-white rounded-md font-bold tracking-widest uppercase text-[10px] px-2 py-0.5">
                       <CheckCircle className="w-3 h-3 mr-1" />
-                      Completed
+                      COMPLETED
                     </Badge>
                   ) : latestTask.status === "processing" ? (
-                    <Badge className="bg-violet-500/10 text-violet-400 border border-violet-500/20 text-xs">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Processing
+                    <Badge className="bg-transparent border border-white/30 text-white rounded-md font-bold tracking-widest uppercase text-[10px] px-2 py-0.5">
+                      <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                      PROCESSING
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-xs text-white/50 border-white/10">{latestTask.status}</Badge>
+                    <Badge variant="outline" className="text-[10px] rounded-md font-bold tracking-widest uppercase text-white/50 border-white/10">{latestTask.status}</Badge>
                   )}
                   <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-white/50 transition-colors" />
                 </div>
@@ -525,31 +519,36 @@ export default function Home() {
           )}
 
           {isLoadingLatest && (
-            <div className="mb-8 p-4 rounded-xl glass-card">
+            <div className="mb-8 p-4 brutal-card">
               <div className="flex items-center gap-4">
-                <Skeleton className="w-10 h-10 rounded-lg bg-white/[0.06]" />
+                <Skeleton className="w-10 h-10 rounded-xl bg-white/[0.1]" />
                 <div>
-                  <Skeleton className="h-4 w-48 mb-1.5 bg-white/[0.06]" />
-                  <Skeleton className="h-3 w-32 bg-white/[0.06]" />
+                  <Skeleton className="h-4 w-48 mb-1.5 rounded-md bg-white/[0.1]" />
+                  <Skeleton className="h-3 w-32 rounded-md bg-white/[0.1]" />
                 </div>
               </div>
             </div>
           )}
 
           {/* Two Column Layout */}
-          <div className="flex flex-col lg:flex-row gap-10 items-start">
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 items-start">
             {/* Left Column — Form */}
-            <div className="flex-1 min-w-0">
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  Create New Clip
+            <motion.div 
+              initial={{ opacity: 0, x: -15 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="flex-1 min-w-0"
+            >
+              <div className="mb-5 sm:mb-8">
+                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black font-syne uppercase tracking-tighter text-white mb-2 leading-none">
+                  NEW CLIP.
                 </h2>
-                <p className="text-white/40">
-                  Paste a YouTube link or upload a video — AI handles the rest.
+                <p className="text-white/40 font-mono tracking-widest text-[10px] sm:text-xs mt-3 sm:mt-4 uppercase">
+                  Paste a YouTube link or upload a video.
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
                 {/* Source Type Tabs */}
                 <div className="space-y-3">
                   <div className="flex gap-2">
@@ -562,7 +561,7 @@ export default function Home() {
                         if (fileInputRef.current) fileInputRef.current.value = "";
                       }}
                       disabled={isLoading}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
                         sourceType === "youtube"
                           ? "bg-white/10 text-white border border-white/10 shadow-sm"
                           : "bg-white/[0.03] text-white/40 border border-transparent hover:bg-white/[0.06] hover:text-white/60"
@@ -575,7 +574,7 @@ export default function Home() {
                       type="button"
                       onClick={() => setSourceType("upload")}
                       disabled={isLoading}
-                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
                         sourceType === "upload"
                           ? "bg-white/10 text-white border border-white/10 shadow-sm"
                           : "bg-white/[0.03] text-white/40 border border-transparent hover:bg-white/[0.06] hover:text-white/60"
@@ -597,7 +596,7 @@ export default function Home() {
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         disabled={isLoading}
-                        className="h-14 pl-12 text-base rounded-xl glass-input"
+                        className="h-14 pl-12 text-base brutal-input font-mono placeholder:text-white/20"
                       />
                     </div>
                   ) : (
@@ -628,19 +627,19 @@ export default function Home() {
                 </div>
 
                 {/* Caption & Style Section */}
-                <div className="glass-card rounded-xl p-4 space-y-3">
-                  <div className="flex items-center gap-2 text-sm font-medium text-white/80">
-                    <Sparkles className="w-4 h-4 text-violet-400" />
-                    Style & Captions
+                <div className="brutal-card p-3 sm:p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm font-bold font-mono tracking-widest text-white uppercase">
+                    <Sparkles className="w-4 h-4 text-white" />
+                    STYLE & CAPTIONS
                   </div>
 
                   {/* Caption Template Selector */}
                   <div className="space-y-2">
-                    <label className="text-sm text-white/40">
-                      Caption Style
+                    <label className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/50">
+                      preset
                     </label>
                     <Select value={captionTemplate} onValueChange={handleTemplateChange} disabled={isLoading}>
-                      <SelectTrigger className="w-full h-11 glass-input rounded-lg border-white/[0.08]">
+                      <SelectTrigger className="w-full h-11 brutal-input">
                         <SelectValue>
                           {availableTemplates.find(t => t.id === captionTemplate)?.name || "Select style"}
                         </SelectValue>
@@ -662,12 +661,12 @@ export default function Home() {
 
                   {/* B-Roll Toggle */}
                   {brollAvailable && (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                      <div className="flex items-center gap-3">
-                        <Film className="w-4 h-4 text-purple-400" />
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border border-white/10 bg-transparent rounded-xl">
+                      <div className="flex items-start gap-3 sm:items-center">
+                        <Film className="w-5 h-5 text-white mt-1 sm:mt-0 opacity-80" />
                         <div>
-                          <h3 className="text-sm font-medium text-white/80">AI B-Roll</h3>
-                          <p className="text-xs text-white/30">Auto-add stock footage from Pexels</p>
+                          <span className="font-mono tracking-widest uppercase font-bold text-xs text-white/80">AI B-ROLL</span>
+                          <p className="text-[10px] sm:text-xs text-white/40 font-mono uppercase tracking-wider mt-1">Auto-add stock footage from Pexels</p>
                         </div>
                       </div>
                       <Switch
@@ -679,12 +678,12 @@ export default function Home() {
                   )}
 
                   {/* Output format */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                    <div className="flex items-center gap-3">
-                      <Monitor className="w-4 h-4 text-blue-400" />
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border border-white/10 bg-transparent rounded-xl">
+                    <div className="flex items-start gap-3 sm:items-center">
+                      <Monitor className="w-5 h-5 text-white mt-1 sm:mt-0 opacity-80" />
                       <div>
-                        <h3 className="text-sm font-medium text-white/80">Wide format</h3>
-                        <p className="text-xs text-white/30">Keep original aspect ratio instead of 9:16 vertical</p>
+                        <span className="font-mono tracking-widest uppercase font-bold text-xs text-white/80">WIDE FORMAT</span>
+                        <p className="text-[10px] sm:text-xs text-white/40 font-mono uppercase tracking-wider mt-1">Keep original aspect ratio instead of 9:16 vertical</p>
                       </div>
                     </div>
                     <Switch
@@ -695,12 +694,12 @@ export default function Home() {
                   </div>
 
                   {/* Add subtitles */}
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                    <div className="flex items-center gap-3">
-                      <Type className="w-4 h-4 text-emerald-400" />
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border border-white/10 bg-transparent rounded-xl">
+                    <div className="flex items-start gap-3 sm:items-center">
+                      <Type className="w-5 h-5 text-white mt-1 sm:mt-0 opacity-80" />
                       <div>
-                        <h3 className="text-sm font-medium text-white/80">Add subtitles</h3>
-                        <p className="text-xs text-white/30">Burn captions onto clips (disable for faster processing)</p>
+                        <span className="font-mono tracking-widest uppercase font-bold text-xs text-white/80">ADD SUBTITLES</span>
+                        <p className="text-[10px] sm:text-xs text-white/40 font-mono uppercase tracking-wider mt-1">Burn captions onto clips (disable for faster processing)</p>
                       </div>
                     </div>
                     <Switch
@@ -719,17 +718,17 @@ export default function Home() {
                       : "max-h-0 opacity-0 pointer-events-none"
                   }`}
                 >
-                <div className="glass-card rounded-xl p-4 space-y-3">
+                <div className="brutal-card p-4 space-y-3">
                   <div
-                    className="flex items-center justify-between cursor-pointer"
+                    className="flex items-center justify-between cursor-pointer group mb-1"
                     onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
                   >
-                    <div className="flex items-center gap-2 text-sm font-medium text-white/80">
-                      <Paintbrush className="w-4 h-4 text-violet-400" />
-                      Font Customization
+                    <div className="flex items-center gap-2 text-sm font-bold font-mono tracking-widest text-white uppercase transition-colors">
+                      <Paintbrush className="w-4 h-4 text-white" />
+                      FONT CUSTOMIZATION
                     </div>
-                    <button type="button" className="text-xs text-white/30 hover:text-white/50 transition-colors">
-                      {showAdvancedOptions ? "Hide" : "Show"}
+                    <button type="button" className="text-[10px] font-bold font-mono uppercase tracking-widest text-white/30 group-hover:text-white/60 transition-colors">
+                      {showAdvancedOptions ? "HIDE" : "SHOW"}
                     </button>
                   </div>
 
@@ -737,11 +736,11 @@ export default function Home() {
                     <div className="space-y-5 pt-1">
                       {/* Font Family Selector */}
                       <div className="space-y-2">
-                        <label className="text-sm text-white/40 flex items-center gap-2">
+                        <label className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/50 flex items-center gap-2">
                           <Type className="w-3.5 h-3.5" />
-                          Font Family
+                          FONT FAMILY
                         </label>
-                        <div className="flex items-center justify-between gap-3 text-xs text-white/30">
+                        <div className="flex items-center justify-between gap-3 text-xs font-mono uppercase tracking-wider text-white/30">
                           <span>{availableFonts.length} font{availableFonts.length === 1 ? "" : "s"} available</span>
                           <input
                             ref={fontUploadInputRef}
@@ -771,7 +770,7 @@ export default function Home() {
                           className="glass-input rounded-lg"
                         />
                         <Select value={fontFamily} onValueChange={setFontFamily} disabled={isLoading}>
-                          <SelectTrigger className="w-full glass-input rounded-lg border-white/[0.08]">
+                          <SelectTrigger className="w-full brutal-input">
                             <SelectValue placeholder="Select font" />
                           </SelectTrigger>
                           <SelectContent>
@@ -798,11 +797,11 @@ export default function Home() {
                       </div>
 
                       {/* Font Size & Color Row */}
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {/* Font Size Slider */}
                         <div className="space-y-2">
-                          <label className="text-sm text-white/40">
-                            Size: {fontSize}px
+                          <label className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/50 flex items-center gap-2">
+                            SIZE: {fontSize}PX
                           </label>
                           <div className="px-1">
                             <Slider
@@ -823,9 +822,9 @@ export default function Home() {
 
                         {/* Font Color Picker */}
                         <div className="space-y-2">
-                          <label className="text-sm text-white/40 flex items-center gap-1.5">
+                          <label className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/50 flex items-center gap-2">
                             <Palette className="w-3.5 h-3.5" />
-                            Color
+                            COLOR
                           </label>
                           <div className="flex items-center gap-2">
                             <input
@@ -841,7 +840,7 @@ export default function Home() {
                               onChange={(e) => setFontColor(e.target.value)}
                               disabled={isLoading}
                               placeholder="#FFFFFF"
-                              className="flex-1 h-8 text-xs glass-input rounded-lg"
+                              className="flex-1 h-8 text-xs brutal-input font-mono"
                               pattern="^#[0-9A-Fa-f]{6}$"
                             />
                           </div>
@@ -876,7 +875,7 @@ export default function Home() {
                     </div>
 
                     {currentStep && statusMessage && (
-                      <div className="glass-card rounded-xl p-4 space-y-3">
+                      <div className="brutal-card p-4 space-y-3 bg-transparent">
                         <div className="flex items-center gap-3">
                           {getStepIcon(currentStep)}
                           <div className="flex-1">
@@ -887,30 +886,30 @@ export default function Home() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'validation' || currentStep === 'user_check' ? 'bg-violet-500/10' : progress > 15 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
-                            <CheckCircle className={`w-3 h-3 ${progress > 15 ? 'text-emerald-400' : 'text-white/20'}`} />
-                            <span className={progress > 15 ? 'text-emerald-400' : 'text-white/30'}>Validation</span>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-mono tracking-wider sm:tracking-widest uppercase font-bold">
+                          <div className={`flex items-center gap-2 p-2 brutal-card border border-white/20 ${currentStep === 'validation' || currentStep === 'user_check' ? 'bg-white text-black' : progress > 15 ? 'bg-white text-black' : 'bg-transparent text-white/50'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 15 || currentStep === 'validation' || currentStep === 'user_check' ? 'text-black' : 'text-white/20'}`} />
+                            <span>Validation</span>
                           </div>
-                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'download' || currentStep === 'youtube_info' ? 'bg-emerald-500/10' : progress > 30 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
-                            <CheckCircle className={`w-3 h-3 ${progress > 30 ? 'text-emerald-400' : 'text-white/20'}`} />
-                            <span className={progress > 30 ? 'text-emerald-400' : 'text-white/30'}>Download</span>
+                          <div className={`flex items-center gap-2 p-2 brutal-card border border-white/20 ${currentStep === 'download' || currentStep === 'youtube_info' ? 'bg-white text-black' : progress > 30 ? 'bg-white text-black' : 'bg-transparent text-white/50'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 30 || currentStep === 'download' || currentStep === 'youtube_info' ? 'text-black' : 'text-white/20'}`} />
+                            <span>Download</span>
                           </div>
-                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'transcript' ? 'bg-purple-500/10' : progress > 45 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
-                            <CheckCircle className={`w-3 h-3 ${progress > 45 ? 'text-emerald-400' : 'text-white/20'}`} />
-                            <span className={progress > 45 ? 'text-emerald-400' : 'text-white/30'}>Transcript</span>
+                          <div className={`flex items-center gap-2 p-2 brutal-card border border-white/20 ${currentStep === 'transcript' ? 'bg-white text-black' : progress > 45 ? 'bg-white text-black' : 'bg-transparent text-white/50'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 45 || currentStep === 'transcript' ? 'text-black' : 'text-white/20'}`} />
+                            <span>Transcript</span>
                           </div>
-                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'ai_analysis' ? 'bg-amber-500/10' : progress > 60 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
-                            <CheckCircle className={`w-3 h-3 ${progress > 60 ? 'text-emerald-400' : 'text-white/20'}`} />
-                            <span className={progress > 60 ? 'text-emerald-400' : 'text-white/30'}>AI Analysis</span>
+                          <div className={`flex items-center gap-2 p-2 brutal-card border border-white/20 ${currentStep === 'ai_analysis' ? 'bg-white text-black' : progress > 60 ? 'bg-white text-black' : 'bg-transparent text-white/50'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 60 || currentStep === 'ai_analysis' ? 'text-black' : 'text-white/20'}`} />
+                            <span>AI Analysis</span>
                           </div>
-                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'clip_generation' ? 'bg-indigo-500/10' : progress > 75 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
-                            <CheckCircle className={`w-3 h-3 ${progress > 75 ? 'text-emerald-400' : 'text-white/20'}`} />
-                            <span className={progress > 75 ? 'text-emerald-400' : 'text-white/30'}>Create Clips</span>
+                          <div className={`flex items-center gap-2 p-2 brutal-card border border-white/20 ${currentStep === 'clip_generation' ? 'bg-white text-black' : progress > 75 ? 'bg-white text-black' : 'bg-transparent text-white/50'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress > 75 || currentStep === 'clip_generation' ? 'text-black' : 'text-white/20'}`} />
+                            <span>Create Clips</span>
                           </div>
-                          <div className={`flex items-center gap-2 p-2 rounded-lg ${currentStep === 'complete' ? 'bg-emerald-500/10' : progress >= 100 ? 'bg-emerald-500/10' : 'bg-white/[0.03]'}`}>
-                            <CheckCircle className={`w-3 h-3 ${progress >= 100 ? 'text-emerald-400' : 'text-white/20'}`} />
-                            <span className={progress >= 100 ? 'text-emerald-400' : 'text-white/30'}>Complete</span>
+                          <div className={`flex items-center gap-2 p-2 brutal-card border border-white/20 ${currentStep === 'complete' ? 'bg-white text-black' : progress >= 100 ? 'bg-white text-black' : 'bg-transparent text-white/50'}`}>
+                            <CheckCircle className={`w-3 h-3 ${progress >= 100 || currentStep === 'complete' ? 'text-black' : 'text-white/20'}`} />
+                            <span>Complete</span>
                           </div>
                         </div>
                       </div>
@@ -936,7 +935,7 @@ export default function Home() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 text-base rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-all glow-violet-sm disabled:opacity-50"
+                  className="w-full h-12 sm:h-14 text-sm sm:text-base rounded-xl bg-white hover:bg-white/90 text-black font-black uppercase font-syne tracking-wider sm:tracking-widest transition-all disabled:opacity-50"
                   disabled={
                     (sourceType === "youtube" && !url.trim()) ||
                     (sourceType === "upload" && !fileRef.current) ||
@@ -946,28 +945,21 @@ export default function Home() {
                 >
                   {
                     !isAdmin
-                    ? "Reserved for Administrators"
-                    : isLoading ? "Processing..." : "Generate Clips"
+                    ? "ADMIN ONLY"
+                    : isLoading ? "PROCESSING..." : "GENERATE CLIPS."
                   }
                 </Button>
               </form>
-            </div>
+            </motion.div>
 
             {/* Right Column — Phone Preview */}
-            <div
-              className={`hidden lg:block flex-shrink-0 overflow-hidden transition-all duration-500 ease-in-out ${
-                sourceType === "upload"
-                  ? "w-0 opacity-0"
-                  : "w-[340px] opacity-100"
-              }`}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+              className="hidden lg:block flex-shrink-0 w-[340px]"
             >
-              <div
-                className={`w-[340px] transition-all duration-500 ease-in-out ${
-                  sourceType === "upload"
-                    ? "translate-x-6 scale-[0.97] opacity-0"
-                    : "translate-x-0 scale-100 opacity-100"
-                }`}
-              >
+              <div className="w-[340px]">
               <div className="lg:sticky lg:top-20">
                 <div className="flex items-center justify-center gap-2 mb-5 text-sm text-white/25">
                   <Monitor className="w-4 h-4" />
@@ -975,101 +967,132 @@ export default function Home() {
                 </div>
 
                 {/* Phone Frame */}
-                <div className="mx-auto" style={{ maxWidth: "300px" }}>
+                <div className="mx-auto relative group" style={{ maxWidth: "320px" }}>
+                  {/* Subtle ambient glow behind phone */}
+                  <div className="absolute inset-0 bg-white/[0.02] blur-3xl rounded-[3rem] transition-all duration-700 group-hover:bg-white/[0.04]" />
+                  
                   <div
-                    className="relative bg-[#1a1a1f] border border-white/[0.08]"
-                    style={{ borderRadius: "3rem", padding: "12px" }}
+                    className="relative bg-[#0c0c0e] shadow-[0_0_0_1px_rgba(255,255,255,0.08),_0_40px_80px_-20px_rgba(0,0,0,1)] ring-1 ring-inset ring-white/5"
+                    style={{ borderRadius: "3.5rem", padding: "12px" }}
                   >
+                    {/* Hardware Buttons */}
+                    <div className="absolute top-[110px] -left-[1.5px] w-[2px] h-[26px] bg-white/[0.15] rounded-l-md" />
+                    <div className="absolute top-[160px] -left-[1.5px] w-[2px] h-[50px] bg-white/[0.15] rounded-l-md" />
+                    <div className="absolute top-[220px] -left-[1.5px] w-[2px] h-[50px] bg-white/[0.15] rounded-l-md" />
+                    <div className="absolute top-[180px] -right-[1.5px] w-[2px] h-[70px] bg-white/[0.15] rounded-r-md" />
+
+                    {/* Inner Screen */}
                     <div
-                      className="relative overflow-hidden bg-black"
-                      style={{ borderRadius: "2.25rem", height: "580px" }}
+                      className="relative overflow-hidden bg-black ring-1 ring-white/[0.08]"
+                      style={{ borderRadius: "2.75rem", height: "620px" }}
                     >
                       {/* Status bar */}
-                      <div className="absolute top-0 left-0 right-0 z-20 px-6 pt-3 flex justify-between items-center">
-                        <span className="text-white text-xs font-semibold">9:41</span>
-                        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-24 h-7 bg-black rounded-full" />
-                        <div className="flex items-center gap-1">
+                      <div className="absolute top-0 left-0 right-0 z-30 h-[54px] px-6 pt-2 flex justify-between items-center text-white">
+                        {/* Time */}
+                        <div className="flex-1 flex justify-start pl-1">
+                          <span className="text-[14.5px] font-semibold tracking-tight">9:41</span>
+                        </div>
+                        
+                        {/* Dynamic Island */}
+                        <div className="flex-shrink-0 w-[110px] h-[32px] bg-black rounded-[24px] flex items-center justify-between px-2 shadow-[0_0_0_1px_rgba(255,255,255,0.03)] overflow-hidden">
+                          {/* Inner camera sensors */}
+                          <div className="w-[10px] h-[10px] rounded-full bg-[#080808] border border-white/[0.02] shadow-[inset_0_0_2px_rgba(0,0,0,0.5)] ml-1" />
+                          <div className="w-[30px] h-[10px] rounded-full bg-[#080808] border border-white/[0.02] shadow-[inset_0_0_2px_rgba(0,0,0,0.5)] mr-1 flex items-center justify-center">
+                            <div className="w-[6px] h-[6px] rounded-full bg-[#001030] shadow-[inset_0_0_2px_rgba(100,150,255,0.3)] opacity-50" />
+                          </div>
+                        </div>
+
+                        {/* Hardware Icons */}
+                        <div className="flex-1 flex justify-end pr-1">
+                          <div className="flex items-center gap-1.5 opacity-90 scale-90 origin-right">
                           <svg width="16" height="12" viewBox="0 0 16 12" className="text-white">
                             <rect x="0" y="8" width="3" height="4" rx="0.5" fill="currentColor" />
                             <rect x="4.5" y="5" width="3" height="7" rx="0.5" fill="currentColor" />
                             <rect x="9" y="2" width="3" height="10" rx="0.5" fill="currentColor" />
-                            <rect x="13.5" y="0" width="3" height="12" rx="0.5" fill="currentColor" opacity="0.3" />
+                            <rect x="13.5" y="0" width="3" height="12" rx="0.5" fill="currentColor" />
                           </svg>
-                          <svg width="14" height="12" viewBox="0 0 14 12" className="text-white ml-0.5">
+                          <svg width="15" height="12" viewBox="0 0 14 12" className="text-white ml-0.5">
                             <path d="M7 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z" fill="currentColor" />
                             <path d="M3.5 8.5a5 5 0 017 0" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
                             <path d="M1 5.5a8.5 8.5 0 0112 0" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" />
                           </svg>
-                          <svg width="26" height="12" viewBox="0 0 26 12" className="text-white ml-0.5">
+                          <svg width="24" height="12" viewBox="0 0 26 12" className="text-white ml-0.5">
                             <rect x="0" y="1" width="22" height="10" rx="2" stroke="currentColor" strokeWidth="1" fill="none" />
                             <rect x="2" y="3" width="16" height="6" rx="1" fill="currentColor" />
                             <rect x="23" y="4" width="2" height="4" rx="0.5" fill="currentColor" opacity="0.4" />
                           </svg>
                         </div>
                       </div>
+                    </div>
 
-                      {/* Video background */}
-                      {youtubeThumbnailUrl ? (
+                    {/* Video background */}
+                    {youtubeThumbnailUrl ? (
                         <div
-                          className="absolute inset-0 bg-cover bg-center scale-105 blur-sm"
-                          style={{ backgroundImage: `url(${youtubeThumbnailUrl})` }}
+                        className="absolute inset-0 bg-cover bg-center scale-105 pointer-events-none"
+                        style={{ backgroundImage: `url(${youtubeThumbnailUrl})` }}
                         />
                       ) : (
-                        <div className="absolute inset-0 bg-gradient-to-b from-zinc-700 via-zinc-600 to-zinc-800" />
+                        <div className="absolute inset-0 bg-[#0a0a0c]">
+                           {/* Add a subtle aesthetic metallic gradient to empty preview */}
+                           <div className="absolute top-0 left-0 w-[150%] h-[150%] bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.06)_0%,transparent_40%)]" />
+                           <div className="absolute bottom-0 right-0 w-[100%] h-[100%] bg-[radial-gradient(circle_at_100%_100%,rgba(255,255,255,0.02)_0%,transparent_50%)]" />
+                        </div>
                       )}
-                      <div className="absolute inset-0 bg-black/20" />
-                      <div className="absolute inset-x-0 bottom-0 h-60 bg-gradient-to-t from-black/70 via-black/30 to-transparent z-[1]" />
+                      
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90 pointer-events-none" />
 
                       {/* TikTok-style top navigation */}
-                      <div className="absolute top-12 left-0 right-0 z-10 flex justify-center items-center gap-5">
-                        <span className="text-white/50 text-xs font-medium">Following</span>
-                        <span className="text-white text-xs font-semibold relative">
-                          For You
-                          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-6 h-0.5 bg-white rounded-full" />
-                        </span>
+                      <div className="absolute top-[60px] left-0 right-0 z-20 flex justify-center items-center gap-6">
+                        <span className="text-white/60 text-[15px] font-semibold tracking-wide drop-shadow-md">Following</span>
+                        <div className="relative flex flex-col items-center">
+                          <span className="text-white text-[15px] font-bold tracking-wide drop-shadow-md">
+                            For You
+                          </span>
+                          <div className="absolute -bottom-[9px] w-8 h-1 bg-white rounded-full drop-shadow-lg" />
+                        </div>
                       </div>
 
                       {/* Right side action buttons */}
-                      <div className="absolute right-3 space-y-5 z-10" style={{ bottom: "260px" }}>
+                      <div className="absolute right-2 space-y-6 z-20" style={{ bottom: "240px" }}>
                         <div className="flex flex-col items-center gap-1">
-                          <div className="w-9 h-9 rounded-full bg-white/20 border-2 border-white/40" />
-                          <div className="w-4 h-4 rounded-full bg-red-500 -mt-3 border border-black flex items-center justify-center">
-                            <span className="text-white text-[7px] font-bold">+</span>
+                          <div className="w-[42px] h-[42px] rounded-full bg-white/10 border-[1.5px] border-white/30 backdrop-blur-md shadow-lg" />
+                          <div className="w-5 h-5 rounded-full bg-[#EA4335] -mt-3 border-2 border-black flex items-center justify-center shadow-md relative">
+                            <span className="text-white text-[12px] font-bold absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[52%]">+</span>
                           </div>
                         </div>
-                        <div className="flex flex-col items-center gap-0.5">
-                          <svg width="26" height="26" viewBox="0 0 24 24" fill="white" className="opacity-90">
+                        <div className="flex flex-col items-center gap-1">
+                          <svg width="32" height="32" viewBox="0 0 24 24" fill="white" className="drop-shadow-lg">
                             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                           </svg>
-                          <span className="text-white text-[10px] font-semibold">24.5K</span>
+                          <span className="text-white text-[12px] font-semibold drop-shadow-md">24.5K</span>
                         </div>
-                        <div className="flex flex-col items-center gap-0.5">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="white" className="opacity-90">
+                        <div className="flex flex-col items-center gap-1">
+                          <svg width="30" height="30" viewBox="0 0 24 24" fill="white" className="drop-shadow-lg">
                             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
                           </svg>
-                          <span className="text-white text-[10px] font-semibold">482</span>
+                          <span className="text-white text-[12px] font-semibold drop-shadow-md">482</span>
                         </div>
-                        <div className="flex flex-col items-center gap-0.5">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="white" className="opacity-90">
+                        <div className="flex flex-col items-center gap-1">
+                          <svg width="30" height="30" viewBox="0 0 24 24" fill="white" className="drop-shadow-lg">
                             <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/>
                           </svg>
-                          <span className="text-white text-[10px] font-semibold">Share</span>
+                          <span className="text-white text-[12px] font-semibold drop-shadow-md">Share</span>
                         </div>
                       </div>
 
                       {/* Subtitle area */}
-                      <div className="absolute left-0 right-0 z-10" style={{ bottom: "195px" }}>
+                      <div className="absolute left-0 right-0 z-20" style={{ bottom: "185px" }}>
                         <div className="mx-4">
                           <p
                             style={{
                               color: fontColor,
-                              fontSize: `${Math.max(Math.min(fontSize * 0.6, 22), 11)}px`,
+                              fontSize: `${Math.max(Math.min(fontSize * 0.6, 24), 12)}px`,
                               fontFamily: `'${fontFamily}', system-ui, -apple-system, sans-serif`,
                               textAlign: 'center',
-                              lineHeight: '1.5',
-                              textShadow: '0 2px 8px rgba(0,0,0,0.8), 0 0px 2px rgba(0,0,0,0.9)',
+                              lineHeight: '1.4',
+                              textShadow: '0 2px 10px rgba(0,0,0,0.8), 0 0px 4px rgba(0,0,0,1)',
                             }}
-                            className="font-bold"
+                            className="font-bold tracking-tight"
                           >
                             Your subtitle will look like this
                           </p>
@@ -1077,51 +1100,53 @@ export default function Home() {
                       </div>
 
                       {/* Bottom left — creator info */}
-                      <div className="absolute left-3 z-10 max-w-[60%]" style={{ bottom: "110px" }}>
-                        <p className="text-white text-xs font-bold mb-1">@creator_name</p>
-                        <p className="text-white/80 text-[10px] leading-snug">
+                      <div className="absolute left-4 z-20 max-w-[65%]" style={{ bottom: "100px" }}>
+                        <p className="text-white text-[15px] font-bold mb-0.5 drop-shadow-md">@creator_name</p>
+                        <p className="text-white/90 text-[13px] leading-snug drop-shadow-md">
                           Check out this amazing clip generated by AI
                         </p>
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="white" className="opacity-70">
+                        <div className="flex items-center gap-2 mt-2.5">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="white" className="opacity-90 -translate-y-[0.5px]">
                             <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
                           </svg>
-                          <span className="text-white/70 text-[9px]">Original Sound - creator_name</span>
+                          <span className="text-white/80 text-[11px] font-medium tracking-wide">Original Sound - creator_name</span>
                         </div>
                       </div>
 
                       {/* Bottom nav bar */}
-                      <div className="absolute bottom-0 left-0 right-0 z-20 bg-black px-2 pt-2 pb-5">
+                      <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black via-black/95 to-transparent px-3 pt-8 pb-6 border-t border-white/[0.05]">
                         <div className="flex items-center justify-around">
-                          <div className="flex flex-col items-center gap-0.5">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+                          <div className="flex flex-col items-center gap-1 opacity-100">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
                               <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                             </svg>
-                            <span className="text-white text-[8px]">Home</span>
+                            <span className="text-white text-[9px] font-semibold tracking-wide">Home</span>
                           </div>
-                          <div className="flex flex-col items-center gap-0.5">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" opacity="0.5">
+                          <div className="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
                               <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5z"/>
                             </svg>
-                            <span className="text-white/50 text-[8px]">Discover</span>
+                            <span className="text-white text-[9px] font-medium tracking-wide">Discover</span>
                           </div>
-                          <div className="relative -mt-3">
-                            <div className="w-10 h-7 rounded-lg bg-white flex items-center justify-center">
-                              <span className="text-black text-lg font-bold leading-none">+</span>
+                          <div className="relative -mt-4 transform hover:scale-105 transition-transform flex-shrink-0">
+                            <div className="w-[45px] h-[30px] rounded-[10px] bg-gradient-to-tr from-[#69C9D0] via-white to-[#EE1D52] p-[2px]">
+                              <div className="w-full h-full bg-white rounded-[8px] flex items-center justify-center relative">
+                                <span className="text-black text-2xl font-bold absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[52%]">+</span>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex flex-col items-center gap-0.5">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="white" opacity="0.5">
+                          <div className="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
                               <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
                             </svg>
-                            <span className="text-white/50 text-[8px]">Inbox</span>
+                            <span className="text-white text-[9px] font-medium tracking-wide">Inbox</span>
                           </div>
-                          <div className="flex flex-col items-center gap-0.5">
-                            <div className="w-5 h-5 rounded-full bg-white/30" />
-                            <span className="text-white/50 text-[8px]">Me</span>
+                          <div className="flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
+                            <div className="w-5 h-5 rounded-full bg-white/90" />
+                            <span className="text-white text-[9px] font-medium tracking-wide">Me</span>
                           </div>
                         </div>
-                        <div className="w-28 h-1 bg-white/40 rounded-full mx-auto mt-2" />
+                        <div className="w-[120px] h-1.5 bg-white/80 rounded-full mx-auto mt-4" />
                       </div>
                     </div>
                   </div>
@@ -1158,7 +1183,7 @@ export default function Home() {
                 </div>
               </div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </div>

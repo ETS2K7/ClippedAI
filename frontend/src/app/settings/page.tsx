@@ -140,11 +140,11 @@ export default function SettingsPage() {
 
   if (isPending || isFetching) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="space-y-4">
-          <Skeleton className="h-4 w-32 mx-auto bg-white/[0.06]" />
-          <Skeleton className="h-4 w-48 mx-auto bg-white/[0.06]" />
-          <Skeleton className="h-4 w-24 mx-auto bg-white/[0.06]" />
+          <Skeleton className="h-4 w-32 mx-auto rounded-md bg-white/[0.1]" />
+          <Skeleton className="h-4 w-48 mx-auto rounded-md bg-white/[0.1]" />
+          <Skeleton className="h-4 w-24 mx-auto rounded-md bg-white/[0.1]" />
         </div>
       </div>
     );
@@ -152,12 +152,12 @@ export default function SettingsPage() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f]">
+      <div className="min-h-screen">
         <div className="max-w-4xl mx-auto px-4 py-24 text-center">
-          <h1 className="text-3xl font-bold text-white mb-4">Sign In Required</h1>
-          <p className="text-white/40 mb-8">You need to sign in to access your settings.</p>
+          <h1 className="text-4xl md:text-5xl font-black font-syne uppercase text-white mb-4">SIGN IN REQUIRED.</h1>
+          <p className="text-white/40 mb-8 font-mono tracking-widest text-xs uppercase">You need to sign in to access your settings.</p>
           <Link href="/login">
-            <Button size="lg" className="bg-violet-600 hover:bg-violet-500 text-white">Sign In</Button>
+            <Button size="lg" className="bg-white hover:bg-white/90 text-black font-black uppercase font-syne tracking-widest rounded-xl">Sign In</Button>
           </Link>
         </div>
       </div>
@@ -167,27 +167,22 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <div className="min-h-screen">
-        {/* ── Ambient glows ── */}
-        <div className="pointer-events-none fixed inset-0 overflow-hidden">
-          <div className="absolute -top-40 right-1/4 h-[400px] w-[400px] rounded-full bg-violet-600/[0.03] blur-[120px]" />
-        </div>
 
         {/* ── Page header ── */}
-        <div className="border-b border-white/[0.06]">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-5">
-            <div className="flex items-center gap-3 mb-4">
+        <div className="border-b border-white/[0.1]">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+            <div className="flex items-center gap-3 mb-6">
               <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="text-white/40 hover:text-white hover:bg-white/[0.06]">
-                  <ArrowLeft className="w-4 h-4" />
-                  Back
+                <Button variant="ghost" size="sm" className="text-white/40 hover:text-white hover:bg-white/[0.06] rounded-full font-mono tracking-widest uppercase text-[10px]">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  BACK
                 </Button>
               </Link>
             </div>
-            <div className="flex items-center gap-2 mb-2">
-              <Settings className="w-5 h-5 text-violet-400" />
-              <h1 className="text-2xl font-bold text-white">Settings</h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-syne uppercase tracking-tighter text-white leading-none">SETTINGS.</h1>
             </div>
-            <p className="text-sm text-white/35">
+            <p className="text-[10px] sm:text-xs text-white/40 font-mono tracking-widest uppercase mt-3 sm:mt-4">
               Configure your default preferences for video clip generation.
             </p>
           </div>
@@ -195,27 +190,26 @@ export default function SettingsPage() {
 
         {/* ── Main content ── */}
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-8">
-          <div className="max-w-xl mx-auto space-y-8">
+          <div className="max-w-xl mx-auto space-y-6 sm:space-y-8">
 
             {/* ── Font Preferences ── */}
-            <div className="glass-card rounded-xl p-6 space-y-6">
+            <div className="brutal-card p-4 sm:p-6 space-y-4 sm:space-y-6">
               <div>
-                <h3 className="text-base font-semibold text-white mb-1">
-                  Default Font Settings
+                <h3 className="text-xs sm:text-[14px] font-bold font-mono tracking-widest uppercase text-white mb-2">
+                  DEFAULT FONT SETTINGS
                 </h3>
-                <p className="text-sm text-white/35">
+                <p className="text-[10px] sm:text-xs text-white/40 font-mono uppercase tracking-wider">
                   These settings will be applied to all new video processing tasks.
                 </p>
               </div>
 
               {/* Font Family Selector */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-white/60 flex items-center gap-2">
-                  <Type className="w-4 h-4 text-violet-400" />
+                <Label className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/50">
                   Font Family
                 </Label>
                 <Select value={fontFamily} onValueChange={setFontFamily} disabled={isLoading}>
-                  <SelectTrigger className="w-full glass-input rounded-lg border-white/[0.08]">
+                  <SelectTrigger className="w-full brutal-input">
                     <SelectValue placeholder="Select font" />
                   </SelectTrigger>
                   <SelectContent>
@@ -235,7 +229,7 @@ export default function SettingsPage() {
 
               {/* Font Size Slider */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-white/60">
+                <Label className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/50">
                   Font Size: {fontSize}px
                 </Label>
                 <div className="px-1">
@@ -257,8 +251,7 @@ export default function SettingsPage() {
 
               {/* Font Color Picker */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-white/60 flex items-center gap-2">
-                  <Palette className="w-4 h-4 text-violet-400" />
+                <Label className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/50">
                   Font Color
                 </Label>
                 <div className="flex items-center gap-2">
@@ -267,7 +260,7 @@ export default function SettingsPage() {
                     value={fontColor}
                     onChange={(e) => setFontColor(e.target.value)}
                     disabled={isLoading}
-                    className="w-10 h-8 rounded border border-white/10 cursor-pointer disabled:cursor-not-allowed bg-transparent"
+                    className="w-10 h-8 rounded-md border border-white/10 cursor-pointer disabled:cursor-not-allowed bg-transparent"
                   />
                   <Input
                     type="text"
@@ -275,7 +268,7 @@ export default function SettingsPage() {
                     onChange={(e) => setFontColor(e.target.value)}
                     disabled={isLoading}
                     placeholder="#FFFFFF"
-                    className="flex-1 h-9 glass-input rounded-lg"
+                    className="flex-1 h-9 brutal-input font-mono uppercase"
                     pattern="^#[0-9A-Fa-f]{6}$"
                   />
                 </div>
@@ -296,8 +289,8 @@ export default function SettingsPage() {
 
               {/* Preview */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium text-white/60">Preview</Label>
-                <div className="p-6 bg-black/60 rounded-xl border border-white/[0.06] flex items-center justify-center min-h-[100px]">
+                <Label className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/50">PREVIEW</Label>
+                <div className="p-6 bg-black border border-white/[0.1] flex items-center justify-center min-h-[100px]">
                   <p
                     style={{
                       color: fontColor,
@@ -315,22 +308,22 @@ export default function SettingsPage() {
             </div>
 
             {/* ── Notifications ── */}
-            <div className="glass-card rounded-xl p-6 space-y-5">
+            <div className="brutal-card p-4 sm:p-6 space-y-5">
               <div>
-                <h3 className="text-base font-semibold text-white mb-1">
-                  Notifications
+                <h3 className="text-xs sm:text-[14px] font-bold font-mono tracking-widest uppercase text-white mb-2">
+                  NOTIFICATIONS
                 </h3>
-                <p className="text-sm text-white/35">
+                <p className="text-[10px] sm:text-xs text-white/35 font-mono uppercase tracking-wider">
                   Manage how you receive updates about your clips.
                 </p>
               </div>
 
-              <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                <Label htmlFor="completion-emails" className="flex items-center gap-3 text-sm font-medium text-white/80 cursor-pointer">
-                  <Mail className="w-4 h-4 text-violet-400" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border border-white/10 bg-transparent rounded-xl">
+                <Label htmlFor="completion-emails" className="flex items-start gap-3 sm:items-center text-sm font-medium text-white/80 cursor-pointer">
+                  <Mail className="w-5 h-5 text-white mt-1 sm:mt-0 opacity-80" />
                   <div>
-                    <span>Completion emails</span>
-                    <p className="text-xs text-white/30 font-normal mt-0.5">Get notified when clips are ready</p>
+                    <span className="font-mono tracking-widest uppercase font-bold text-xs">COMPLETION EMAILS</span>
+                    <p className="text-[10px] text-white/40 font-mono tracking-wider uppercase mt-1">Get notified when clips are ready</p>
                   </div>
                 </Label>
                 <Switch
@@ -367,9 +360,9 @@ export default function SettingsPage() {
             <Button
               onClick={handleSavePreferences}
               disabled={isLoading}
-              className="w-full h-12 text-base rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold transition-all glow-violet-sm"
+              className="w-full h-12 sm:h-14 text-sm sm:text-base rounded-xl bg-white hover:bg-white/90 text-black font-black uppercase font-syne tracking-wider sm:tracking-widest transition-all disabled:opacity-50"
             >
-              {isLoading ? "Saving..." : "Save Preferences"}
+              {isLoading ? "SAVING..." : "SAVE PREFERENCES."}
             </Button>
           </div>
         </div>
