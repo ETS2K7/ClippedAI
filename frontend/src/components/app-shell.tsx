@@ -79,7 +79,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </Button>
               </Link>
               {isAdmin && (
-                <Link href="/admin">
+                <a href="/admin">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -87,7 +87,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   >
                     ADMIN
                   </Button>
-                </Link>
+                </a>
               )}
             </nav>
 
@@ -178,14 +178,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 Generations
               </Link>
               {isAdmin && (
-                <Link
+                <a
                   href="/admin"
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
                 >
                   <Shield className="w-4 h-4 text-white/30" />
                   Admin
-                </Link>
+                </a>
               )}
               <Link
                 href="/settings"
