@@ -19,7 +19,12 @@ export async function GET() {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { prefFontFamily: true, prefFontSize: true, prefFontColor: true },
+    select: { 
+      prefFontFamily: true, 
+      prefFontSize: true, 
+      prefFontColor: true,
+      isAdmin: true 
+    },
   });
 
   if (!user) return new NextResponse(null, { status: 404 });
@@ -28,6 +33,7 @@ export async function GET() {
     fontFamily: user.prefFontFamily,
     fontSize: user.prefFontSize,
     fontColor: user.prefFontColor,
+    isAdmin: user.isAdmin,
   });
 }
 

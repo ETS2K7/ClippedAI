@@ -8,12 +8,16 @@ import { signOut, useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, LogOut, List, Settings, Plus, Shield } from "lucide-react";
+import useSWR from "swr";
+import { fetcher } from "~/lib/fetcher";
 
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isAdmin = Boolean(session?.user?.isAdmin);
+  
+  const { data: prefsData } = useSWR(session?.user ? "/api/preferences" : null, fetcher);
+  const isAdmin = prefsData?.isAdmin ?? Boolean(session?.user?.isAdmin);
 
   const handleSignOut = async () => {
     await signOut();
