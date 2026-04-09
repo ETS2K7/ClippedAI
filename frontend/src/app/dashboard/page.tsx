@@ -86,7 +86,7 @@ export default function Home() {
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { data: session, isPending } = useSession();
-  const isAdmin = Boolean((session?.user as any)?.isAdmin);
+  const isAdminSession = Boolean((session?.user as any)?.isAdmin);
 
   const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
   const [fontSize, setFontSize] = useState(24);
