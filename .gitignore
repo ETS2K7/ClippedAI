@@ -69,6 +69,7 @@ frontend/prisma/dev.db
 # ─── IDE / tools ──────────────────────────────────────────────────────────
 .idea/
 .gemini/
+.VSCodeCounter/
 
 # ─── OCI / deploy keys ────────────────────────────────────────────────────
 deploy/oci_api_key*.pem

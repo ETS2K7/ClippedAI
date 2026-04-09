@@ -54,6 +54,7 @@ export default function AdminPage() {
   );
 
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   // Security guard redirect safely in useEffect to prevent render violation
   useEffect(() => {
