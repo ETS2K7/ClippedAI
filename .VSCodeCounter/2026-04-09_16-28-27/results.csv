@@ -1,0 +1,167 @@
+"filename", "language", "YAML", "Properties", "Markdown", "Python", "TypeScript", "JSON with Comments", "Shell Script", "Docker", "pip requirements", "JSON", "JavaScript", "XML", "TypeScript JSX", "CSS", "MS SQL", "comment", "blank", "total"
+"/Users/ebelthomasseiko/ClippedAI/.github/workflows/deploy.yml", "YAML", 135, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 20, 162
+"/Users/ebelthomasseiko/ClippedAI/DEPLOY.md", "Markdown", 0, 0, 136, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65, 201
+"/Users/ebelthomasseiko/ClippedAI/README.md", "Markdown", 0, 0, 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 131
+"/Users/ebelthomasseiko/ClippedAI/backend/config.py", "Python", 0, 0, 0, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 17, 71
+"/Users/ebelthomasseiko/ClippedAI/backend/main.py", "Python", 0, 0, 0, 188, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 40, 234
+"/Users/ebelthomasseiko/ClippedAI/backend/modal_fast_asd.py", "Python", 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 71
+"/Users/ebelthomasseiko/ClippedAI/backend/read_secrets.py", "Python", 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 27
+"/Users/ebelthomasseiko/ClippedAI/backend/requirements.txt", "pip requirements", 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 13
+"/Users/ebelthomasseiko/ClippedAI/backend/run_local.py", "Python", 0, 0, 0, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 18, 76
+"/Users/ebelthomasseiko/ClippedAI/backend/src/downloader.py", "Python", 0, 0, 0, 64, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 9, 74
+"/Users/ebelthomasseiko/ClippedAI/backend/src/llm.py", "Python", 0, 0, 0, 106, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 25, 136
+"/Users/ebelthomasseiko/ClippedAI/backend/src/signal_helpers.py", "Python", 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 70
+"/Users/ebelthomasseiko/ClippedAI/backend/src/subtitles.py", "Python", 0, 0, 0, 108, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 27, 138
+"/Users/ebelthomasseiko/ClippedAI/backend/src/transcriber.py", "Python", 0, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 17, 79
+"/Users/ebelthomasseiko/ClippedAI/backend/src/video_processing.py", "Python", 0, 0, 0, 497, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 100, 682
+"/Users/ebelthomasseiko/ClippedAI/backend/tests/conftest.py", "Python", 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 6
+"/Users/ebelthomasseiko/ClippedAI/backend/tests/test_video_processing.py", "Python", 0, 0, 0, 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 29, 84
+"/Users/ebelthomasseiko/ClippedAI/deploy/bootstrap.sh", "Shell Script", 0, 0, 0, 0, 0, 0, 102, 0, 0, 0, 0, 0, 0, 0, 0, 13, 22, 137
+"/Users/ebelthomasseiko/ClippedAI/deploy/github-secrets.md", "Markdown", 0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 76
+"/Users/ebelthomasseiko/ClippedAI/deploy/oci-premium.sh", "Shell Script", 0, 0, 0, 0, 0, 0, 60, 0, 0, 0, 0, 0, 0, 0, 0, 6, 16, 82
+"/Users/ebelthomasseiko/ClippedAI/deploy/oci-provision.sh", "Shell Script", 0, 0, 0, 0, 0, 0, 149, 0, 0, 0, 0, 0, 0, 0, 0, 22, 21, 192
+"/Users/ebelthomasseiko/ClippedAI/deploy/oci-retry.sh", "Shell Script", 0, 0, 0, 0, 0, 0, 67, 0, 0, 0, 0, 0, 0, 0, 0, 13, 17, 97
+"/Users/ebelthomasseiko/ClippedAI/deploy/setup-ssl.sh", "Shell Script", 0, 0, 0, 0, 0, 0, 65, 0, 0, 0, 0, 0, 0, 0, 0, 8, 15, 88
+"/Users/ebelthomasseiko/ClippedAI/docker-compose.yml", "YAML", 44, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 47
+"/Users/ebelthomasseiko/ClippedAI/frontend/Dockerfile", "Docker", 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 8, 13, 54
+"/Users/ebelthomasseiko/ClippedAI/frontend/README.md", "Markdown", 0, 0, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 30
+"/Users/ebelthomasseiko/ClippedAI/frontend/components.json", "JSON", 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 0, 0, 0, 0, 0, 0, 21
+"/Users/ebelthomasseiko/ClippedAI/frontend/eslint.config.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 57, 0, 0, 0, 0, 3, 3, 63
+"/Users/ebelthomasseiko/ClippedAI/frontend/next.config.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58, 0, 0, 0, 0, 2, 8, 68
+"/Users/ebelthomasseiko/ClippedAI/frontend/package-lock.json", "JSON", 0, 0, 0, 0, 0, 0, 0, 0, 0, 10940, 0, 0, 0, 0, 0, 0, 1, 10941
+"/Users/ebelthomasseiko/ClippedAI/frontend/package.json", "JSON", 0, 0, 0, 0, 0, 0, 0, 0, 0, 84, 0, 0, 0, 0, 0, 0, 1, 85
+"/Users/ebelthomasseiko/ClippedAI/frontend/postcss.config.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 1, 6
+"/Users/ebelthomasseiko/ClippedAI/frontend/prettier.config.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 1, 5
+"/Users/ebelthomasseiko/ClippedAI/frontend/prisma/migrations/0001_init.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 21, 28, 129
+"/Users/ebelthomasseiko/ClippedAI/frontend/prisma/migrations/20260101000000_init/migration.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 80, 21, 28, 129
+"/Users/ebelthomasseiko/ClippedAI/frontend/prisma/migrations/20260402_cleanup_remove_post_add_indexes/migration.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 4, 13
+"/Users/ebelthomasseiko/ClippedAI/frontend/prisma/migrations/20260404_user_prefs_admin_optional_password/migration.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 10, 4, 19
+"/Users/ebelthomasseiko/ClippedAI/frontend/public/icons/bg-line-2.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1
+"/Users/ebelthomasseiko/ClippedAI/frontend/public/icons/bg-line.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1
+"/Users/ebelthomasseiko/ClippedAI/frontend/public/icons/nav-arrow-down.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1
+"/Users/ebelthomasseiko/ClippedAI/frontend/public/icons/search-header-bg.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1
+"/Users/ebelthomasseiko/ClippedAI/frontend/public/icons/xmark.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/actions/auth.ts", "TypeScript", 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 47
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/actions/generation.ts", "TypeScript", 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 40
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/actions/s3.ts", "TypeScript", 0, 0, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 55
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/admin/users/[userId]/admin/route.ts", "TypeScript", 0, 0, 0, 0, 57, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 11, 69
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/auth/[...nextauth]/route.ts", "TypeScript", 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/broll/status/route.ts", "TypeScript", 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/caption-templates/route.ts", "TypeScript", 0, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 128
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/feedback/route.ts", "TypeScript", 0, 0, 0, 0, 37, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 9, 48
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/fonts/[name]/route.ts", "TypeScript", 0, 0, 0, 0, 78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 11, 97
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/fonts/route.ts", "TypeScript", 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 37
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/health/route.ts", "TypeScript", 0, 0, 0, 0, 19, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 5, 26
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/preferences/route.ts", "TypeScript", 0, 0, 0, 0, 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 14, 78
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/tasks/[id]/progress/route.ts", "TypeScript", 0, 0, 0, 0, 105, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 16, 128
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/tasks/[id]/route.ts", "TypeScript", 0, 0, 0, 0, 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 22, 155
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/tasks/create/route.ts", "TypeScript", 0, 0, 0, 0, 119, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 21, 148
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/tasks/route.ts", "TypeScript", 0, 0, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 54
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/upload/route.ts", "TypeScript", 0, 0, 0, 0, 79, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 15, 99
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/api/webhooks/modal/route.ts", "TypeScript", 0, 0, 0, 0, 76, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 14, 97
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/dashboard/layout.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 5, 29
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/dashboard/loading.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 2, 11
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/dashboard/page.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1049, 0, 0, 44, 100, 1193
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/layout.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 0, 0, 0, 8, 43
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/list/layout.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 3, 15
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/list/page.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 682, 0, 0, 13, 58, 753
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/login/page.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 4, 10, 54
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/not-found.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 0, 0, 1, 3, 29
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/page.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 0, 0, 0, 3, 34
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/settings/layout.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 3, 15
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/settings/page.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 324, 0, 0, 15, 34, 373
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/signup/page.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 0, 0, 4, 10, 54
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/tasks/[id]/edit/page.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 851, 0, 0, 0, 98, 949
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/tasks/[id]/page.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 428, 0, 0, 8, 33, 469
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/app/tasks/layout.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 3, 15
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/admin/admin-user-toggle.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 0, 0, 0, 10, 62
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/app-shell.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 195, 0, 0, 11, 17, 223
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/clip-display.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 81, 0, 0, 0, 8, 89
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/datafast-identity.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 0, 0, 10, 38
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/dynamic-video-player.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 5, 47
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/feedback-button.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 112, 0, 0, 0, 14, 126
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/bento-grid.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 95, 0, 0, 0, 13, 108
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/flip-words.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 79, 0, 0, 0, 5, 84
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/floating-nav.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 66, 0, 0, 3, 4, 73
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/grid-background.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 2, 14
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/infinite-marquee.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 106, 0, 0, 0, 10, 116
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/moving-border-button.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 34, 0, 0, 0, 2, 36
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/sections/cta-section.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 0, 1, 6, 35
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/sections/features-section.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 5, 105
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/sections/footer-section.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 0, 6, 70
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/sections/hero-section.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 1, 8, 51
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/sections/how-it-works.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 68, 0, 0, 2, 9, 79
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/sections/social-proof.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 3, 27
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/sections/stats-section.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 0, 0, 3, 31
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/spotlight.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 2, 44
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v2/text-generate.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 0, 0, 0, 5, 60
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v3/interactive-hero.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 469, 0, 0, 14, 39, 522
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v3/kinetic-typography.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 0, 0, 3, 13, 63
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v3/sticky-narrative.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 166, 0, 0, 23, 26, 215
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing-v3/void-cta.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 0, 0, 3, 13, 80
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/animations/FadeIn.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 4, 34
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/animations/ScrollReveal.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 5, 55
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/animations/SharedLayoutProvider.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 3, 9
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/layout/CookieBanner.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 60, 0, 0, 0, 8, 68
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/layout/Footer.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 0, 0, 3, 9, 102
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/layout/Navbar.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 227, 0, 0, 6, 18, 251
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/sections/AIEditor.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 82, 0, 0, 3, 8, 93
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/sections/Autopilot.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 0, 0, 5, 6, 58
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/sections/CTASection.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 76, 0, 0, 2, 7, 85
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/sections/ClipAnything.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 66, 0, 0, 7, 8, 81
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/sections/FAQ.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 81, 0, 0, 2, 6, 89
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/sections/Hero.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 154, 0, 0, 13, 15, 182
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/sections/ScaleSection.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44, 0, 0, 0, 5, 49
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/ui/AuthModal.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 106, 0, 0, 9, 16, 131
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/ui/FloatingCTA.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 51, 0, 0, 0, 8, 59
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/landing/ui/HeroCarousel.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 163, 0, 0, 13, 18, 194
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/login-form.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 10, 138
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/providers/session-provider.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 2, 7
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/signup-form.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 133, 0, 0, 0, 11, 144
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/alert-dialog.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 0, 0, 0, 15, 142
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/alert.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 60, 0, 0, 0, 7, 67
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/avatar.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 0, 0, 0, 7, 54
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/badge.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 6, 47
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/button.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 0, 0, 0, 6, 61
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/card.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 0, 0, 0, 10, 57
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/checkbox.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 0, 0, 0, 5, 33
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/dropdown-menu.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 239, 0, 0, 0, 19, 258
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/input.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 4, 22
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/label.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 5, 25
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/popover.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 79, 0, 0, 0, 11, 90
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/progress.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 5, 32
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/select.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 172, 0, 0, 0, 14, 186
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/separator.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 5, 29
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/sheet.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 130, 0, 0, 0, 14, 144
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/skeleton.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 3, 14
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/slider.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 5, 29
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/sonner.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 0, 0, 5, 26
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/switch.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 5, 32
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/table.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 105, 0, 0, 0, 12, 117
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/tabs.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 59, 0, 0, 0, 8, 67
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/textarea.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 4, 19
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/components/ui/tooltip.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 0, 8, 58
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/env.js", "JavaScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 49, 0, 0, 0, 0, 3, 4, 56
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/api-error.ts", "TypeScript", 0, 0, 0, 0, 55, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 13, 69
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/app-flags.ts", "TypeScript", 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/auth-client.ts", "TypeScript", 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 16
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/auth.ts", "TypeScript", 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 10
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/constants.ts", "TypeScript", 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 15
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/datafast.ts", "TypeScript", 0, 0, 0, 0, 81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 106
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/landing/constants.ts", "TypeScript", 0, 0, 0, 0, 112, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 8, 126
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/monetization.ts", "TypeScript", 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/require-admin.ts", "TypeScript", 0, 0, 0, 0, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 36
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/lib/utils.ts", "TypeScript", 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 7
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/schemas/auth.ts", "TypeScript", 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 15
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/server/auth/config.ts", "TypeScript", 0, 0, 0, 0, 99, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 13, 121
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/server/auth/index.ts", "TypeScript", 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 11
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/server/db.ts", "TypeScript", 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 18
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/server/s3.ts", "TypeScript", 0, 0, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 27
+"/Users/ebelthomasseiko/ClippedAI/frontend/src/styles/globals.css", "CSS", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 265, 0, 0, 25, 290
+"/Users/ebelthomasseiko/ClippedAI/frontend/tsconfig.json", "JSON with Comments", 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 45
+"/Users/ebelthomasseiko/ClippedAI/nginx/clippedai.conf", "Properties", 0, 68, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 14, 97
+"/Users/ebelthomasseiko/ClippedAI/nginx/conf.d/rate-limits.conf", "Properties", 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 1, 9
+"/Users/ebelthomasseiko/ClippedAI/scripts/oci-free-hunter.sh", "Shell Script", 0, 0, 0, 0, 0, 0, 212, 0, 0, 0, 0, 0, 0, 0, 0, 30, 40, 282
+"/Users/ebelthomasseiko/ClippedAI/scripts/sync-clips-from-s3.ts", "TypeScript", 0, 0, 0, 0, 81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 15, 98
+"/Users/ebelthomasseiko/ClippedAI/scripts/tsconfig.json", "JSON with Comments", 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 10
+"Total", "-", 179, 71, 312, 1318, 1634, 50, 655, 33, 13, 11045, 173, 5, 8698, 265, 170, 598, 1984, 27203

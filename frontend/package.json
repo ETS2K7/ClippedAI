@@ -9,6 +9,7 @@
     "db:push": "prisma db push",
     "build": "next build",
     "check": "next lint && tsc --noEmit",
+    "check:strict": "tsc --project tsconfig.strict.json --noEmit",
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
