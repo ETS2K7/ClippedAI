@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Badge } from "~/components/ui/badge";
@@ -40,6 +40,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import AppShell from "~/components/app-shell";
+import useSWR from "swr";
+import { fetcher } from "~/lib/fetcher";
 
 interface Task {
   id: string;
@@ -57,19 +59,6 @@ type BatchAction = "cancel" | "resume" | "delete" | null;
 
 const ACTIVE_TASK_STATUSES = ["queued", "processing"];
 const RESUMABLE_TASK_STATUSES = ["cancelled", "error"];
-
-async function fetchTasksList() {
-  const response = await fetch("/api/tasks/", {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch tasks: ${response.status}`);
-  }
-
-  const data = await response.json();
-  return (data.tasks || []) as Task[];
-}
 
 async function buildSupportError(response: Response, fallbackMessage: string) {
   const parsed = await parseApiError(response, fallbackMessage);
@@ -114,10 +103,7 @@ const STATUS_CONFIG: Record<
 
 export default function ListPage() {
   const { data: session, isPending } = useSession();
-  const [tasks, setTasks] = useState<Task[]>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [batchNotice, setBatchNotice] = useState<{
     tone: "success" | "error";
     message: string;
@@ -125,39 +111,19 @@ export default function ListPage() {
   const [activeBatchAction, setActiveBatchAction] = useState<BatchAction>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  useEffect(() => {
-    const loadTasks = async () => {
-      if (!session?.user?.id) {
-        setTasks([]);
-        setSelectedTaskIds([]);
-        setIsLoading(false);
-        return;
-      }
+  // SWR: Data Fetching
+  const swrOptions = { revalidateOnFocus: false };
+  const { data: tasksData, error: fetchError, mutate: mutateTasks } = useSWR(session?.user ? "/api/tasks/" : null, fetcher, swrOptions);
 
-      try {
-        setIsLoading(true);
-        setError(null);
-        const nextTasks = await fetchTasksList();
-        setTasks(nextTasks);
-        setSelectedTaskIds((current) =>
-          current.filter((taskId) => nextTasks.some((task) => task.id === taskId)),
-        );
-      } catch (err) {
-        console.error("Error fetching tasks:", err);
-        setError(err instanceof Error ? err.message : "Failed to load tasks");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    void loadTasks();
-  }, [session?.user?.id]);
+  const tasks: Task[] = tasksData?.tasks || [];
+  const isLoading = session?.user && !tasksData && !fetchError;
+  const error = fetchError ? (fetchError instanceof Error ? fetchError.message : "Failed to load tasks") : null;
 
   const refreshTasks = async () => {
-    const nextTasks = await fetchTasksList();
-    setTasks(nextTasks);
+    const nextData = await mutateTasks();
+    const nextTasks = nextData?.tasks || [];
     setSelectedTaskIds((current) =>
-      current.filter((taskId) => nextTasks.some((task) => task.id === taskId)),
+      current.filter((taskId) => nextTasks.some((task: Task) => task.id === taskId)),
     );
   };
 

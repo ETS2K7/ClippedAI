@@ -13,15 +13,12 @@ import { Switch } from "~/components/ui/switch";
 import { useSession } from "~/lib/auth-client";
 import { track } from "~/lib/datafast";
 import Link from "next/link";
-import { Type, Palette, CheckCircle, AlertCircle, Settings, ArrowLeft, Mail } from "lucide-react";
+import { CheckCircle, AlertCircle, ArrowLeft, Mail } from "lucide-react";
 import AppShell from "~/components/app-shell";
+import useSWR from "swr";
+import { fetcher } from "~/lib/fetcher";
 
-interface UserPreferences {
-  fontFamily: string;
-  fontSize: number;
-  fontColor: string;
-  notifyOnCompletion: boolean;
-}
+
 
 
 export default function SettingsPage() {
@@ -29,79 +26,50 @@ export default function SettingsPage() {
   const [fontSize, setFontSize] = useState(24);
   const [fontColor, setFontColor] = useState("#FFFFFF");
   const [completionEmails, setCompletionEmails] = useState(true);
-  const [availableFonts, setAvailableFonts] = useState<Array<{ name: string, display_name: string }>>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const { data: session, isPending } = useSession();
 
-  // Load available fonts from backend and inject them into the page
+  // SWR: Global Data Fetching
+  const swrOptions = { revalidateOnFocus: false };
+  const { data: fontsData } = useSWR(session?.user ? '/api/fonts' : null, fetcher, swrOptions);
+  const { data: prefsData, error: prefsError, mutate: mutatePrefs } = useSWR(session?.user ? '/api/preferences' : null, fetcher, swrOptions);
+
+  const availableFonts: Array<{ name: string, display_name: string }> = fontsData?.fonts || [];
+  const isFetching = session?.user && !prefsData && !prefsError;
+
+  // On preferences loaded, set initial local values
   useEffect(() => {
-    const loadFonts = async () => {
-      try {
-        const response = await fetch('/api/fonts', { cache: 'no-store' });
-        if (response.ok) {
-          const data = await response.json();
-          setAvailableFonts(data.fonts || []);
+    if (prefsData) {
+      setFontFamily(prefsData.fontFamily || "TikTokSans-Regular");
+      setFontSize(prefsData.fontSize || 24);
+      setFontColor(prefsData.fontColor || "#FFFFFF");
+      setCompletionEmails(prefsData.notifyOnCompletion ?? true);
+    }
+  }, [prefsData]);
 
-          // Dynamically load fonts using @font-face
-          const fontFaceStyles = data.fonts.map((font: { name: string }) => {
-            return `
-              @font-face {
-                font-family: '${font.name}';
-                src: url('/api/fonts/${font.name}') format('truetype');
-                font-weight: normal;
-                font-style: normal;
-              }
-            `;
-          }).join('\n');
-
-          // Inject font styles into the page
-          const styleElement = document.createElement('style');
-          styleElement.id = 'custom-fonts';
-          styleElement.innerHTML = fontFaceStyles;
-
-          // Remove existing custom fonts style if present
-          const existingStyle = document.getElementById('custom-fonts');
-          if (existingStyle) {
-            existingStyle.remove();
+  // Inject font-faces globally based on SWR fonts
+  useEffect(() => {
+    if (availableFonts.length > 0) {
+      const fontFaceStyles = availableFonts.map((font) => {
+        return `
+          @font-face {
+            font-family: '${font.name}';
+            src: url('/api/fonts/${font.name}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
           }
+        `;
+      }).join('\n');
 
-          document.head.appendChild(styleElement);
-        }
-      } catch (error) {
-        console.error('Failed to load fonts:', error);
+      let styleElement = document.getElementById('custom-fonts');
+      if (!styleElement) {
+        styleElement = document.createElement('style');
+        styleElement.id = 'custom-fonts';
+        document.head.appendChild(styleElement);
       }
-    };
-
-    loadFonts();
-  }, []);
-
-  // Load user preferences
-  useEffect(() => {
-    const loadPreferences = async () => {
-      if (!session?.user?.id) return;
-
-      setIsFetching(true);
-      try {
-        const response = await fetch('/api/preferences');
-        if (response.ok) {
-          const data: UserPreferences = await response.json();
-          setFontFamily(data.fontFamily);
-          setFontSize(data.fontSize);
-          setFontColor(data.fontColor);
-          setCompletionEmails(data.notifyOnCompletion ?? true);
-        }
-      } catch (error) {
-        console.error('Failed to load preferences:', error);
-      } finally {
-        setIsFetching(false);
-      }
-    };
-
-    loadPreferences();
-  }, [session?.user?.id]);
+      styleElement.innerHTML = fontFaceStyles;
+    }
+  }, [availableFonts]);
 
   const handleSavePreferences = async () => {
     setIsLoading(true);
@@ -129,6 +97,7 @@ export default function SettingsPage() {
 
       track("preferences_saved");
       setSuccess(true);
+      mutatePrefs();
       setTimeout(() => setSuccess(false), 3000);
     } catch (error) {
       console.error('Error saving preferences:', error);

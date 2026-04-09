@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Progress } from "~/components/ui/progress";
@@ -18,6 +18,8 @@ import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, 
 import { Switch } from "~/components/ui/switch";
 import AppShell from "~/components/app-shell";
 import { motion } from "framer-motion";
+import useSWR from "swr";
+import { fetcher } from "~/lib/fetcher";
 
 interface LatestTask {
   id: string;
@@ -86,61 +88,51 @@ export default function Home() {
   const { data: session, isPending } = useSession();
   const isAdmin = Boolean((session?.user as any)?.isAdmin);
 
-  // Font customization states
   const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
   const [fontSize, setFontSize] = useState(24);
   const [fontColor, setFontColor] = useState("#FFFFFF");
-  const [availableFonts, setAvailableFonts] = useState<FontOption[]>([]);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(true);
   const [fontSearch, setFontSearch] = useState("");
-  const [fontLoadError, setFontLoadError] = useState<string | null>(null);
   const [isUploadingFont, setIsUploadingFont] = useState(false);
   const fontUploadInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Caption template and B-roll states
+  // SWR: Global Data Fetching (only enabled if signed in)
+  const swrOptions = { revalidateOnFocus: false };
+  const { data: fontsData, error: fontError, mutate: mutateFonts } = useSWR(session?.user ? "/api/fonts" : null, fetcher, swrOptions);
+  const { data: templatesData } = useSWR(session?.user ? "/api/caption-templates" : null, fetcher, swrOptions);
+  const { data: brollData } = useSWR(session?.user ? "/api/broll/status" : null, fetcher, swrOptions);
+  const { data: prefsData } = useSWR(session?.user ? "/api/preferences" : null, fetcher, swrOptions);
+  const { data: tasksData, isLoading: isLoadingLatest } = useSWR(session?.user ? "/api/tasks/" : null, fetcher, swrOptions);
+
+  // Derived application state
+  const availableFonts: FontOption[] = fontsData?.fonts || [];
+  const fontLoadError = fontError ? "Could not load fonts right now." : null;
+  const availableTemplates: any[] = templatesData?.templates || [];
+  const brollAvailable = brollData?.configured || false;
+  const latestTask: LatestTask | null = tasksData?.tasks?.[0] || null;
+
+  // Caption template state
   const [captionTemplate, setCaptionTemplate] = useState("default");
-  const [availableTemplates, setAvailableTemplates] = useState<Array<{
-    id: string;
-    name: string;
-    description: string;
-    animation: string;
-    font_family: string;
-    font_size: number;
-    font_color: string;
-    highlight_color: string;
-    stroke_color: string | null;
-    stroke_width: number;
-    background: boolean;
-    background_color: string | null;
-    shadow: boolean;
-    position_y: number;
-  }>>([]);
   const [includeBroll, setIncludeBroll] = useState(false);
-  const [brollAvailable, setBrollAvailable] = useState(false);
   const [outputFormat, setOutputFormat] = useState<"vertical" | "original">("vertical");
   const [addSubtitles, setAddSubtitles] = useState(true);
 
-  // Latest task state
-  const [latestTask, setLatestTask] = useState<LatestTask | null>(null);
-  const [isLoadingLatest, setIsLoadingLatest] = useState(false);
   const taskApiUrl = "/api/tasks";
   const youtubeThumbnailUrl = sourceType === "youtube" ? getYouTubeThumbnailUrl(url) : null;
 
-  const refreshFonts = useCallback(async () => {
-    try {
-      setFontLoadError(null);
-      const response = await fetch("/api/fonts", {
-        cache: "no-store",
-      });
-      if (!response.ok) {
-        throw new Error(`Failed to load fonts (${response.status})`);
-      }
+  // On preferences loaded, set initial local values
+  useEffect(() => {
+    if (prefsData) {
+      if (prefsData.fontFamily) setFontFamily(prefsData.fontFamily);
+      if (prefsData.fontSize) setFontSize(prefsData.fontSize);
+      if (prefsData.fontColor) setFontColor(prefsData.fontColor);
+    }
+  }, [prefsData]);
 
-      const data = await response.json();
-      const fonts: FontOption[] = data.fonts || [];
-      setAvailableFonts(fonts);
-
-      const fontFaceStyles = fonts.map((font) => {
+  // Inject required font-faces globally dynamically based on available SWR fonts
+  useEffect(() => {
+    if (availableFonts.length > 0) {
+      const fontFaceStyles = availableFonts.map((font) => {
         const format = font.format === "otf" ? "opentype" : "truetype";
         return `
           @font-face {
@@ -152,103 +144,15 @@ export default function Home() {
         `;
       }).join("\n");
 
-      const styleElement = document.createElement("style");
-      styleElement.id = "custom-fonts";
+      let styleElement = document.getElementById("custom-fonts");
+      if (!styleElement) {
+        styleElement = document.createElement("style");
+        styleElement.id = "custom-fonts";
+        document.head.appendChild(styleElement);
+      }
       styleElement.innerHTML = fontFaceStyles;
-
-      const existingStyle = document.getElementById("custom-fonts");
-      if (existingStyle) {
-        existingStyle.remove();
-      }
-
-      document.head.appendChild(styleElement);
-    } catch (error) {
-      console.error("Failed to load fonts:", error);
-      setFontLoadError("Could not load fonts right now.");
     }
-  }, []);
-
-  useEffect(() => {
-    void refreshFonts();
-  }, [refreshFonts]);
-
-  // Load caption templates and check B-roll availability
-  useEffect(() => {
-    const loadTemplates = async () => {
-      try {
-        const response = await fetch(`/api/caption-templates`);
-        if (response.ok) {
-          const data = await response.json();
-          setAvailableTemplates(data.templates || []);
-        }
-      } catch (error) {
-        console.error('Failed to load caption templates:', error);
-      }
-    };
-
-    const checkBrollStatus = async () => {
-      try {
-        const response = await fetch(`/api/broll/status`);
-        if (response.ok) {
-          const data = await response.json();
-          setBrollAvailable(data.configured || false);
-        }
-      } catch (error) {
-        console.error('Failed to check B-roll status:', error);
-      }
-    };
-
-    loadTemplates();
-    checkBrollStatus();
-  }, []);
-
-  // Load user preferences as defaults
-  useEffect(() => {
-    const loadUserPreferences = async () => {
-      if (!session?.user?.id) return;
-
-      try {
-        const response = await fetch('/api/preferences');
-        if (response.ok) {
-          const data = await response.json();
-          setFontFamily(data.fontFamily || "TikTokSans-Regular");
-          setFontSize(data.fontSize || 24);
-          setFontColor(data.fontColor || "#FFFFFF");
-        }
-      } catch (error) {
-        console.error('Failed to load user preferences:', error);
-      }
-    };
-
-    loadUserPreferences();
-  }, [session?.user?.id]);
-
-  // Load latest task
-  useEffect(() => {
-    const fetchLatestTask = async () => {
-      if (!session?.user?.id) return;
-
-      try {
-        setIsLoadingLatest(true);
-        const response = await fetch(`${taskApiUrl}/`, {
-          cache: "no-store",
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.tasks && data.tasks.length > 0) {
-            setLatestTask(data.tasks[0]);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load latest task:', error);
-      } finally {
-        setIsLoadingLatest(false);
-      }
-    };
-
-    fetchLatestTask();
-  }, [session?.user?.id, taskApiUrl]);
+  }, [availableFonts]);
 
 
   // Always treat file input as uncontrolled, and store file in a ref
@@ -313,7 +217,7 @@ export default function Home() {
       if (data?.font?.name) {
         setFontFamily(data.font.name);
       }
-      await refreshFonts();
+      await mutateFonts();
     } catch (uploadError) {
       console.error("Failed to upload font:", uploadError);
       setError("Failed to upload font. Please try again.");
