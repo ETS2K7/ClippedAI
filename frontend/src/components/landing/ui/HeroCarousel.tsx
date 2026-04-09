@@ -57,7 +57,7 @@ export default function HeroCarousel() {
     };
     const goToSlideFromHash = (hash: string) => {
       if (hash in hashToIndex) {
-        setCurrentIndex(hashToIndex[hash]);
+        setCurrentIndex(hashToIndex[hash] ?? 0);
         // Scroll the carousel into view
         const el = document.getElementById('hero-carousel');
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -133,13 +133,15 @@ export default function TaskPage() {
     const status = task?.status;
     if (status !== "generating_clips" && status !== "queued" && status !== "processing") return;
 
-    const interval = setInterval(async () => {
-      const ok = await fetchTaskStatus();
-      if (!ok) return;
-      if (task?.status === "completed") {
-        triggerAutoRefresh();
-        clearInterval(interval);
-      }
+    const interval = setInterval(() => {
+      void (async () => {
+        const ok = await fetchTaskStatus();
+        if (!ok) return;
+        if (task?.status === "completed") {
+          triggerAutoRefresh();
+          clearInterval(interval);
+        }
+      })();
     }, 5000);
 
     return () => clearInterval(interval);

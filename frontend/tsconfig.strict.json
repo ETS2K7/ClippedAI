@@ -14,6 +14,8 @@
   "include": [
     // Incrementally add directories here as they become strict-mode compliant
     "src/server/**/*.ts",
-    "src/lib/**/*.ts"
+    "src/lib/**/*.ts",
+    "src/components/**/*.ts",
+    "src/components/**/*.tsx"
   ]
 }

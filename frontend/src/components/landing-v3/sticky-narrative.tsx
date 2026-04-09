@@ -13,16 +13,28 @@ export const StickyNarrative = () => {
   });
 
   // Helper: piecewise linear interpolation with clamping (avoids Framer Motion spline overshoot)
-  const lerp = (v: number, input: number[], output: number[]) => {
-    if (v <= input[0]) return output[0];
-    if (v >= input[input.length - 1]) return output[output.length - 1];
+  const lerp = (v: number, input: number[], output: number[]): number => {
+    if (input.length === 0 || output.length === 0) return 0;
+    const firstIn = input[0] as number;
+    const lastIn = input[input.length - 1] as number;
+    const firstOut = output[0] as number;
+    const lastOut = output[output.length - 1] as number;
+    
+    if (v <= firstIn) return firstOut;
+    if (v >= lastIn) return lastOut;
+    
     for (let i = 0; i < input.length - 1; i++) {
-      if (v >= input[i] && v <= input[i + 1]) {
-        const t = (v - input[i]) / (input[i + 1] - input[i]);
-        return output[i] + t * (output[i + 1] - output[i]);
+      const inI = input[i] as number;
+      const inNext = input[i + 1] as number;
+      const outI = output[i] as number;
+      const outNext = output[i + 1] as number;
+      
+      if (v >= inI && v <= inNext) {
+        const t = (v - inI) / (inNext - inI);
+        return outI + t * (outNext - outI);
       }
     }
-    return output[output.length - 1];
+    return lastOut;
   };
 
   // Phases — using transform functions with manual linear interpolation to prevent overshoot
@@ -178,7 +190,7 @@ export const StickyNarrative = () => {
             <motion.div style={{ opacity: rawPhase, scale: rawTextScale, transformOrigin: "left center" }} className="flex flex-col">
               <span className="font-mono font-bold text-xs tracking-widest text-[#999] mb-4 uppercase">Phase 01</span>
               <h2 className="text-4xl lg:text-5xl font-black uppercase tracking-tighter leading-none mb-4 font-syne">Input hours of<br/><span className="text-[#999]">dead space.</span></h2>
-              <p className="text-neutral-500 font-medium">Dump your 3-hour podcast. We don't care.</p>
+              <p className="text-neutral-500 font-medium">Dump your 3-hour podcast. We don&apos;t care.</p>
             </motion.div>
           </div>
 
