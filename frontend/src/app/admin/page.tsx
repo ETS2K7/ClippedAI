@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import useSWR from "swr";
 import { useSession } from "~/lib/auth-client";
 import { useRouter } from "next/navigation";
@@ -54,11 +54,16 @@ export default function AdminPage() {
 
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
 
-  // Security guard redirect
-  if (!isPending && !session?.user?.isAdmin) {
-    if (typeof window !== "undefined") {
-      router.push("/dashboard");
+  // Security guard redirect safely in useEffect to prevent render violation
+  useEffect(() => {
+    if (!isPending && !session?.user?.isAdmin) {
+      if (typeof window !== "undefined") {
+        router.push("/dashboard");
+      }
     }
+  }, [isPending, session, router]);
+
+  if (!isPending && !session?.user?.isAdmin) {
     return (
       <div className="flex h-screen items-center justify-center bg-black">
         <Skeleton className="h-12 w-12 rounded-full bg-white/20" />
