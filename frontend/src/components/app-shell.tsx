@@ -79,15 +79,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 </Button>
               </Link>
               {isAdmin && (
-                <a href="/admin">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-white/50 hover:text-white hover:bg-white/[0.04] text-[11px] font-bold uppercase tracking-widest font-mono rounded-full transition-all duration-200 h-8"
-                  >
-                    ADMIN
-                  </Button>
-                </a>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="text-white/50 hover:text-white hover:bg-white/[0.04] text-[11px] font-bold uppercase tracking-widest font-mono rounded-full transition-all duration-200 h-8"
+                >
+                  <a href="/admin">ADMIN</a>
+                </Button>
               )}
             </nav>
 
