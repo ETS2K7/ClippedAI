@@ -4,6 +4,7 @@ import { S3Client } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import { env } from "~/env";
 import { db } from "~/server/db";
+import crypto from "crypto";
 
 /** Accepted video MIME types */
 const ALLOWED_MIME_TYPES = new Set([
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
       },
     });
 
-    const fileId = "file_" + Date.now().toString();
+    const fileId = crypto.randomUUID();
     const folderName = `${session.user.id}-${fileId}`;
     const s3Key = `${folderName}/original.mp4`;
 

@@ -115,7 +115,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 text_parts.append("{\\an5\\pos(540,960)}")
 
             for j, cw in enumerate(chunk):
-                clean_txt = str(cw.get("text", "")).upper()
+                # Escape ASS special syntax characters to prevent subtitle corruption
+                raw_txt = str(cw.get("text", "")).upper()
+                clean_txt = raw_txt.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
                 if j == w_idx:
                     text_parts.append(
                         f"{{\\c&H0000FF00&}}{clean_txt}{{\\c&H00FFFFFF&}}"

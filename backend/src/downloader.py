@@ -1,3 +1,10 @@
+"""
+Local-only YouTube downloader using yt-dlp.
+
+⚠️  This module is used ONLY by `run_local.py` for local development.
+The production Modal pipeline (main.py) uses its own _download_youtube()
+function which downloads via the Apify actor.
+"""
 import os
 import subprocess
 import glob

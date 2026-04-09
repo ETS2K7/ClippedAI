@@ -1,3 +1,9 @@
+"""
+⚠️  DEBUG TOOL — DO NOT USE IN CI/CD OR PRODUCTION.
+This script prints all Modal secrets to stdout. It exists only for local
+development verification. Consider gating behind an explicit --confirm flag
+if keeping in the repository.
+"""
 import modal
 import os
 

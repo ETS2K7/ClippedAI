@@ -47,6 +47,17 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Validate user exists before creating records
+    const userExists = await db.user.findUnique({
+      where: { id: user_id },
+      select: { id: true },
+    });
+
+    if (!userExists) {
+      console.error(`[webhook/modal] User ${user_id} not found`);
+      return NextResponse.json({ error: "Invalid user" }, { status: 400 });
+    }
+
     if (status === "success" && clips.length > 0) {
       // Atomically create clips + mark file as processed
       await db.$transaction([

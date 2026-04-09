@@ -20,6 +20,7 @@ function ClipCard({ clip }: { clip: Clip }) {
           console.error("Failed to get play url: " + result.error);
         }
       } catch (error) {
+        console.error("Failed to fetch clip play URL:", error);
       } finally {
         setIsLoadingUrl(false);
       }

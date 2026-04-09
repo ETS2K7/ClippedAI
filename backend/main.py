@@ -57,7 +57,7 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
 
     run_input = {
         "videos": [{"url": youtube_url}],
-        "s3Bucket": "clippedai-7137",
+        "s3Bucket": S3_BUCKET,
         "s3AccessKeyId": os.environ.get("AWS_ACCESS_KEY_ID"),
         "s3SecretAccessKey": os.environ.get("AWS_SECRET_ACCESS_KEY"),
         "s3Region": "us-east-1",
@@ -90,11 +90,11 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
             aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
             region_name="us-east-1",
         )
-        s3.download_file("clippedai-7137", file_key, str(video_path))
+        s3.download_file(S3_BUCKET, file_key, str(video_path))
         
         # Clean up the intermediate Apify file in S3 to prevent root-level bucket clutter
         try:
-            s3.delete_object(Bucket="clippedai-7137", Key=file_key)
+            s3.delete_object(Bucket=S3_BUCKET, Key=file_key)
         except Exception as cleanup_err:
             logger.warning(f"Failed to cleanup intermediate Apify file {file_key}: {cleanup_err}")
             

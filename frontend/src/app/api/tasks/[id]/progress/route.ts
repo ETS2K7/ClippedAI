@@ -15,7 +15,10 @@ export async function GET(
 
   const stream = new ReadableStream({
     async start(controller) {
+      let cancelled = false;
+
       const send = (event: string, data: object) => {
+        if (cancelled) return;
         try {
           controller.enqueue(
             encoder.encode(
@@ -24,6 +27,7 @@ export async function GET(
           );
         } catch {
           // client disconnected
+          cancelled = true;
         }
       };
 
@@ -31,6 +35,7 @@ export async function GET(
       let polls = 0;
 
       const poll = async () => {
+        if (cancelled) return;
         polls++;
         try {
           const file = await db.uploadedFile.findUnique({
@@ -40,6 +45,7 @@ export async function GET(
 
           if (!file) {
             send("status", { status: "failed", progress: 0, message: "Task not found" });
+            cancelled = true;
             controller.close();
             return;
           }
@@ -53,6 +59,7 @@ export async function GET(
               message: `Done — ${clipsCount} clip${clipsCount !== 1 ? "s" : ""} ready`,
               clips_count: clipsCount,
             });
+            cancelled = true;
             controller.close();
             return;
           }
@@ -63,6 +70,7 @@ export async function GET(
               progress: 0,
               message: file.status === "no credits" ? "Insufficient credits" : "Processing failed",
             });
+            cancelled = true;
             controller.close();
             return;
           }
@@ -80,26 +88,31 @@ export async function GET(
             clips_count: clipsCount,
           });
 
-          if (polls < MAX_POLLS) {
+          if (polls < MAX_POLLS && !cancelled) {
             setTimeout(() => void poll(), 4000); // poll every 4s
-          } else {
+          } else if (!cancelled) {
             // Timed out — tell client to stop
             send("status", {
               status: "processing",
               progress: 90,
               message: "Still processing — this is taking longer than usual.",
             });
+            cancelled = true;
             controller.close();
           }
         } catch (err) {
           console.error("[progress SSE] poll error:", err);
           send("status", { status: "failed", progress: 0, message: "Server error" });
+          cancelled = true;
           controller.close();
         }
       };
 
       // Start polling immediately
       await poll();
+    },
+    cancel() {
+      // Client disconnected — the cancelled flag in start() prevents further work
     },
   });
 

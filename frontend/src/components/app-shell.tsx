@@ -13,7 +13,7 @@ import { Menu, X, LogOut, List, Settings, Plus, Shield } from "lucide-react";
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isAdmin = Boolean((session?.user as { is_admin?: boolean } | undefined)?.is_admin);
+  const isAdmin = Boolean(session?.user?.isAdmin);
 
   const handleSignOut = async () => {
     await signOut();

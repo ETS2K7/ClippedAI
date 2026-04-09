@@ -53,6 +53,11 @@ test_podcast.mp4
 tsconfig.tsbuildinfo
 .ruff_cache/
 
+# ─── Frontend debug / test artifacts ──────────────────────────────────────
+frontend/lh-report.json
+frontend/test-localstorage.js
+frontend/clip_*.mp4
+
 # ─── Backend cache / debug ────────────────────────────────────────────────
 backend/assemblyai_diarized_cache_*.json
 backend/asd_debug_output.json

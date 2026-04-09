@@ -26,7 +26,22 @@ export async function POST(req: Request) {
   }
 
   // YouTube URL — create a new DB record for it
-  if (sourceUrl.startsWith("http")) {
+  const YOUTUBE_HOSTS = new Set([
+    "youtube.com",
+    "www.youtube.com",
+    "m.youtube.com",
+    "youtu.be",
+    "www.youtu.be",
+  ]);
+
+  let parsedUrl: URL | null = null;
+  try {
+    parsedUrl = new URL(sourceUrl);
+  } catch {
+    // Not a valid URL — treat as uploaded file ID (below)
+  }
+
+  if (parsedUrl && (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") && YOUTUBE_HOSTS.has(parsedUrl.hostname)) {
     const videoIdMatch = sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
     const videoId = videoIdMatch ? videoIdMatch[1] : "video";
     const generatedS3Key = `youtube-downloads/${session.user.id}-${Date.now()}/${videoId}/original.mp4`;

@@ -21,7 +21,7 @@ export function DataFastIdentity() {
       user_id: user.id,
       ...(user.name ? { name: user.name } : {}),
       ...(user.image ? { image: user.image } : {}),
-      is_admin: String(Boolean((user as { is_admin?: boolean }).is_admin)),
+      is_admin: String(Boolean((user as { isAdmin?: boolean }).isAdmin)),
     };
     const serializedPayload = JSON.stringify(payload);
 

@@ -1,10 +1,11 @@
 "use server";
 
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import { s3Client } from "~/server/s3";
 
 export async function getClipPlayUrl(
   clipId: string,
@@ -19,14 +20,6 @@ export async function getClipPlayUrl(
       where: {
         id: clipId,
         userId: session.user.id,
-      },
-    });
-
-    const s3Client = new S3Client({
-      region: env.AWS_REGION,
-      credentials: {
-        accessKeyId: env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
       },
     });
 

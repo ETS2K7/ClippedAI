@@ -22,11 +22,12 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
     logger.info("==================== PHASE 2: TRANSCRIPTION ====================")
 
     logger.info("Uploading to AssemblyAI...")
-    headers = {"authorization": ASSEMBLYAI_KEY}
+    headers = {"authorization": ASSEMBLYAI_KEY()}
 
     with open(video_path, "rb") as f:
         res = requests.post(
-            "https://api.assemblyai.com/v2/upload", headers=headers, data=f
+            "https://api.assemblyai.com/v2/upload", headers=headers, data=f,
+            timeout=600,  # 10 min timeout for large video uploads
         )
 
     if res.status_code != 200:
@@ -53,8 +54,13 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
     logger.info(f"Polling transcription {transcript_id}...")
     for attempt in range(MAX_POLL_ATTEMPTS):
         res = requests.get(
-            f"https://api.assemblyai.com/v2/transcript/{transcript_id}", headers=headers
+            f"https://api.assemblyai.com/v2/transcript/{transcript_id}", headers=headers,
+            timeout=30,
         )
+        if res.status_code != 200:
+            logger.warning(f"Poll returned HTTP {res.status_code}, retrying...")
+            time.sleep(3)
+            continue
         data = res.json()
         status = data["status"]
 

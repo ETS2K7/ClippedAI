@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
-import { getClipPlayUrl } from "~/actions/generation";
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env";
+import { s3Client } from "~/server/s3";
 
 function mapStatus(status: string): string {
   switch (status) {
@@ -42,25 +42,21 @@ function getSourceType(s3Key: string): "youtube" | "upload" {
   return s3Key.startsWith("youtube-downloads/") ? "youtube" : "upload";
 }
 
-const s3Client = new S3Client({
-  region: env.AWS_REGION,
-  credentials: {
-    accessKeyId: env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: env.AWS_SECRET_ACCESS_KEY,
-  },
-});
-
-async function getThumbnailUrl(thumbnailKey: string | null): Promise<string | null> {
-  if (!thumbnailKey) return null;
+async function getPresignedUrl(s3Key: string): Promise<string | null> {
   try {
     return await getSignedUrl(
       s3Client,
-      new GetObjectCommand({ Bucket: env.S3_BUCKET_NAME, Key: thumbnailKey }),
+      new GetObjectCommand({ Bucket: env.S3_BUCKET_NAME, Key: s3Key }),
       { expiresIn: 3600 }
     );
   } catch {
     return null;
   }
+}
+
+async function getThumbnailUrl(thumbnailKey: string | null): Promise<string | null> {
+  if (!thumbnailKey) return null;
+  return getPresignedUrl(thumbnailKey);
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -77,16 +73,17 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     return new NextResponse(null, { status: 404 });
   }
 
+  // Generate presigned URLs directly — avoids re-querying the DB for each clip (N+1)
   const clipsWithUrls = await Promise.all(
     file.clips.map(async (clip) => {
-      const [urlRes, thumbnailUrl] = await Promise.all([
-        getClipPlayUrl(clip.id),
+      const [videoUrl, thumbnailUrl] = await Promise.all([
+        getPresignedUrl(clip.s3Key),
         getThumbnailUrl(clip.thumbnailKey ?? null),
       ]);
       return {
         id: clip.id,
         // video_url is a full pre-signed S3 URL — do NOT prepend any base URL in the client
-        video_url: urlRes.url ?? null,
+        video_url: videoUrl,
         thumbnail_url: thumbnailUrl,
         video_path: clip.s3Key,
         created_at: toISO(clip.createdAt),

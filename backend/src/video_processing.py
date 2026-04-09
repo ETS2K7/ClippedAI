@@ -153,65 +153,17 @@ def get_centered_crop(
 
 
 def _smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
-    """
-    Gap-fills a 1-D position array (gaps = -1) then Gaussian-smooths it.
-    Leading/trailing gaps are filled with the nearest valid value.
-    """
-    seg_len = len(raw)
-    filled = raw.copy()
-    valid_mask = filled != -1
-    if not np.any(valid_mask):
-        filled[:] = default
-        return filled
-    idxs = np.arange(seg_len)
-    first_valid = int(np.argmax(valid_mask))
-    filled[:first_valid] = filled[first_valid]
-    last_valid = int(seg_len - 1 - np.argmax(valid_mask[::-1]))
-    filled[last_valid + 1:] = filled[last_valid]
-    valid_mask = filled != -1
-    if not np.all(valid_mask):
-        filled[~valid_mask] = np.interp(
-            idxs[~valid_mask], idxs[valid_mask], filled[valid_mask]
-        )
-    effective_sigma = min(sigma, max(1, seg_len // 4))
-    return ndimage.gaussian_filter1d(filled, sigma=effective_sigma)
+    """Thin wrapper — implementation lives in signal_helpers.py for testability."""
+    from src.signal_helpers import smooth_segment
+    return smooth_segment(raw, default, sigma)
 
 
 # ─── Split-state stabilisation ────────────────────────────────────────────────
 
 def _stabilize_segment(raw: np.ndarray, min_entry: int, min_gap: int) -> np.ndarray:
-    """
-    Two-pass stabiliser for a boolean signal within one scene segment.
-      Pass 1: Remove True-runs shorter than min_entry frames (noise).
-      Pass 2: Merge adjacent True-runs separated by < min_gap False frames (hysteresis).
-    """
-    n = len(raw)
-    if n == 0:
-        return raw.copy()
-    runs = []
-    i = 0
-    while i < n:
-        if raw[i]:
-            j = i
-            while j < n and raw[j]:
-                j += 1
-            runs.append([i, j - 1])
-            i = j
-        else:
-            i += 1
-    runs = [r for r in runs if (r[1] - r[0] + 1) >= min_entry]
-    if not runs:
-        return np.zeros(n, dtype=bool)
-    merged = [runs[0]]
-    for s, e in runs[1:]:
-        if (s - merged[-1][1] - 1) < min_gap:
-            merged[-1][1] = e
-        else:
-            merged.append([s, e])
-    result = np.zeros(n, dtype=bool)
-    for s, e in merged:
-        result[s: e + 1] = True
-    return result
+    """Thin wrapper — implementation lives in signal_helpers.py for testability."""
+    from src.signal_helpers import stabilize_segment
+    return stabilize_segment(raw, min_entry, min_gap)
 
 
 def _stabilize_bool_state(
@@ -382,6 +334,21 @@ def track_speaker_and_frame(
     w        = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h        = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     frames_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    if fps <= 0:
+        logger.warning(f"Invalid fps ({fps}), defaulting to 25")
+        fps = 25.0
+
+    if w < CROP_W_1:
+        logger.warning(
+            f"Video width ({w}px) is narrower than crop width ({CROP_W_1}px). "
+            f"Adjusting crop width to match video."
+        )
+        # Override the crop width for this clip — use the full frame width
+        effective_crop_w = w
+    else:
+        effective_crop_w = CROP_W_1
+
     logger.info(f"Video: {w}x{h} @ {fps}fps, {frames_count} frames")
 
     fourcc   = cv2.VideoWriter_fourcc(*"mp4v")

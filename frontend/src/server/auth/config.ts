@@ -56,7 +56,14 @@ export const authConfig = {
         const passwordMatch = await comparePasswords(password, user.password);
         if (!passwordMatch) return null;
 
-        return user;
+        // Only return fields needed by NextAuth — never expose the password hash
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          isAdmin: user.isAdmin,
+        };
       },
     }),
   ],

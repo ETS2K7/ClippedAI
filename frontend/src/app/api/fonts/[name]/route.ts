@@ -29,6 +29,9 @@ const FONT_CDN_MAP: Record<string, string> = {
   "Raleway-Bold":          "https://fonts.gstatic.com/s/raleway/v28/1Ptxg8zYS_SKggPN4iEgvnHyvveLxVvaorCIPbEHJA.woff2",
 };
 
+// Set of allowed font names — prevents path traversal via filesystem access
+const ALLOWED_FONT_NAMES = new Set(Object.keys(FONT_CDN_MAP));
+
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ name: string }> }
@@ -41,8 +44,20 @@ export async function GET(
   const { name } = await params;
   const fontName = name.replace(/\.(ttf|otf|woff2?)$/i, "");
 
+  // Path traversal guard: only serve fonts from the known allowlist
+  if (!ALLOWED_FONT_NAMES.has(fontName)) {
+    return new NextResponse(null, { status: 404 });
+  }
+
   // 1. Try to serve from local public/fonts/ first
-  const localPath = path.join(process.cwd(), "public", "fonts", `${fontName}.ttf`);
+  const fontsDir = path.resolve(process.cwd(), "public", "fonts");
+  const localPath = path.resolve(fontsDir, `${fontName}.ttf`);
+
+  // Defense-in-depth: ensure resolved path is still within the fonts directory
+  if (!localPath.startsWith(fontsDir + path.sep)) {
+    return new NextResponse(null, { status: 400 });
+  }
+
   if (fs.existsSync(localPath)) {
     const fileBuffer = fs.readFileSync(localPath);
     return new NextResponse(fileBuffer, {

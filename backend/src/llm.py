@@ -14,7 +14,7 @@ _gemini_client = None
 def _get_gemini_client():
     global _gemini_client
     if _gemini_client is None:
-        _gemini_client = genai.Client(api_key=GEMINI_KEY)
+        _gemini_client = genai.Client(api_key=GEMINI_KEY())
     return _gemini_client
 
 
@@ -36,6 +36,10 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     logger.info(
         "==================== PHASE 3: VIRAL CLIP SELECTION ===================="
     )
+
+    if not words:
+        raise ValueError("Cannot select clips from an empty transcript")
+
     sentences = []
     current_sentence = []
     start_time = None
@@ -71,21 +75,61 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     )
 
     logger.info("Calling Gemini 2.5 Flash for clip selection...")
-    response = _get_gemini_client().models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config={
-            "response_mime_type": "application/json",
-            "response_schema": ClipList,
-            "temperature": 0.2,
-        },
-    )
+
+    # Retry with exponential backoff for transient API failures
+    import time as _time
+    MAX_RETRIES = 3
+    last_error = None
+
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = _get_gemini_client().models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json",
+                    "response_schema": ClipList,
+                    "temperature": 0.2,
+                },
+            )
+            break
+        except Exception as e:
+            last_error = e
+            if attempt < MAX_RETRIES - 1:
+                wait = 2 ** (attempt + 1)
+                logger.warning(f"Gemini API call failed (attempt {attempt + 1}/{MAX_RETRIES}), retrying in {wait}s: {e}")
+                _time.sleep(wait)
+            else:
+                logger.error(f"Gemini API call failed after {MAX_RETRIES} attempts: {e}")
+                raise
 
     try:
         data = json.loads(response.text)
-        logger.info(f"Selected {len(data.get('clips', []))} clips.")
-        return data["clips"]
+        clips = data.get("clips", [])
+
+        # Post-validate clip timestamps
+        video_end_s = words[-1]["end"] / 1000.0
+        validated_clips = []
+        for clip in clips:
+            start = clip.get("start_time", 0)
+            end = clip.get("end_time", 0)
+            duration = end - start
+            if start < 0 or end <= start or start > video_end_s:
+                logger.warning(f"Skipping invalid clip: start={start}, end={end}")
+                continue
+            if duration < 10 or duration > 120:
+                logger.warning(f"Skipping clip with unusual duration ({duration:.1f}s): {clip}")
+                continue
+            validated_clips.append(clip)
+
+        if not validated_clips:
+            logger.error("No valid clips after timestamp validation")
+            raise ValueError("LLM returned no valid clips")
+
+        logger.info(f"Selected {len(validated_clips)} clips (validated).")
+        return validated_clips
     except Exception as e:
         logger.error(f"Failed to parse or receive output from Gemini: {e}")
         logger.error(f"Raw Output: {response.text}")
         raise
+

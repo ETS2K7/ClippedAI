@@ -12,6 +12,8 @@ if (typeof global !== 'undefined') {
 const jiti = createJiti(fileURLToPath(import.meta.url));
 jiti("./src/env.js");
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const securityHeaders = [
   {
     key: "X-Frame-Options",
@@ -26,10 +28,14 @@ const securityHeaders = [
     value: "strict-origin-when-cross-origin",
   },
   {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains",
+  },
+  {
     key: "Content-Security-Policy",
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com",
+      `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://static.cloudflareinsights.com`,
       "connect-src 'self' https://cloudflareinsights.com https://fonts.googleapis.com https://fonts.gstatic.com",
       "font-src 'self' data: https://fonts.gstatic.com https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http:",
