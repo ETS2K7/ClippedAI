@@ -870,7 +870,7 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.95, y: 30 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className="hidden lg:block flex-shrink-0 w-[340px]"
+              className={`hidden ${sourceType === "youtube" ? "lg:block" : "lg:hidden"} flex-shrink-0 w-[340px]`}
             >
               <div className="w-[340px]">
               <div className="lg:sticky lg:top-20">
