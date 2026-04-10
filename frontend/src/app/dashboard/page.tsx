@@ -444,7 +444,7 @@ export default function Home() {
           )}
 
           {/* Two Column Layout */}
-          <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 items-start">
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-0 items-start">
             {/* Left Column — Form */}
             <motion.div 
               initial={{ opacity: 0, x: -15 }}
@@ -869,14 +869,13 @@ export default function Home() {
             <AnimatePresence>
               {sourceType === "youtube" && (
                 <motion.div 
-                  layout
                   initial={{ opacity: 0, width: 0, filter: "blur(4px)" }}
-                  animate={{ opacity: 1, width: 340, filter: "blur(0px)" }}
+                  animate={{ opacity: 1, width: 380, filter: "blur(0px)" }}
                   exit={{ opacity: 0, width: 0, filter: "blur(4px)" }}
                   transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                   className="hidden lg:block flex-shrink-0 overflow-hidden"
                 >
-                  <div className="w-[340px]">
+                  <div className="pl-10 w-[380px]">
                   <div className="lg:sticky lg:top-20">
                 <div className="flex items-center justify-center gap-2 mb-5 text-sm text-white/25">
                   <Monitor className="w-4 h-4" />
