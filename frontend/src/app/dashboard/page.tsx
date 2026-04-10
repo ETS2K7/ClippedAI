@@ -84,119 +84,13 @@ const getYouTubeThumbnailUrl = (value: string): string | null => {
   return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null;
 };
 
-const BetaModal = ({ onClose }: { onClose: () => void }) => {
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-    
-    setSending(true);
-    try {
-      const res = await fetch("/api/feedback", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: "general", message })
-      });
-      if (res.ok) {
-        setSent(true);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  return (
-    <motion.div 
-      className="fixed inset-0 z-[500] flex items-center justify-center p-4"
-      exit={{}}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.96, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 20 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        style={{ willChange: "opacity, transform" }}
-        className="relative brutal-card p-6 sm:p-10 max-w-lg w-full bg-[#0a0a0c]/95 border border-white/10 shadow-2xl overflow-hidden"
-      >
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
-        >
-          <X className="w-4 h-4" />
-        </button>
-        <div className="absolute top-0 left-0 w-[150%] h-[150%] bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.06)_0%,transparent_40%)] pointer-events-none" />
-        
-        <div className="flex items-center gap-4 mb-6 relative">
-          <div className="w-12 h-12 rounded-xl bg-[#EA4335]/10 border border-[#EA4335]/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(234,67,53,0.1)]">
-            <Lock className="w-6 h-6 text-[#EA4335]" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold font-syne uppercase tracking-wider text-white leading-tight">Closed Beta</h3>
-            <p className="text-xs text-[#EA4335]/80 font-mono tracking-widest uppercase mt-1">Access Restricted</p>
-          </div>
-        </div>
-
-        <div className="space-y-4 mb-8 relative text-sm sm:text-base text-white/80 leading-relaxed font-medium">
-          <p>
-            Welcome to ClippedAI! We are currently operating in a strict closed beta phase. Direct video generation capabilities are exclusively restricted to system administrators at this time.
-          </p>
-          <p>
-            Built by <span className="text-white font-bold tracking-wide">The ClippedAI Team</span>, our core processing engines are currently undergoing extremely heavy battle-testing to ensure we deliver absolute cinematic perfection to creators upon launch.
-          </p>
-        </div>
-
-        <div className="relative border-t border-white/10 pt-6">
-          <p className="text-[10px] font-bold font-mono tracking-widest text-white/50 uppercase mb-4">
-            Request Early Access / Contact The Team
-          </p>
-          
-          {sent ? (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="p-4 rounded-xl bg-white/5 border border-green-500/30 flex items-center gap-3"
-            >
-              <CheckCircle className="w-5 h-5 text-green-400" />
-              <span className="text-sm text-green-300 font-medium">Message received! We'll be in touch.</span>
-            </motion.div>
-          ) : (
-            <form onSubmit={handleSend} className="space-y-3">
-              <Textarea 
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Want early access or have questions? Send us a message..."
-                className="bg-white/5 border-white/10 resize-none h-24 text-sm focus-visible:ring-1 focus-visible:ring-white/20 transition-all font-medium text-white placeholder:text-white/30"
-                disabled={sending}
-              />
-              <Button 
-                type="submit" 
-                disabled={sending || !message.trim()}
-                className="w-full bg-white text-black hover:bg-white/90 font-black uppercase tracking-widest text-[11px] h-11 rounded-xl transition-all"
-              >
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                  <>
-                    <Send className="w-3.5 h-3.5 mr-2" />
-                    Send Message
-                  </>
-                )}
-              </Button>
-            </form>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-};
 
 export default function Home() {
   const [showBetaModal, setShowBetaModal] = useState(false);
+  const [betaMessage, setBetaMessage] = useState("");
+  const [betaSending, setBetaSending] = useState(false);
+  const [betaSent, setBetaSent] = useState(false);
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -506,8 +400,82 @@ export default function Home() {
 
   return (
     <AppShell>
-      <AnimatePresence mode="wait">
-        {showBetaModal && <BetaModal key="beta-modal" onClose={() => setShowBetaModal(false)} />}
+      <AnimatePresence>
+        {showBetaModal && (
+          <motion.div
+            key="beta-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="fixed inset-0 z-[500] flex items-center justify-center p-4"
+            style={{ willChange: "opacity" }}
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowBetaModal(false)} />
+            <motion.div
+              initial={{ scale: 0.96, y: 18 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 18 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              style={{ willChange: "transform" }}
+              className="relative brutal-card p-6 sm:p-10 max-w-lg w-full bg-[#0a0a0c]/95 border border-white/10 shadow-2xl overflow-hidden"
+            >
+              <button
+                onClick={() => setShowBetaModal(false)}
+                className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="absolute top-0 left-0 w-[150%] h-[150%] bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.06)_0%,transparent_40%)] pointer-events-none" />
+
+              <div className="flex items-center gap-4 mb-6 relative">
+                <div className="w-12 h-12 rounded-xl bg-[#EA4335]/10 border border-[#EA4335]/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(234,67,53,0.1)]">
+                  <Lock className="w-6 h-6 text-[#EA4335]" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold font-syne uppercase tracking-wider text-white leading-tight">Closed Beta</h3>
+                  <p className="text-xs text-[#EA4335]/80 font-mono tracking-widest uppercase mt-1">Access Restricted</p>
+                </div>
+              </div>
+
+              <div className="space-y-4 mb-8 relative text-sm sm:text-base text-white/80 leading-relaxed font-medium">
+                <p>Welcome to ClippedAI! We are currently operating in a strict closed beta phase. Direct video generation capabilities are exclusively restricted to system administrators at this time.</p>
+                <p>Built by <span className="text-white font-bold tracking-wide">The ClippedAI Team</span>, our core processing engines are currently undergoing extremely heavy battle-testing to ensure we deliver absolute cinematic perfection to creators upon launch.</p>
+              </div>
+
+              <div className="relative border-t border-white/10 pt-6">
+                <p className="text-[10px] font-bold font-mono tracking-widest text-white/50 uppercase mb-4">Request Early Access / Contact The Team</p>
+                {betaSent ? (
+                  <div className="p-4 rounded-xl bg-white/5 border border-green-500/30 flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
+                    <span className="text-sm text-green-300 font-medium">Message received! We'll be in touch.</span>
+                  </div>
+                ) : (
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!betaMessage.trim()) return;
+                    setBetaSending(true);
+                    try {
+                      const res = await fetch("/api/feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ category: "general", message: betaMessage }) });
+                      if (res.ok) setBetaSent(true);
+                    } catch { /* silent */ } finally { setBetaSending(false); }
+                  }} className="space-y-3">
+                    <Textarea
+                      value={betaMessage}
+                      onChange={(e) => setBetaMessage(e.target.value)}
+                      placeholder="Want early access or have questions? Send us a message..."
+                      className="bg-white/5 border-white/10 resize-none h-24 text-sm focus-visible:ring-1 focus-visible:ring-white/20 transition-all font-medium text-white placeholder:text-white/30"
+                      disabled={betaSending}
+                    />
+                    <Button type="submit" disabled={betaSending || !betaMessage.trim()} className="w-full bg-white text-black hover:bg-white/90 font-black uppercase tracking-widest text-[11px] h-11 rounded-xl transition-all">
+                      {betaSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-3.5 h-3.5 mr-2" />Send Message</>}
+                    </Button>
+                  </form>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
       <div className="min-h-screen">
 
