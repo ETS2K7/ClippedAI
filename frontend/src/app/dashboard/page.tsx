@@ -14,7 +14,7 @@ import { useSession } from "~/lib/auth-client";
 import { track } from "~/lib/datafast";
 import { formatSupportMessage, parseApiError } from "~/lib/api-error";
 import Link from "next/link";
-import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, LinkIcon, Lock, Send } from "lucide-react";
+import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, LinkIcon, Lock, Send, X } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
 import AppShell from "~/components/app-shell";
@@ -84,7 +84,7 @@ const getYouTubeThumbnailUrl = (value: string): string | null => {
   return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null;
 };
 
-const NonAdminOverlay = () => {
+const BetaModal = ({ onClose }: { onClose: () => void }) => {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -111,16 +111,22 @@ const NonAdminOverlay = () => {
   };
 
   return (
-    <div className="absolute inset-[0rem] z-50 flex items-center justify-center p-4 min-h-[500px]">
-      {/* Blurred backdrop over the dashboard columns */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[6px] rounded-[2rem] border border-white/[0.05]" />
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
       
       <motion.div 
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="relative brutal-card p-6 sm:p-10 max-w-lg w-full bg-[#0a0a0c]/95 border border-white/10 shadow-2xl overflow-hidden"
       >
+        <button 
+          onClick={onClose} 
+          className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
+        >
+          <X className="w-4 h-4" />
+        </button>
         <div className="absolute top-0 left-0 w-[150%] h-[150%] bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.06)_0%,transparent_40%)] pointer-events-none" />
         
         <div className="flex items-center gap-4 mb-6 relative">
@@ -186,6 +192,7 @@ const NonAdminOverlay = () => {
 };
 
 export default function Home() {
+  const [showBetaModal, setShowBetaModal] = useState(false);
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -368,6 +375,11 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!isAdmin) {
+      setShowBetaModal(true);
+      return;
+    }
+
     if (sourceType === "upload" && !fileRef.current) return;
     if (sourceType === "youtube" && !url.trim()) return;
     if (!session?.user?.id) return;
@@ -490,6 +502,9 @@ export default function Home() {
 
   return (
     <AppShell>
+      <AnimatePresence>
+        {showBetaModal && <BetaModal onClose={() => setShowBetaModal(false)} />}
+      </AnimatePresence>
       <div className="min-h-screen">
 
         {/* ── Main Content ── */}
@@ -545,11 +560,30 @@ export default function Home() {
             </div>
           )}
 
-          {/* Two Column Layout Wrapper */}
-          <div className="relative">
-            {!isAdmin && <NonAdminOverlay />}
-            
-            <div className={`flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-0 items-start transition-all duration-1000 ${!isAdmin ? "opacity-20 pointer-events-none select-none blur-[2px]" : ""}`}>
+          {/* Non-Admin Informational Banner */}
+          {!isAdmin && (
+             <div className="mb-8 p-5 sm:p-6 brutal-card bg-[#EA4335]/5 border-[#EA4335]/20 flex flex-col sm:flex-row justify-between gap-6 items-start sm:items-center relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-[#EA4335]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+               <div className="relative">
+                 <h3 className="text-sm sm:text-base font-bold font-syne uppercase tracking-wider text-white flex items-center gap-2 mb-1.5">
+                   <Lock className="w-4 h-4 text-[#EA4335]" />
+                   Closed Beta Checkpoint
+                 </h3>
+                 <p className="text-xs text-white/60 font-medium leading-relaxed max-w-xl">
+                   Welcome! ClippedAI is currently operating in a strict beta. While you can fully preview and explore the dashboard parameters, the primary AI generator is temporarily locked to system administrators.
+                 </p>
+               </div>
+               <Button 
+                 onClick={() => setShowBetaModal(true)}
+                 className="relative z-10 w-full sm:w-auto bg-white hover:bg-white/90 text-black font-black uppercase tracking-widest text-[10px] h-10 px-6 rounded-xl shrink-0"
+               >
+                 Request Access
+               </Button>
+             </div>
+          )}
+
+          {/* Two Column Layout */}
+          <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-0 items-start">
             {/* Left Column — Form */}
             <motion.div 
               initial={{ opacity: 0, x: -15 }}
@@ -1203,7 +1237,6 @@ export default function Home() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
           </div>
         </div>
       </div>
