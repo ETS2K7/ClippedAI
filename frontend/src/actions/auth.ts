@@ -23,10 +23,11 @@ export async function signUp(data: SignupFormValues): Promise<SignupResult> {
   try {
     const existingUser = await db.user.findUnique({ where: { email } });
 
+    // Generic message — prevents email enumeration attacks
     if (existingUser) {
       return {
         success: false,
-        error: "Email already in use",
+        error: "If this email is not registered, a new account will be created. Please check your details.",
       };
     }
 

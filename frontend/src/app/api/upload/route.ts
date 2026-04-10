@@ -93,8 +93,12 @@ export async function POST(req: Request) {
     const folderName = `${session.user.id}-${fileId}`;
     const s3Key = `${folderName}/original.mp4`;
 
-    // Preserve the original filename so task titles look human-readable
-    const displayName = file.name !== "blob" ? file.name.replace(/\.[^.]+$/, "") : undefined;
+    // Preserve the original filename so task titles look human-readable.
+    // Strip extension, cap at 200 chars, remove non-printable characters to prevent DB abuse.
+    const rawName = file.name !== "blob" ? file.name.replace(/\.[^.]+$/, "") : undefined;
+    const displayName = rawName
+      ? rawName.replace(/[^\x20-\x7E]/g, "").trim().slice(0, 200) || undefined
+      : undefined;
 
     const upload = new Upload({
       client: s3Client,
