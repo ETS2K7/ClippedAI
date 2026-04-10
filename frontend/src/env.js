@@ -21,6 +21,10 @@ export const env = createEnv({
     // Stripe (optional — not needed for self-hosted)
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    
+    // Email Integrations
+    RESEND_API_KEY: z.string().optional(),
+    ADMIN_EMAIL: z.string().optional(),
   },
 
   client: {
@@ -45,6 +49,8 @@ export const env = createEnv({
     BASE_URL: process.env.BASE_URL,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_DATAFAST_WEBSITE_ID: process.env.NEXT_PUBLIC_DATAFAST_WEBSITE_ID,
     NEXT_PUBLIC_DATAFAST_DOMAIN: process.env.NEXT_PUBLIC_DATAFAST_DOMAIN,
