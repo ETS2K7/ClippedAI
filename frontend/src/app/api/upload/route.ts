@@ -6,6 +6,23 @@ import { db } from "~/server/db";
 import { s3Client } from "~/server/s3";
 import crypto from "crypto";
 
+// ── In-process rate limiter: max 15 uploads per user per hour ─────────────
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_MAX = 15;
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function isRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(userId);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return true;
+  entry.count += 1;
+  return false;
+}
+
 /** Accepted video MIME types */
 const ALLOWED_MIME_TYPES = new Set([
   "video/mp4",
@@ -51,6 +68,14 @@ function hasValidMagicBytes(header: Uint8Array): boolean {
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
+
+  // Rate limiting — prevent S3 storage exhaustion
+  if (isRateLimited(session.user.id)) {
+    return NextResponse.json(
+      { error: "Too many uploads. Please wait before uploading more videos." },
+      { status: 429 },
+    );
+  }
 
   const formData = await req.formData();
   // ClippedAI sends the file under the "video" key; support both for compatibility
