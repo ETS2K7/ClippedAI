@@ -193,7 +193,7 @@ const BetaModal = ({ onClose }: { onClose: () => void }) => {
           )}
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
 
