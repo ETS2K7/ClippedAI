@@ -47,6 +47,8 @@ jobs:
           STRIPE_SMALL_CREDIT_PACK=${{ secrets.STRIPE_SMALL_CREDIT_PACK }}
           STRIPE_MEDIUM_CREDIT_PACK=${{ secrets.STRIPE_MEDIUM_CREDIT_PACK }}
           STRIPE_LARGE_CREDIT_PACK=${{ secrets.STRIPE_LARGE_CREDIT_PACK }}
+          RESEND_API_KEY="re_eHFWm5V6_2eRYZLkR1wbCQm6YB4boL6ex"
+          ADMIN_EMAIL="ebelthomasseiko@gmail.com"
           EOF
           # Strip leading whitespace from heredoc
           sed -i 's/^[[:space:]]*//' /tmp/env.production
