@@ -14,8 +14,9 @@ import { useSession } from "~/lib/auth-client";
 import { track } from "~/lib/datafast";
 import { formatSupportMessage, parseApiError } from "~/lib/api-error";
 import Link from "next/link";
-import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, LinkIcon } from "lucide-react";
+import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, LinkIcon, Lock, Send } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
+import { Textarea } from "~/components/ui/textarea";
 import AppShell from "~/components/app-shell";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
@@ -81,6 +82,107 @@ const extractYouTubeVideoId = (value: string): string | null => {
 const getYouTubeThumbnailUrl = (value: string): string | null => {
   const videoId = extractYouTubeVideoId(value);
   return videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null;
+};
+
+const NonAdminOverlay = () => {
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    
+    setSending(true);
+    try {
+      const res = await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category: "general", message })
+      });
+      if (res.ok) {
+        setSent(true);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="absolute inset-[0rem] z-50 flex items-center justify-center p-4 min-h-[500px]">
+      {/* Blurred backdrop over the dashboard columns */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[6px] rounded-[2rem] border border-white/[0.05]" />
+      
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        className="relative brutal-card p-6 sm:p-10 max-w-lg w-full bg-[#0a0a0c]/95 border border-white/10 shadow-2xl overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 w-[150%] h-[150%] bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.06)_0%,transparent_40%)] pointer-events-none" />
+        
+        <div className="flex items-center gap-4 mb-6 relative">
+          <div className="w-12 h-12 rounded-xl bg-[#EA4335]/10 border border-[#EA4335]/20 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(234,67,53,0.1)]">
+            <Lock className="w-6 h-6 text-[#EA4335]" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold font-syne uppercase tracking-wider text-white leading-tight">Closed Beta</h3>
+            <p className="text-xs text-[#EA4335]/80 font-mono tracking-widest uppercase mt-1">Access Restricted</p>
+          </div>
+        </div>
+
+        <div className="space-y-4 mb-8 relative text-sm sm:text-base text-white/80 leading-relaxed font-medium">
+          <p>
+            Welcome to ClippedAI! We are currently operating in a strict closed beta phase. Direct video generation capabilities are exclusively restricted to system administrators at this time.
+          </p>
+          <p>
+            Built by <span className="text-white font-bold tracking-wide">The ClippedAI Team</span>, our core processing engines are currently undergoing extremely heavy battle-testing to ensure we deliver absolute cinematic perfection to creators upon launch.
+          </p>
+        </div>
+
+        <div className="relative border-t border-white/10 pt-6">
+          <p className="text-[10px] font-bold font-mono tracking-widest text-white/50 uppercase mb-4">
+            Request Early Access / Contact The Team
+          </p>
+          
+          {sent ? (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="p-4 rounded-xl bg-white/5 border border-green-500/30 flex items-center gap-3"
+            >
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <span className="text-sm text-green-300 font-medium">Message received! We'll be in touch.</span>
+            </motion.div>
+          ) : (
+            <form onSubmit={handleSend} className="space-y-3">
+              <Textarea 
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Want early access or have questions? Send us a message..."
+                className="bg-white/5 border-white/10 resize-none h-24 text-sm focus-visible:ring-1 focus-visible:ring-white/20 transition-all font-medium text-white placeholder:text-white/30"
+                disabled={sending}
+              />
+              <Button 
+                type="submit" 
+                disabled={sending || !message.trim()}
+                className="w-full bg-white text-black hover:bg-white/90 font-black uppercase tracking-widest text-[11px] h-11 rounded-xl transition-all"
+              >
+                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                  <>
+                    <Send className="w-3.5 h-3.5 mr-2" />
+                    Send Message
+                  </>
+                )}
+              </Button>
+            </form>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
 };
 
 export default function Home() {
@@ -443,8 +545,11 @@ export default function Home() {
             </div>
           )}
 
-          {/* Two Column Layout */}
-          <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-0 items-start">
+          {/* Two Column Layout Wrapper */}
+          <div className="relative">
+            {!isAdmin && <NonAdminOverlay />}
+            
+            <div className={`flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-0 items-start transition-all duration-1000 ${!isAdmin ? "opacity-20 pointer-events-none select-none blur-[2px]" : ""}`}>
             {/* Left Column — Form */}
             <motion.div 
               initial={{ opacity: 0, x: -15 }}
@@ -856,11 +961,7 @@ export default function Home() {
                     !isAdmin
                   }
                 >
-                  {
-                    !isAdmin
-                    ? "ADMIN ONLY"
-                    : isLoading ? "PROCESSING..." : "GENERATE CLIPS."
-                  }
+                  {isLoading ? "PROCESSING..." : "GENERATE CLIPS."}
                 </Button>
               </form>
             </motion.div>
@@ -1102,6 +1203,7 @@ export default function Home() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
           </div>
         </div>
       </div>
