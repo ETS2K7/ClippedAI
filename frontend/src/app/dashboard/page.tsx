@@ -509,7 +509,7 @@ export default function Home() {
   return (
     <AppShell>
       <AnimatePresence>
-        {showBetaModal && <BetaModal onClose={() => setShowBetaModal(false)} />}
+        {showBetaModal && <BetaModal key="beta-modal" onClose={() => setShowBetaModal(false)} />}
       </AnimatePresence>
       <div className="min-h-screen">
 
