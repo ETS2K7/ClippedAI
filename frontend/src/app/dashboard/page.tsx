@@ -447,7 +447,6 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 items-start">
             {/* Left Column — Form */}
             <motion.div 
-              layout
               initial={{ opacity: 0, x: -15 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
