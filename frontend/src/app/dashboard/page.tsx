@@ -971,8 +971,7 @@ export default function Home() {
                   disabled={
                     (sourceType === "youtube" && !url.trim()) ||
                     (sourceType === "upload" && !fileRef.current) ||
-                    isLoading ||
-                    !isAdmin
+                    isLoading
                   }
                 >
                   {isLoading ? "PROCESSING..." : "GENERATE CLIPS."}
