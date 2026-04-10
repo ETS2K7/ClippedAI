@@ -17,7 +17,7 @@ import Link from "next/link";
 import { ArrowRight, Youtube, CheckCircle, AlertCircle, Loader2, Palette, Type, Paintbrush, Film, Sparkles, Upload, Monitor, LinkIcon } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
 import AppShell from "~/components/app-shell";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
 import { fetcher } from "~/lib/fetcher";
 
@@ -447,6 +447,7 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 items-start">
             {/* Left Column — Form */}
             <motion.div 
+              layout
               initial={{ opacity: 0, x: -15 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
@@ -866,14 +867,18 @@ export default function Home() {
             </motion.div>
 
             {/* Right Column — Phone Preview */}
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-              className={`hidden ${sourceType === "youtube" ? "lg:block" : "lg:hidden"} flex-shrink-0 w-[340px]`}
-            >
-              <div className="w-[340px]">
-              <div className="lg:sticky lg:top-20">
+            <AnimatePresence>
+              {sourceType === "youtube" && (
+                <motion.div 
+                  layout
+                  initial={{ opacity: 0, width: 0, filter: "blur(4px)" }}
+                  animate={{ opacity: 1, width: 340, filter: "blur(0px)" }}
+                  exit={{ opacity: 0, width: 0, filter: "blur(4px)" }}
+                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                  className="hidden lg:block flex-shrink-0 overflow-hidden"
+                >
+                  <div className="w-[340px]">
+                  <div className="lg:sticky lg:top-20">
                 <div className="flex items-center justify-center gap-2 mb-5 text-sm text-white/25">
                   <Monitor className="w-4 h-4" />
                   <span>Live Preview</span>
@@ -1096,7 +1101,9 @@ export default function Home() {
                 </div>
               </div>
               </div>
-            </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
       </div>
