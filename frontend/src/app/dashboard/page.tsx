@@ -560,27 +560,7 @@ export default function Home() {
             </div>
           )}
 
-          {/* Non-Admin Informational Banner */}
-          {!isAdmin && (
-             <div className="mb-8 p-5 sm:p-6 brutal-card bg-[#EA4335]/5 border-[#EA4335]/20 flex flex-col sm:flex-row justify-between gap-6 items-start sm:items-center relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-64 h-64 bg-[#EA4335]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-               <div className="relative">
-                 <h3 className="text-sm sm:text-base font-bold font-syne uppercase tracking-wider text-white flex items-center gap-2 mb-1.5">
-                   <Lock className="w-4 h-4 text-[#EA4335]" />
-                   Closed Beta Checkpoint
-                 </h3>
-                 <p className="text-xs text-white/60 font-medium leading-relaxed max-w-xl">
-                   Welcome! ClippedAI is currently operating in a strict beta. While you can fully preview and explore the dashboard parameters, the primary AI generator is temporarily locked to system administrators.
-                 </p>
-               </div>
-               <Button 
-                 onClick={() => setShowBetaModal(true)}
-                 className="relative z-10 w-full sm:w-auto bg-white hover:bg-white/90 text-black font-black uppercase tracking-widest text-[10px] h-10 px-6 rounded-xl shrink-0"
-               >
-                 Request Access
-               </Button>
-             </div>
-          )}
+
 
           {/* Two Column Layout */}
           <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-0 items-start">
