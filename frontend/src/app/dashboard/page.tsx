@@ -422,9 +422,10 @@ export default function Home() {
             >
               <button
                 onClick={() => setShowBetaModal(false)}
+                aria-label="Close beta access modal"
                 className="absolute top-4 right-4 z-10 w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-white/40 hover:text-white transition-all"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4" aria-hidden="true" />
               </button>
               <div className="absolute top-0 left-0 w-[150%] h-[150%] bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.06)_0%,transparent_40%)] pointer-events-none" />
 
@@ -464,6 +465,7 @@ export default function Home() {
                       value={betaMessage}
                       onChange={(e) => setBetaMessage(e.target.value)}
                       placeholder="Want early access or have questions? Send us a message..."
+                      aria-label="Message to ClippedAI team"
                       className="bg-white/5 border-white/10 resize-none h-24 text-sm focus-visible:ring-1 focus-visible:ring-white/20 transition-all font-medium text-white placeholder:text-white/30"
                       disabled={betaSending}
                     />
@@ -538,15 +540,15 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row gap-6 sm:gap-10 lg:gap-0 items-start">
             {/* Left Column — Form */}
             <motion.div 
-              initial={{ opacity: 0, x: -15 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="flex-1 min-w-0"
             >
               <div className="mb-5 sm:mb-8">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black font-syne uppercase tracking-tighter text-white mb-2 leading-none">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-syne uppercase tracking-tighter text-white mb-2 leading-none">
                   NEW CLIP.
-                </h2>
+                </h1>
                 <p className="text-white/40 font-mono tracking-widest text-[10px] sm:text-xs mt-3 sm:mt-4 uppercase">
                   Paste a YouTube link or upload a video.
                 </p>
@@ -558,6 +560,8 @@ export default function Home() {
                   <div className="flex gap-2">
                     <button
                       type="button"
+                      aria-label="Use YouTube URL as source"
+                      aria-pressed={sourceType === "youtube"}
                       onClick={() => {
                         setSourceType("youtube");
                         setFileName(null);
@@ -571,11 +575,13 @@ export default function Home() {
                           : "bg-white/[0.03] text-white/40 border border-transparent hover:bg-white/[0.06] hover:text-white/60"
                       }`}
                     >
-                      <Youtube className="w-4 h-4" />
+                      <Youtube className="w-4 h-4" aria-hidden="true" />
                       YouTube URL
                     </button>
                     <button
                       type="button"
+                      aria-label="Upload a video file as source"
+                      aria-pressed={sourceType === "upload"}
                       onClick={() => setSourceType("upload")}
                       disabled={isLoading}
                       className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all ${
@@ -584,7 +590,7 @@ export default function Home() {
                           : "bg-white/[0.03] text-white/40 border border-transparent hover:bg-white/[0.06] hover:text-white/60"
                       }`}
                     >
-                      <Upload className="w-4 h-4" />
+                      <Upload className="w-4 h-4" aria-hidden="true" />
                       Upload Video
                     </button>
                   </div>
@@ -677,6 +683,7 @@ export default function Home() {
                         checked={includeBroll}
                         onCheckedChange={setIncludeBroll}
                         disabled={isLoading}
+                        aria-label="Toggle AI B-Roll: auto-add stock footage from Pexels"
                       />
                     </div>
                   )}
@@ -694,6 +701,7 @@ export default function Home() {
                       checked={outputFormat === "original"}
                       onCheckedChange={(checked) => setOutputFormat(checked ? "original" : "vertical")}
                       disabled={isLoading}
+                      aria-label="Toggle wide format: keep original aspect ratio instead of 9:16 vertical"
                     />
                   </div>
 
@@ -710,6 +718,7 @@ export default function Home() {
                       checked={addSubtitles}
                       onCheckedChange={setAddSubtitles}
                       disabled={isLoading}
+                      aria-label="Toggle add subtitles: burn captions onto clips"
                     />
                   </div>
                 </div>
@@ -770,6 +779,7 @@ export default function Home() {
                           value={fontSearch}
                           onChange={(e) => setFontSearch(e.target.value)}
                           placeholder="Search fonts"
+                          aria-label="Search available fonts"
                           disabled={isLoading}
                           className="glass-input rounded-lg"
                         />
@@ -815,6 +825,7 @@ export default function Home() {
                               min={12}
                               step={2}
                               disabled={isLoading}
+                              aria-label={`Font size: ${fontSize}px`}
                               className="w-full"
                             />
                           </div>
@@ -831,11 +842,12 @@ export default function Home() {
                             COLOR
                           </label>
                           <div className="flex items-center gap-2">
-                            <input
+                           <input
                               type="color"
                               value={fontColor}
                               onChange={(e) => setFontColor(e.target.value)}
                               disabled={isLoading}
+                              aria-label="Font color picker"
                               className="w-10 h-8 rounded border border-white/10 cursor-pointer disabled:cursor-not-allowed bg-transparent"
                             />
                             <Input
@@ -849,15 +861,15 @@ export default function Home() {
                             />
                           </div>
                           <div className="flex gap-1.5 mt-1">
-                            {["#FFFFFF", "#000000", "#FFD700", "#FF6B6B", "#4ECDC4", "#45B7D1"].map((color) => (
+                             {["#FFFFFF", "#000000", "#FFD700", "#FF6B6B", "#4ECDC4", "#45B7D1"].map((color) => (
                               <button
                                 key={color}
                                 type="button"
                                 onClick={() => setFontColor(color)}
                                 disabled={isLoading}
+                                aria-label={`Set font color to ${color}`}
                                 className="w-5 h-5 rounded-full border-2 border-white/10 cursor-pointer hover:scale-125 hover:border-white/30 transition-all disabled:cursor-not-allowed"
                                 style={{ backgroundColor: color }}
-                                title={color}
                               />
                             ))}
                           </div>
