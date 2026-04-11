@@ -369,6 +369,7 @@ export const InteractiveHero = () => {
                   <input
                     type="text"
                     placeholder="Paste YouTube URL..."
+                    aria-label="YouTube video URL"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
@@ -377,6 +378,7 @@ export const InteractiveHero = () => {
                   <button
                     onClick={handleStart}
                     disabled={!inputValue}
+                    aria-label="Start clipping"
                     className="shrink-0 bg-white text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm flex items-center gap-2 hover:bg-white/90 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.15)]"
                   >
                     CLIP <ArrowRight className="w-4 h-4" />
@@ -399,8 +401,10 @@ export const InteractiveHero = () => {
               </motion.div>
             </div>
 
-            {/* Right — Live Demo Visual */}
-            <LiveDemoPreview />
+            {/* Right — Live Demo Visual (decorative) */}
+            <div aria-hidden="true">
+              <LiveDemoPreview />
+            </div>
           </motion.div>
         ) : (
           /* ─── Processing View ─── */

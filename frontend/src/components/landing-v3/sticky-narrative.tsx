@@ -110,7 +110,7 @@ export const StickyNarrative = () => {
                </motion.div>
                <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-red-500 shadow-[0_0_10px_red] z-10"></div>
             </div>
-            <h3 className="text-3xl font-black uppercase tracking-tight mb-2 z-20 font-syne">2 HOURS RAW</h3>
+            <p role="heading" aria-level={2} className="text-3xl font-black uppercase tracking-tight mb-2 z-20 font-syne">2 HOURS RAW</p>
             <p className="text-sm text-neutral-500 font-mono tracking-tight z-20 uppercase">Awaiting AI extraction.</p>
           </motion.div>
 
@@ -149,7 +149,7 @@ export const StickyNarrative = () => {
                 
                 {/* Simulated TikTok UI Elements */}
                 <div className="absolute bottom-16 left-4 right-16 text-white z-20">
-                  <h4 className="font-bold mb-1">@creator_alpha</h4>
+                  <p className="font-bold mb-1">@creator_alpha</p>
                   <p className="text-sm shadow-black drop-shadow-md">This is exactly why editing is dead. ClippedAI does it all.</p>
                 </div>
 
@@ -170,8 +170,8 @@ export const StickyNarrative = () => {
                  <span className="text-xs font-mono font-bold text-neutral-500 mb-1">BATCH_01_COMPLETE</span>
                  <span className="font-black text-black text-lg">14 CLIPS READY</span>
                </div>
-               <button className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg shadow-black/20">
-                 <Play className="w-5 h-5 ml-1" />
+               <button aria-label="Play clips" className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center hover:scale-110 transition-transform shadow-lg shadow-black/20">
+                 <Play className="w-5 h-5 ml-1" aria-hidden="true" />
                </button>
             </div>
           </motion.div>

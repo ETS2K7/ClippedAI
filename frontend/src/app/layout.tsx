@@ -6,8 +6,24 @@ import { Geist, Geist_Mono, Syne } from "next/font/google";
 import { TooltipProvider } from "~/components/ui/tooltip";
 
 export const metadata: Metadata = {
-  title: "ClippedAI",
-  description: "Turn long videos into viral-ready clips.",
+  title: {
+    default: "ClippedAI — AI Clip Generator",
+    template: "%s",
+  },
+  description: "Turn long videos into viral-ready short clips instantly. ClippedAI uses AI to transcribe, extract highlight moments, reframe speakers, and burn in captions.",
+  keywords: ["AI video editor", "clip generator", "short form content", "YouTube clips", "viral clips", "AI captions"],
+  openGraph: {
+    title: "ClippedAI — AI Clip Generator",
+    description: "Turn long videos into viral-ready short clips instantly.",
+    type: "website",
+    locale: "en_US",
+    siteName: "ClippedAI",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ClippedAI — AI Clip Generator",
+    description: "Turn long videos into viral-ready short clips instantly.",
+  },
   icons: {
     icon: "/icon.png",
   },

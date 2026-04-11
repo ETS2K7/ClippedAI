@@ -1,9 +1,13 @@
-"use server";
-
+import { type Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SignupForm } from "~/components/signup-form";
 import { auth } from "~/server/auth";
+
+export const metadata: Metadata = {
+  title: "Create Account — ClippedAI",
+  description: "Join ClippedAI and transform your long-form videos into viral-ready short clips with AI-powered editing.",
+};
 
 export default async function Page() {
   const session = await auth();
@@ -13,17 +17,15 @@ export default async function Page() {
   }
 
   return (
-    <div className="relative flex min-h-svh w-full flex-col items-center justify-center bg-black overflow-hidden p-6 md:p-10">
+    <main className="relative flex min-h-svh w-full flex-col items-center justify-center bg-black overflow-hidden p-6 md:p-10">
       {/* Ambient depth — dot grid */}
       <div className="absolute inset-0 bg-[radial-gradient(#222_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_30%,#000_20%,transparent_100%)] opacity-40 pointer-events-none" />
 
-
-
       {/* Logo / back to home */}
       <div className="relative z-10 mb-10 flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-3 text-white/80 hover:text-white transition-colors">
+        <Link href="/" className="flex items-center gap-3 text-white/80 hover:text-white transition-colors" aria-label="Back to ClippedAI home">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.06] backdrop-blur-sm border border-white/[0.08]">
-            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <polygon points="5,3 19,12 5,21" />
             </svg>
           </div>
@@ -48,6 +50,6 @@ export default async function Page() {
         </Link>
         .
       </p>
-    </div>
+    </main>
   );
 }

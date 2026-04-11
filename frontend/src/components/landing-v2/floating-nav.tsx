@@ -55,11 +55,12 @@ export const FloatingNav = ({
           <Link
             key={`link=${idx}`}
             href={navItem.link}
+            aria-label={navItem.name}
             className={cn(
               "relative text-neutral-400 items-center flex gap-1 hover:text-white transition-colors text-sm font-bold uppercase tracking-wider leading-none"
             )}
            >
-            <span className="block sm:hidden">{navItem.icon}</span>
+            <span className="block sm:hidden" aria-hidden="true">{navItem.icon}</span>
             <span className="hidden sm:block">{navItem.name}</span>
           </Link>
         ))}
