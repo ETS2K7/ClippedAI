@@ -312,8 +312,8 @@ def _send_webhook(
 @app.cls(
     gpu="any",
     timeout=1200,
-    keep_warm=1,      # Eliminate cold boot latency (~15-60s saved per request)
-    container_idle_timeout=300,  # Keep container alive for 5 min after last request
+    min_containers=1,      # Eliminate cold boot latency (~15-60s saved per request)
+    scaledown_window=300,  # Keep container alive for 5 min after last request
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
     ]
