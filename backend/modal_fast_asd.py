@@ -27,7 +27,7 @@ fast_asd_image = (
         "git clone https://github.com/sieve-community/fast-asd.git /fast-asd",
         "mkdir -p /root/.cache/models",
         "mkdir -p /root/model/faceDetector/s3fd",
-        "gdown --id 1AbN9fCf9IexMxEKXLQY2KYBlb-IhSEea -O /root/.cache/models/pretrain_TalkSet.model",
+        "gdown 1AbN9fCf9IexMxEKXLQY2KYBlb-IhSEea -O /root/.cache/models/pretrain_TalkSet.model",
         "wget -O /root/model/faceDetector/s3fd/sfd_face.pth https://storage.googleapis.com/mango-public-models/sfd_face.pth",
         "ln -s /fast-asd/talknet/model /root/model_symlink",  # Just in case any other relative paths are needed
     )
