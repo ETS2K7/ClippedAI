@@ -13,9 +13,13 @@ export default async function AdminLayout({
     redirect("/dashboard");
   }
 
-  // At this point we are guaranteed to have a session 
+  // At this point we are guaranteed to have a session
   // since requireAdmin only returns session property if authorized.
-  const { session } = result as { session: import("next-auth").Session & { user: { id: string, isAdmin: boolean } } };
+  const { session } = result as {
+    session: import("next-auth").Session & {
+      user: { id: string; isAdmin: boolean };
+    };
+  };
 
   return <SessionProvider session={session}>{children}</SessionProvider>;
 }

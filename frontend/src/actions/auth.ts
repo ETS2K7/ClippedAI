@@ -27,7 +27,8 @@ export async function signUp(data: SignupFormValues): Promise<SignupResult> {
     if (existingUser) {
       return {
         success: false,
-        error: "If this email is not registered, a new account will be created. Please check your details.",
+        error:
+          "If this email is not registered, a new account will be created. Please check your details.",
       };
     }
 

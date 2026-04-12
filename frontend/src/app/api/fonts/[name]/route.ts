@@ -6,27 +6,48 @@ import path from "path";
 // Map font names to public CDN sources for fonts not bundled locally.
 // For locally bundled fonts, we serve from public/fonts/.
 const FONT_CDN_MAP: Record<string, string> = {
-  "TikTokSans-Regular":    "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-400-normal.woff2",
-  "TikTokSans-Bold":       "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-700-normal.woff2",
-  "TikTokSans-SemiBold":   "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-600-normal.woff2",
-  "TikTokSans-Medium":     "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-500-normal.woff2",
-  "Montserrat-Regular":    "https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-400-normal.woff2",
-  "Montserrat-Bold":       "https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-700-normal.woff2",
-  "Montserrat-SemiBold":   "https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-600-normal.woff2",
-  "Montserrat-BoldItalic": "https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-700-italic.woff2",
-  "Roboto-Regular":        "https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-400-normal.woff2",
-  "Roboto-Bold":           "https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-700-normal.woff2",
-  "Roboto-Medium":         "https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-500-normal.woff2",
-  "OpenSans-Regular":      "https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-400-normal.woff2",
-  "OpenSans-Bold":         "https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-700-normal.woff2",
-  "OpenSans-SemiBold":     "https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-600-normal.woff2",
-  "Lato-Regular":          "https://cdn.jsdelivr.net/fontsource/fonts/lato@latest/latin-400-normal.woff2",
-  "Lato-Bold":             "https://cdn.jsdelivr.net/fontsource/fonts/lato@latest/latin-700-normal.woff2",
-  "Inter-Regular":         "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff2",
-  "Inter-Bold":            "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff2",
-  "Inter-SemiBold":        "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.woff2",
-  "Raleway-Regular":       "https://cdn.jsdelivr.net/fontsource/fonts/raleway@latest/latin-400-normal.woff2",
-  "Raleway-Bold":          "https://cdn.jsdelivr.net/fontsource/fonts/raleway@latest/latin-700-normal.woff2",
+  "TikTokSans-Regular":
+    "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-400-normal.woff2",
+  "TikTokSans-Bold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-700-normal.woff2",
+  "TikTokSans-SemiBold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-600-normal.woff2",
+  "TikTokSans-Medium":
+    "https://cdn.jsdelivr.net/fontsource/fonts/noto-sans@latest/latin-500-normal.woff2",
+  "Montserrat-Regular":
+    "https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-400-normal.woff2",
+  "Montserrat-Bold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-700-normal.woff2",
+  "Montserrat-SemiBold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-600-normal.woff2",
+  "Montserrat-BoldItalic":
+    "https://cdn.jsdelivr.net/fontsource/fonts/montserrat@latest/latin-700-italic.woff2",
+  "Roboto-Regular":
+    "https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-400-normal.woff2",
+  "Roboto-Bold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-700-normal.woff2",
+  "Roboto-Medium":
+    "https://cdn.jsdelivr.net/fontsource/fonts/roboto@latest/latin-500-normal.woff2",
+  "OpenSans-Regular":
+    "https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-400-normal.woff2",
+  "OpenSans-Bold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-700-normal.woff2",
+  "OpenSans-SemiBold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/open-sans@latest/latin-600-normal.woff2",
+  "Lato-Regular":
+    "https://cdn.jsdelivr.net/fontsource/fonts/lato@latest/latin-400-normal.woff2",
+  "Lato-Bold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/lato@latest/latin-700-normal.woff2",
+  "Inter-Regular":
+    "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-400-normal.woff2",
+  "Inter-Bold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-700-normal.woff2",
+  "Inter-SemiBold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/inter@latest/latin-600-normal.woff2",
+  "Raleway-Regular":
+    "https://cdn.jsdelivr.net/fontsource/fonts/raleway@latest/latin-400-normal.woff2",
+  "Raleway-Bold":
+    "https://cdn.jsdelivr.net/fontsource/fonts/raleway@latest/latin-700-normal.woff2",
 };
 
 // Set of allowed font names — prevents path traversal via filesystem access
@@ -34,7 +55,7 @@ const ALLOWED_FONT_NAMES = new Set(Object.keys(FONT_CDN_MAP));
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ name: string }> }
+  { params }: { params: Promise<{ name: string }> },
 ) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -78,7 +99,9 @@ export async function GET(
       });
       if (response.ok) {
         const arrayBuffer = await response.arrayBuffer();
-        const contentType = cdnUrl.includes(".woff2") ? "font/woff2" : "font/ttf";
+        const contentType = cdnUrl.includes(".woff2")
+          ? "font/woff2"
+          : "font/ttf";
         return new NextResponse(arrayBuffer, {
           status: 200,
           headers: {

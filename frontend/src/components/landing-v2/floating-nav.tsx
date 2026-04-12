@@ -1,6 +1,11 @@
 "use client";
 import React, { useState } from "react";
-import { motion, AnimatePresence, useScroll, useMotionValueEvent } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  useScroll,
+  useMotionValueEvent,
+} from "framer-motion";
 import { cn } from "~/lib/utils";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
@@ -44,11 +49,14 @@ export const FloatingNav = ({
         animate={{ y: visible ? 0 : -100, opacity: visible ? 1 : 0 }}
         transition={{ duration: 0.2 }}
         className={cn(
-          "flex max-w-fit fixed top-6 inset-x-0 mx-auto border border-white/10 rounded-full bg-black/80 backdrop-blur-xl shadow-[0px_4px_10px_-1px_rgba(0,0,0,0.5)] z-[5000] px-6 py-3 items-center justify-center gap-6",
-          className
+          "fixed inset-x-0 top-6 z-[5000] mx-auto flex max-w-fit items-center justify-center gap-6 rounded-full border border-white/10 bg-black/80 px-6 py-3 shadow-[0px_4px_10px_-1px_rgba(0,0,0,0.5)] backdrop-blur-xl",
+          className,
         )}
       >
-        <Link href="/" className="font-black text-lg text-white font-syne tracking-tight uppercase leading-none flex items-center">
+        <Link
+          href="/"
+          className="font-syne flex items-center text-lg leading-none font-black tracking-tight text-white uppercase"
+        >
           CLIPPEDAI
         </Link>
         {navItems.map((navItem, idx) => (
@@ -57,15 +65,21 @@ export const FloatingNav = ({
             href={navItem.link}
             aria-label={navItem.name}
             className={cn(
-              "relative text-neutral-400 items-center flex gap-1 hover:text-white transition-colors text-sm font-bold uppercase tracking-wider leading-none"
+              "relative flex items-center gap-1 text-sm leading-none font-bold tracking-wider text-neutral-400 uppercase transition-colors hover:text-white",
             )}
-           >
-            <span className="block sm:hidden" aria-hidden="true">{navItem.icon}</span>
+          >
+            <span className="block sm:hidden" aria-hidden="true">
+              {navItem.icon}
+            </span>
             <span className="hidden sm:block">{navItem.name}</span>
           </Link>
         ))}
-        <Button variant="outline" className="border-white/20 text-white bg-transparent hover:bg-white hover:text-black rounded-full h-8 px-5 text-xs font-bold ml-4 uppercase tracking-wider transition-all" asChild>
-           <Link href="/dashboard">Get Started</Link>
+        <Button
+          variant="outline"
+          className="ml-4 h-8 rounded-full border-white/20 bg-transparent px-5 text-xs font-bold tracking-wider text-white uppercase transition-all hover:bg-white hover:text-black"
+          asChild
+        >
+          <Link href="/dashboard">Get Started</Link>
         </Button>
       </motion.div>
     </AnimatePresence>

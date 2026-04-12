@@ -3,12 +3,14 @@
 import type { Clip } from "@prisma/client";
 import { Download, Loader2, Play } from "lucide-react";
 import { useEffect, useState } from "react";
-import { getClipPlayUrl } from "~/actions/generation";
+import { getClipPlayUrl, getClipDownloadUrl } from "~/actions/generation";
 import { Button } from "./ui/button";
 
 function ClipCard({ clip }: { clip: Clip }) {
   const [playUrl, setPlayUrl] = useState<string | null>(null);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [isLoadingUrl, setIsLoadingUrl] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     async function fetchPlayUrl() {
@@ -29,15 +31,35 @@ function ClipCard({ clip }: { clip: Clip }) {
     void fetchPlayUrl();
   }, [clip.id]);
 
-  const handleDownload = () => {
-    if (playUrl) {
-      const link = document.createElement("a");
-      link.href = playUrl;
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const handleDownload = async () => {
+    if (downloadUrl) {
+      triggerDownloadLink(downloadUrl);
+      return;
     }
+
+    setIsDownloading(true);
+    try {
+      const result = await getClipDownloadUrl(clip.id);
+      if (result.success && result.url) {
+        setDownloadUrl(result.url);
+        triggerDownloadLink(result.url);
+      } else if (result.error) {
+        console.error("Failed to get download url: " + result.error);
+      }
+    } catch (error) {
+      console.error("Failed to fetch clip download URL:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const triggerDownloadLink = (url: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -61,8 +83,17 @@ function ClipCard({ clip }: { clip: Clip }) {
         )}
       </div>
       <div className="flex flex-col gap-2">
-        <Button onClick={handleDownload} variant="outline" size="sm">
-          <Download className="mr-1.5 h-4 w-4" />
+        <Button
+          onClick={handleDownload}
+          variant="outline"
+          size="sm"
+          disabled={isDownloading}
+        >
+          {isDownloading ? (
+            <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="mr-1.5 h-4 w-4" />
+          )}
           Download
         </Button>
       </div>

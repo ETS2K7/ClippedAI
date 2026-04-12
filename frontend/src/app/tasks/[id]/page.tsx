@@ -29,7 +29,12 @@ import {
   Clock,
   Clapperboard,
 } from "lucide-react";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "~/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "~/components/ui/tooltip";
 import Link from "next/link";
 import DynamicVideoPlayer from "~/components/dynamic-video-player";
 import AppShell from "~/components/app-shell";
@@ -70,15 +75,20 @@ export default function TaskPage() {
 
   const taskApiUrl = "/api/tasks";
 
-  const buildSupportError = useCallback(async (response: Response, fallbackMessage: string) => {
-    const parsed = await parseApiError(response, fallbackMessage);
-    return formatSupportMessage(parsed);
-  }, []);
+  const buildSupportError = useCallback(
+    async (response: Response, fallbackMessage: string) => {
+      const parsed = await parseApiError(response, fallbackMessage);
+      return formatSupportMessage(parsed);
+    },
+    [],
+  );
 
   const triggerAutoRefresh = useCallback(() => {
     if (hasTriggeredAutoRefresh.current) return;
     hasTriggeredAutoRefresh.current = true;
-    setTimeout(() => { window.location.reload(); }, 700);
+    setTimeout(() => {
+      window.location.reload();
+    }, 700);
   }, []);
 
   const fetchTaskStatus = useCallback(
@@ -86,21 +96,34 @@ export default function TaskPage() {
       if (!params.id) return false;
 
       try {
-        const taskResponse = await fetch(`${taskApiUrl}/${params.id as string}`, {
-          cache: "no-store",
-        });
+        const taskResponse = await fetch(
+          `${taskApiUrl}/${params.id as string}`,
+          {
+            cache: "no-store",
+          },
+        );
 
         // Handle 404 with retry logic (task might not be persisted yet)
         if (taskResponse.status === 404 && retryCount < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, (retryCount + 1) * 500));
+          await new Promise((resolve) =>
+            setTimeout(resolve, (retryCount + 1) * 500),
+          );
           return fetchTaskStatus(retryCount + 1, maxRetries);
         }
 
         if (!taskResponse.ok) {
-          throw new Error(await buildSupportError(taskResponse, `Failed to fetch task: ${taskResponse.status}`));
+          throw new Error(
+            await buildSupportError(
+              taskResponse,
+              `Failed to fetch task: ${taskResponse.status}`,
+            ),
+          );
         }
 
-        const taskData = await taskResponse.json() as { task: TaskDetails; clips: Clip[] };
+        const taskData = (await taskResponse.json()) as {
+          task: TaskDetails;
+          clips: Clip[];
+        };
         setTask(taskData.task);
         setClips(taskData.clips ?? []);
 
@@ -131,7 +154,12 @@ export default function TaskPage() {
   // Poll every 5 s while the task is still processing
   useEffect(() => {
     const status = task?.status;
-    if (status !== "generating_clips" && status !== "queued" && status !== "processing") return;
+    if (
+      status !== "generating_clips" &&
+      status !== "queued" &&
+      status !== "processing"
+    )
+      return;
 
     const interval = setInterval(() => {
       void (async () => {
@@ -158,7 +186,9 @@ export default function TaskPage() {
     if (!session?.user?.id || !params.id) return;
     setIsDeleting(true);
     try {
-      const response = await fetch(`${taskApiUrl}/${params.id as string}`, { method: "DELETE" });
+      const response = await fetch(`${taskApiUrl}/${params.id as string}`, {
+        method: "DELETE",
+      });
       if (response.ok || response.status === 204) {
         router.push("/list");
       } else {
@@ -181,7 +211,7 @@ export default function TaskPage() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
           <Skeleton className="h-12 w-64" />
           <Skeleton className="h-[400px] w-full" />
         </div>
@@ -192,14 +222,14 @@ export default function TaskPage() {
   if (error) {
     return (
       <AppShell>
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mx-auto max-w-6xl px-4 py-8">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           <Link href="/list" className="mt-4 inline-block">
             <Button variant="outline">
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="h-4 w-4" />
               Back to Generations
             </Button>
           </Link>
@@ -211,23 +241,27 @@ export default function TaskPage() {
   return (
     <AppShell>
       <div className="min-h-screen">
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mx-auto max-w-6xl px-4 py-8">
           {/* Header */}
-          <div className="py-6 border-b border-white/[0.1]">
-            <div className="flex items-center gap-3 mb-4">
+          <div className="border-b border-white/[0.1] py-6">
+            <div className="mb-4 flex items-center gap-3">
               <Link href="/list">
-                <Button variant="ghost" size="sm" className="text-white/40 hover:text-white rounded-md font-mono tracking-widest uppercase text-[10px]">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-md font-mono text-[10px] tracking-widest text-white/40 uppercase hover:text-white"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
                   BACK
                 </Button>
               </Link>
             </div>
 
             {isEditing ? (
-              <div className="flex items-center gap-2 flex-1 mt-4">
+              <div className="mt-4 flex flex-1 items-center gap-2">
                 <input
                   autoFocus
-                  className="bg-transparent border-b border-white text-white text-3xl md:text-4xl font-black font-syne uppercase tracking-tighter outline-none flex-1"
+                  className="font-syne flex-1 border-b border-white bg-transparent text-3xl font-black tracking-tighter text-white uppercase outline-none md:text-4xl"
                   value={editedTitle}
                   onChange={(e) => setEditedTitle(e.target.value)}
                   onKeyDown={(e) => {
@@ -235,11 +269,17 @@ export default function TaskPage() {
                     if (e.key === "Escape") setIsEditing(false);
                   }}
                 />
-                <button onClick={handleEditTitle} className="text-white hover:text-white/80 p-2 border border-white">
-                  <Check className="w-5 h-5" />
+                <button
+                  onClick={handleEditTitle}
+                  className="border border-white p-2 text-white hover:text-white/80"
+                >
+                  <Check className="h-5 w-5" />
                 </button>
-                <button onClick={() => setIsEditing(false)} className="text-white/30 hover:text-white p-2 border border-white/20">
-                  <X className="w-5 h-5" />
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="border border-white/20 p-2 text-white/30 hover:text-white"
+                >
+                  <X className="h-5 w-5" />
                 </button>
               </div>
             ) : (
@@ -247,19 +287,19 @@ export default function TaskPage() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      className="flex items-center gap-4 group text-left mt-4"
+                      className="group mt-4 flex items-center gap-4 text-left"
                       onClick={() => {
                         setEditedTitle(task?.source_title ?? "");
                         setIsEditing(true);
                       }}
                     >
-                      <h1 className="text-4xl md:text-5xl font-black font-syne uppercase tracking-tighter text-white group-hover:text-white/80 transition-colors leading-none">
+                      <h1 className="font-syne text-4xl leading-none font-black tracking-tighter text-white uppercase transition-colors group-hover:text-white/80 md:text-5xl">
                         {task?.source_title ?? "GENERATION"}
                       </h1>
-                      <Edit2 className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
+                      <Edit2 className="h-5 w-5 text-white/20 transition-colors group-hover:text-white" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent className="rounded-md bg-white text-black font-bold uppercase text-[10px] tracking-widest">
+                  <TooltipContent className="rounded-md bg-white text-[10px] font-bold tracking-widest text-black uppercase">
                     RENAME
                   </TooltipContent>
                 </Tooltip>
@@ -268,20 +308,22 @@ export default function TaskPage() {
           </div>
 
           {task && (
-            <div className="flex items-center gap-3 mt-6 pb-2">
-              <span className="text-[10px] font-bold font-mono tracking-widest text-white/50 tabular-nums">
+            <div className="mt-6 flex items-center gap-3 pb-2">
+              <span className="font-mono text-[10px] font-bold tracking-widest text-white/50 tabular-nums">
                 {new Date(task.created_at).toLocaleDateString()}
               </span>
               <span className="text-white/10">•</span>
-              <span className="text-[10px] font-bold font-mono tracking-widest text-white/50 uppercase">{task.source_type}</span>
+              <span className="font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
+                {task.source_type}
+              </span>
               <span className="text-white/10">•</span>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-widest border ${
+                className={`rounded-md border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase ${
                   task.status === "completed"
-                    ? "bg-white text-black border-white"
+                    ? "border-white bg-white text-black"
                     : task.status === "failed" || task.status === "error"
-                    ? "bg-red-500 text-white border-red-500"
-                    : "bg-transparent text-white border-white/30"
+                      ? "border-red-500 bg-red-500 text-white"
+                      : "border-white/30 bg-transparent text-white"
                 }`}
               >
                 {task.status}
@@ -291,10 +333,10 @@ export default function TaskPage() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="text-red-400/60 hover:text-red-400 hover:bg-red-500/[0.06]"
+                  className="text-red-400/60 hover:bg-red-500/[0.06] hover:text-red-400"
                   onClick={() => setShowDeleteDialog(true)}
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" />
                   Delete
                 </Button>
               </div>
@@ -304,72 +346,84 @@ export default function TaskPage() {
 
         {/* Main Content */}
         <div className="py-8">
-          {task?.status === "processing" || task?.status === "queued" || task?.status === "generating_clips" ? (
+          {task?.status === "processing" ||
+          task?.status === "queued" ||
+          task?.status === "generating_clips" ? (
             <div className="flex flex-col items-center py-16">
               {/* Animated dots */}
-              <div className="relative group flex items-center gap-1.5 mb-8 cursor-default">
-                <span className="w-2 h-2 bg-white rounded-full animate-[pulse_1.4s_ease-in-out_infinite]" />
-                <span className="w-2 h-2 bg-white rounded-full animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
-                <span className="w-2 h-2 bg-white rounded-full animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
-                <div className="absolute top-full mt-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-white/10 bg-black px-3 py-1.5 text-[10px] font-bold font-mono tracking-widest text-white shadow-md opacity-0 scale-95 transition-all group-hover:opacity-100 group-hover:scale-100 pointer-events-none uppercase">
+              <div className="group relative mb-8 flex cursor-default items-center gap-1.5">
+                <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_infinite] rounded-full bg-white" />
+                <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_0.2s_infinite] rounded-full bg-white" />
+                <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_0.4s_infinite] rounded-full bg-white" />
+                <div className="pointer-events-none absolute top-full left-1/2 mt-3 -translate-x-1/2 scale-95 rounded-md border border-white/10 bg-black px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest whitespace-nowrap text-white uppercase opacity-0 shadow-md transition-all group-hover:scale-100 group-hover:opacity-100">
                   WAITING ON SONY CLOUD.
                 </div>
               </div>
-              <p className="text-white/40 text-sm tracking-wide font-mono uppercase">
+              <p className="font-mono text-sm tracking-wide text-white/40 uppercase">
                 {task.status === "queued" ? "Queued" : "Processing"}
               </p>
-              <p className="text-[10px] font-bold text-white/20 mt-2 tracking-widest uppercase">AUTO-REFRESHING...</p>
+              <p className="mt-2 text-[10px] font-bold tracking-widest text-white/20 uppercase">
+                AUTO-REFRESHING...
+              </p>
             </div>
           ) : !task ? (
-            <div className="flex flex-col items-center justify-center min-h-[50vh] py-16">
+            <div className="flex min-h-[50vh] flex-col items-center justify-center py-16">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 bg-white/40 rounded-full animate-[pulse_1.4s_ease-in-out_infinite]" />
-                <span className="w-2 h-2 bg-white/40 rounded-full animate-[pulse_1.4s_ease-in-out_0.2s_infinite]" />
-                <span className="w-2 h-2 bg-white/40 rounded-full animate-[pulse_1.4s_ease-in-out_0.4s_infinite]" />
+                <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_infinite] rounded-full bg-white/40" />
+                <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_0.2s_infinite] rounded-full bg-white/40" />
+                <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_0.4s_infinite] rounded-full bg-white/40" />
               </div>
             </div>
           ) : task?.status === "error" || task?.status === "failed" ? (
             <Card className="brutal-card border-red-500/20 bg-transparent">
               <CardContent className="p-8 text-center">
-                <div className="text-red-400 mb-4">
-                  <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-                  <h2 className="text-2xl font-black font-syne uppercase text-white tracking-widest">PROCESSING FAILED.</h2>
+                <div className="mb-4 text-red-400">
+                  <AlertCircle className="mx-auto mb-4 h-12 w-12" />
+                  <h2 className="font-syne text-2xl font-black tracking-widest text-white uppercase">
+                    PROCESSING FAILED.
+                  </h2>
                 </div>
-                <p className="text-white/40 mb-8 font-mono tracking-widest uppercase text-xs">There was an error processing your video.</p>
+                <p className="mb-8 font-mono text-xs tracking-widest text-white/40 uppercase">
+                  There was an error processing your video.
+                </p>
                 <Link href="/dashboard">
-                  <Button className="bg-white hover:bg-white/90 text-black font-black font-syne uppercase tracking-widest rounded-md">
-                    <ArrowLeft className="w-4 h-4 mr-2" />
+                  <Button className="font-syne rounded-md bg-white font-black tracking-widest text-black uppercase hover:bg-white/90">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
                     BACK TO HOME
                   </Button>
                 </Link>
               </CardContent>
             </Card>
           ) : clips.length === 0 ? (
-            <Card className="brutal-card bg-transparent text-center border-white/10">
+            <Card className="brutal-card border-white/10 bg-transparent text-center">
               <CardContent className="p-12">
                 {task?.status === "completed" ? (
                   <>
-                    <div className="text-white/40 mb-4">
-                      <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-                      <h2 className="text-2xl font-black font-syne uppercase tracking-widest text-white">NO CLIPS.</h2>
+                    <div className="mb-4 text-white/40">
+                      <AlertCircle className="mx-auto mb-4 h-12 w-12" />
+                      <h2 className="font-syne text-2xl font-black tracking-widest text-white uppercase">
+                        NO CLIPS.
+                      </h2>
                     </div>
-                    <p className="text-white/40 mb-8 font-mono tracking-widest uppercase text-[10px]">
+                    <p className="mb-8 font-mono text-[10px] tracking-widest text-white/40 uppercase">
                       COMPLETED BUT NO SALIENT CLIPS WERE FOUND.
                     </p>
                     <Link href="/dashboard">
-                      <Button className="bg-white hover:bg-white/90 text-black font-black uppercase font-syne tracking-widest rounded-md px-6">
-                        <ArrowLeft className="w-4 h-4 mr-2" />
+                      <Button className="font-syne rounded-md bg-white px-6 font-black tracking-widest text-black uppercase hover:bg-white/90">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
                         TRY ANOTHER VIDEO
                       </Button>
                     </Link>
                   </>
                 ) : (
                   <>
-                    <div className="w-16 h-16 border border-white/20 rounded-md flex items-center justify-center mx-auto mb-6">
-                      <Clock className="w-6 h-6 text-white animate-pulse" />
+                    <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-md border border-white/20">
+                      <Clock className="h-6 w-6 animate-pulse text-white" />
                     </div>
-                    <h2 className="text-xl font-black font-syne uppercase tracking-widest text-white mb-2">GENERATING...</h2>
-                    <p className="text-white/40 font-mono text-[10px] uppercase tracking-widest">
+                    <h2 className="font-syne mb-2 text-xl font-black tracking-widest text-white uppercase">
+                      GENERATING...
+                    </h2>
+                    <p className="font-mono text-[10px] tracking-widest text-white/40 uppercase">
                       Your clips are being generated.
                     </p>
                   </>
@@ -378,9 +432,11 @@ export default function TaskPage() {
             </Card>
           ) : (
             <div className="grid gap-6 pb-20">
-              <div className="flex items-center gap-2 text-[10px] font-bold font-mono tracking-widest uppercase text-white/50">
-                <Clapperboard className="w-4 h-4 text-white" />
-                <span>{clips.length} clip{clips.length !== 1 ? "s" : ""} generated</span>
+              <div className="flex items-center gap-2 font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
+                <Clapperboard className="h-4 w-4 text-white" />
+                <span>
+                  {clips.length} clip{clips.length !== 1 ? "s" : ""} generated
+                </span>
               </div>
 
               {clips.map((clip, index) => (
@@ -388,33 +444,46 @@ export default function TaskPage() {
                   <CardContent className="p-0">
                     <div className="flex flex-col lg:flex-row">
                       {/* Video Player */}
-                      <div className="relative flex-shrink-0 bg-black rounded-md border-r border-white/10 overflow-hidden m-0">
-                        <DynamicVideoPlayer src={clip.video_url ?? ""} poster={clip.thumbnail_url ?? undefined} />
+                      <div className="relative m-0 flex-shrink-0 overflow-hidden rounded-md border-r border-white/10 bg-black">
+                        <DynamicVideoPlayer
+                          src={clip.video_url ?? ""}
+                          poster={clip.thumbnail_url ?? undefined}
+                        />
                       </div>
 
                       {/* Clip Details */}
-                      <div className="p-6 flex-1 bg-black">
-                        <div className="flex items-start justify-between mb-8">
-                          <h3 className="font-syne font-black text-2xl uppercase tracking-widest text-white mb-1">CLIP 0{index + 1}</h3>
-                          <p className="text-[10px] font-mono font-bold tracking-widest text-white/30 tabular-nums">
+                      <div className="flex-1 bg-black p-6">
+                        <div className="mb-8 flex items-start justify-between">
+                          <h3 className="font-syne mb-1 text-2xl font-black tracking-widest text-white uppercase">
+                            CLIP 0{index + 1}
+                          </h3>
+                          <p className="font-mono text-[10px] font-bold tracking-widest text-white/30 tabular-nums">
                             {new Date(clip.created_at).toLocaleDateString()}
                           </p>
                         </div>
 
-                        <div className="flex gap-4 flex-wrap">
-                          <Button size="default" variant="outline" className="rounded-md border-white/20 text-[10px] font-bold font-mono tracking-widest uppercase hover:bg-white hover:text-black hover:border-white transition-all" asChild>
-                            <a href={clip.video_url ?? "#"} download={`clip_${index + 1}.mp4`}>
-                              <Download className="w-4 h-4 mr-2" />
+                        <div className="flex flex-wrap gap-4">
+                          <Button
+                            size="default"
+                            variant="outline"
+                            className="rounded-md border-white/20 font-mono text-[10px] font-bold tracking-widest uppercase transition-all hover:border-white hover:bg-white hover:text-black"
+                            asChild
+                          >
+                            <a
+                              href={clip.video_url ?? "#"}
+                              download={`clip_${index + 1}.mp4`}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
                               DOWNLOAD
                             </a>
                           </Button>
                           <Button
                             size="default"
                             variant="outline"
-                            className="rounded-md text-[10px] font-bold font-mono tracking-widest uppercase text-white/40 border-white/10 hover:text-red-500 hover:border-red-500 transition-all"
+                            className="rounded-md border-white/10 font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase transition-all hover:border-red-500 hover:text-red-500"
                             onClick={() => setDeletingClipId(clip.id)}
                           >
-                            <Trash2 className="w-4 h-4 mr-2" />
+                            <Trash2 className="mr-2 h-4 w-4" />
                             REMOVE
                           </Button>
                         </div>
@@ -431,34 +500,53 @@ export default function TaskPage() {
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent className="brutal-card rounded-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-syne font-black uppercase text-xl">DELETE GENERATION.</AlertDialogTitle>
-            <AlertDialogDescription className="font-mono text-xs uppercase tracking-widest text-white/50">
-              Are you sure you want to delete this generation? This will permanently delete all clips and cannot be
-              undone.
+            <AlertDialogTitle className="font-syne text-xl font-black uppercase">
+              DELETE GENERATION.
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-mono text-xs tracking-widest text-white/50 uppercase">
+              Are you sure you want to delete this generation? This will
+              permanently delete all clips and cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting} className="rounded-md border-white/20 hover:bg-white/5 text-[10px] font-bold font-mono tracking-widest uppercase text-white/70">CANCEL</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTask} disabled={isDeleting} className="rounded-md bg-red-600 hover:bg-red-700 text-[10px] font-bold font-mono tracking-widest uppercase">
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="rounded-md border-white/20 font-mono text-[10px] font-bold tracking-widest text-white/70 uppercase hover:bg-white/5"
+            >
+              CANCEL
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTask}
+              disabled={isDeleting}
+              className="rounded-md bg-red-600 font-mono text-[10px] font-bold tracking-widest uppercase hover:bg-red-700"
+            >
               {isDeleting ? "DELETING..." : "DELETE"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={!!deletingClipId} onOpenChange={(open) => !open && setDeletingClipId(null)}>
+      <AlertDialog
+        open={!!deletingClipId}
+        onOpenChange={(open) => !open && setDeletingClipId(null)}
+      >
         <AlertDialogContent className="brutal-card rounded-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-syne font-black uppercase text-xl">REMOVE CLIP.</AlertDialogTitle>
-            <AlertDialogDescription className="font-mono text-xs uppercase tracking-widest text-white/50">
-              Remove this clip from the view? The source file on S3 is not deleted.
+            <AlertDialogTitle className="font-syne text-xl font-black uppercase">
+              REMOVE CLIP.
+            </AlertDialogTitle>
+            <AlertDialogDescription className="font-mono text-xs tracking-widest text-white/50 uppercase">
+              Remove this clip from the view? The source file on S3 is not
+              deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-md border-white/20 hover:bg-white/5 text-[10px] font-bold font-mono tracking-widest uppercase text-white/70">CANCEL</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-md border-white/20 font-mono text-[10px] font-bold tracking-widest text-white/70 uppercase hover:bg-white/5">
+              CANCEL
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingClipId && handleDeleteClip(deletingClipId)}
-              className="rounded-md bg-red-600 hover:bg-red-700 text-[10px] font-bold font-mono tracking-widest uppercase"
+              className="rounded-md bg-red-600 font-mono text-[10px] font-bold tracking-widest uppercase hover:bg-red-700"
             >
               REMOVE
             </AlertDialogAction>

@@ -10,18 +10,22 @@ export async function POST(req: Request) {
   const user = await db.user.findUnique({ where: { id: session.user.id } });
   if (!user?.isAdmin) {
     return new NextResponse(
-      JSON.stringify({ error: "Access Denied: Video processing is currently restricted to administrators only." }),
-      { status: 403 }
+      JSON.stringify({
+        error:
+          "Access Denied: Video processing is currently restricted to administrators only.",
+      }),
+      { status: 403 },
     );
   }
 
   const body = await req.json();
   const sourceUrl: string | undefined = body?.source?.url;
+  const fontOptions = body?.font_options || {};
 
   if (!sourceUrl) {
     return new NextResponse(
       JSON.stringify({ error: "No source URL provided" }),
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -41,8 +45,14 @@ export async function POST(req: Request) {
     // Not a valid URL — treat as uploaded file ID (below)
   }
 
-  if (parsedUrl && (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") && YOUTUBE_HOSTS.has(parsedUrl.hostname)) {
-    const videoIdMatch = sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  if (
+    parsedUrl &&
+    (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") &&
+    YOUTUBE_HOSTS.has(parsedUrl.hostname)
+  ) {
+    const videoIdMatch = sourceUrl.match(
+      /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/,
+    );
     const videoId = videoIdMatch ? videoIdMatch[1] : null;
 
     if (!videoId) {
@@ -68,14 +78,24 @@ export async function POST(req: Request) {
       });
 
       // Fire-and-forget — Modal will call our webhook when done
-      fireModalJob(generatedS3Key, newFile.id, session.user.id, canonicalYoutubeUrl);
+      fireModalJob(
+        generatedS3Key,
+        newFile.id,
+        session.user.id,
+        canonicalYoutubeUrl,
+        fontOptions.font_family,
+        fontOptions.font_color,
+        fontOptions.font_size,
+      );
       return NextResponse.json({ task_id: newFile.id });
     } catch (err) {
       console.error("[tasks/create] YouTube DB create failed:", err);
-      return NextResponse.json({ error: "Failed to create task. Please sign out and sign in again." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Failed to create task. Please sign out and sign in again." },
+        { status: 500 },
+      );
     }
   }
-
 
   // Uploaded file — find existing DB record
   const uploadedFileId = sourceUrl;
@@ -89,7 +109,7 @@ export async function POST(req: Request) {
     if (!existing) {
       return new NextResponse(
         JSON.stringify({ error: "Upload record not found" }),
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -105,14 +125,22 @@ export async function POST(req: Request) {
     });
 
     // Fire-and-forget — Modal will call our webhook when done
-    fireModalJob(existing.s3Key, uploadedFileId, session.user.id);
+    fireModalJob(
+      existing.s3Key,
+      uploadedFileId,
+      session.user.id,
+      undefined,
+      fontOptions.font_family,
+      fontOptions.font_color,
+      fontOptions.font_size,
+    );
 
     return NextResponse.json({ task_id: existing.id });
   } catch (err) {
     console.error("[tasks/create] Error:", err);
     return new NextResponse(
       JSON.stringify({ error: "Failed to start processing" }),
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -126,10 +154,15 @@ function fireModalJob(
   uploadedFileId: string,
   userId: string,
   youtubeUrl?: string,
+  fontFamily?: string,
+  fontColor?: string,
+  fontSize?: number,
 ) {
   const webhookUrl = `${env.BASE_URL}/api/webhooks/modal`;
 
-  console.log(`[Modal] Firing job for ${uploadedFileId} s3Key=${s3Key}${youtubeUrl ? ` youtubeUrl=${youtubeUrl}` : ""}`);
+  console.log(
+    `[Modal] Firing job for ${uploadedFileId} s3Key=${s3Key}${youtubeUrl ? ` youtubeUrl=${youtubeUrl}` : ""}`,
+  );
 
   fetch(env.PROCESS_VIDEO_ENDPOINT, {
     method: "POST",
@@ -144,15 +177,22 @@ function fireModalJob(
       user_id: userId,
       webhook_url: webhookUrl,
       webhook_secret: env.PROCESS_VIDEO_ENDPOINT_AUTH,
+      font_family: fontFamily,
+      font_color: fontColor,
+      font_size: fontSize,
     }),
     redirect: "manual", // Modal may return 303 for async — that's fine, we don't need the result
-  }).then((resp) => {
-    console.log(`[Modal] Initial response: ${resp.status} for ${uploadedFileId}`);
-  }).catch((err) => {
-    console.error(`[Modal] Failed to fire job for ${uploadedFileId}:`, err);
-    // Update status to failed since Modal never received the job
-    db.uploadedFile
-      .update({ where: { id: uploadedFileId }, data: { status: "failed" } })
-      .catch(() => null);
-  });
+  })
+    .then((resp) => {
+      console.log(
+        `[Modal] Initial response: ${resp.status} for ${uploadedFileId}`,
+      );
+    })
+    .catch((err) => {
+      console.error(`[Modal] Failed to fire job for ${uploadedFileId}:`, err);
+      // Update status to failed since Modal never received the job
+      db.uploadedFile
+        .update({ where: { id: uploadedFileId }, data: { status: "failed" } })
+        .catch(() => null);
+    });
 }

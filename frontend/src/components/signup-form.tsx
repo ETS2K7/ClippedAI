@@ -65,12 +65,12 @@ export function SignupForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="bg-white/[0.03] border-white/[0.08] backdrop-blur-xl text-white shadow-2xl shadow-black/40 rounded-2xl">
+      <Card className="rounded-2xl border-white/[0.08] bg-white/[0.03] text-white shadow-2xl shadow-black/40 backdrop-blur-xl">
         <CardHeader className="pb-4">
-          <CardTitle className="text-3xl font-black font-syne uppercase tracking-tight text-white leading-none">
+          <CardTitle className="font-syne text-3xl leading-none font-black tracking-tight text-white uppercase">
             Create account.
           </CardTitle>
-          <CardDescription className="font-mono tracking-widest text-[10px] uppercase text-white/40 mt-3">
+          <CardDescription className="mt-3 font-mono text-[10px] tracking-widest text-white/40 uppercase">
             Start creating viral clips with AI
           </CardDescription>
         </CardHeader>
@@ -78,7 +78,10 @@ export function SignupForm({
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="flex flex-col gap-5">
               <div className="grid gap-2">
-                <Label htmlFor="email" className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/60">
+                <Label
+                  htmlFor="email"
+                  className="font-mono text-[10px] font-bold tracking-widest text-white/60 uppercase"
+                >
                   EMAIL
                 </Label>
                 <Input
@@ -86,16 +89,21 @@ export function SignupForm({
                   type="email"
                   placeholder="you@example.com"
                   required
-                  className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20 focus:border-white/20 focus:ring-0 h-12 rounded-xl px-4 transition-colors"
+                  className="h-12 rounded-xl border-white/[0.08] bg-white/[0.04] px-4 text-white transition-colors placeholder:text-white/20 focus:border-white/20 focus:ring-0"
                   {...register("email")}
                 />
                 {errors.email && (
-                  <p className="text-xs text-red-400 font-mono">{errors.email.message}</p>
+                  <p className="font-mono text-xs text-red-400">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="password" className="text-[10px] font-bold font-mono tracking-widest uppercase text-white/60">
+                  <Label
+                    htmlFor="password"
+                    className="font-mono text-[10px] font-bold tracking-widest text-white/60 uppercase"
+                  >
                     PASSWORD
                   </Label>
                 </div>
@@ -103,33 +111,36 @@ export function SignupForm({
                   id="password"
                   type="password"
                   required
-                  className="bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/20 focus:border-white/20 focus:ring-0 h-12 rounded-xl px-4 transition-colors"
+                  className="h-12 rounded-xl border-white/[0.08] bg-white/[0.04] px-4 text-white transition-colors placeholder:text-white/20 focus:border-white/20 focus:ring-0"
                   {...register("password")}
                 />
                 {errors.password && (
-                  <p className="text-xs text-red-400 font-mono">
+                  <p className="font-mono text-xs text-red-400">
                     {errors.password.message}
                   </p>
                 )}
               </div>
 
               {error && (
-                <p className="rounded-xl bg-red-500/10 border border-red-500/15 p-3 text-xs font-mono text-red-400">
+                <p className="rounded-xl border border-red-500/15 bg-red-500/10 p-3 font-mono text-xs text-red-400">
                   {error}
                 </p>
               )}
 
               <Button
                 type="submit"
-                className="w-full h-12 rounded-xl bg-white text-black hover:bg-white/90 font-black font-syne uppercase tracking-widest text-sm transition-all duration-200 mt-1"
+                className="font-syne mt-1 h-12 w-full rounded-xl bg-white text-sm font-black tracking-widest text-black uppercase transition-all duration-200 hover:bg-white/90"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "Creating account..." : "Create Account"}
               </Button>
             </div>
-            <div className="mt-6 text-center font-mono tracking-widest uppercase text-[10px] text-white/30">
+            <div className="mt-6 text-center font-mono text-[10px] tracking-widest text-white/30 uppercase">
               Already have an account?{" "}
-              <Link href="/login" className="text-white/70 hover:text-white underline underline-offset-4 transition-colors">
+              <Link
+                href="/login"
+                className="text-white/70 underline underline-offset-4 transition-colors hover:text-white"
+              >
                 Sign In
               </Link>
             </div>

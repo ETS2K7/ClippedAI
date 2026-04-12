@@ -28,7 +28,10 @@ export async function POST(req: Request) {
 
   // Validate required fields
   if (!uploaded_file_id || !user_id || !status || !secret) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Missing required fields" },
+      { status: 400 },
+    );
   }
 
   // Support a dedicated WEBHOOK_SECRET env var; fall back to the auth token for
@@ -76,7 +79,7 @@ export async function POST(req: Request) {
       ]);
 
       console.log(
-        `[webhook/modal] ✓ ${clips.length} clip(s) created for file ${uploaded_file_id}`
+        `[webhook/modal] ✓ ${clips.length} clip(s) created for file ${uploaded_file_id}`,
       );
     } else {
       // Processing failed — update status
@@ -85,7 +88,9 @@ export async function POST(req: Request) {
         data: { status: "failed" },
       });
 
-      console.log(`[webhook/modal] ✗ Processing failed for file ${uploaded_file_id}`);
+      console.log(
+        `[webhook/modal] ✗ Processing failed for file ${uploaded_file_id}`,
+      );
     }
 
     return NextResponse.json({ received: true });

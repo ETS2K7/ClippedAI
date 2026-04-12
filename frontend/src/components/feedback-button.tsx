@@ -72,19 +72,14 @@ export function FeedbackButton() {
       <PopoverTrigger asChild>
         <Button
           size="icon"
-          className="fixed bottom-5 right-5 z-50 h-11 w-11 rounded-full shadow-lg"
+          className="fixed right-5 bottom-5 z-50 h-11 w-11 rounded-full shadow-lg"
         >
           <MessageSquare className="h-5 w-5" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        side="top"
-        align="end"
-        className="w-80"
-        sideOffset={12}
-      >
+      <PopoverContent side="top" align="end" className="w-80" sideOffset={12}>
         <div className="space-y-3">
-          <h3 className="font-semibold text-sm">Send Feedback</h3>
+          <h3 className="text-sm font-semibold">Send Feedback</h3>
 
           <Select value={category} onValueChange={setCategory}>
             <SelectTrigger className="w-full">

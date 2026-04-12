@@ -18,7 +18,10 @@ function mapStatus(status: string): string {
 }
 
 /** Reused from [id]/route.ts — derive human-readable title from file record. */
-function getSourceTitle(file: { displayName?: string | null; s3Key: string }): string {
+function getSourceTitle(file: {
+  displayName?: string | null;
+  s3Key: string;
+}): string {
   if (file.displayName) return file.displayName;
   const parts = file.s3Key.split("/");
   if (parts[0] === "youtube-downloads" && parts[2]) return parts[2];

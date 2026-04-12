@@ -7,7 +7,8 @@ import { FloatingNav } from "~/components/landing-v2/floating-nav";
 import { Home, Zap } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "ClippedAI — AI Video Clipping Tool | Turn Long Videos Into Viral Shorts",
+  title:
+    "ClippedAI — AI Video Clipping Tool | Turn Long Videos Into Viral Shorts",
   description:
     "ClippedAI is the fastest AI video clipping tool. Paste a YouTube link or upload a video — AI finds your best moments, reframes for vertical, burns in captions, and delivers ready-to-post clips in minutes. Free to try.",
   alternates: {
@@ -23,10 +24,14 @@ const jsonLd = {
       "@id": "https://clippedai.app/#website",
       url: "https://clippedai.app",
       name: "ClippedAI",
-      description: "AI video clipping tool — turn long videos into viral-ready short clips instantly.",
+      description:
+        "AI video clipping tool — turn long videos into viral-ready short clips instantly.",
       potentialAction: {
         "@type": "SearchAction",
-        target: { "@type": "EntryPoint", urlTemplate: "https://clippedai.app/dashboard" },
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: "https://clippedai.app/dashboard",
+        },
         "query-input": "required name=search_term_string",
       },
     },
@@ -95,9 +100,9 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="landing-v3 bg-black min-h-screen text-white selection:bg-white/20 font-sans">
+      <div className="landing-v3 min-h-screen bg-black font-sans text-white selection:bg-white/20">
         <FloatingNav navItems={navItems} />
-        <main className="flex flex-col w-full">
+        <main className="flex w-full flex-col">
           <InteractiveHero />
           <StickyNarrative />
           <KineticTypography />
@@ -107,4 +112,3 @@ export default function HomePage() {
     </>
   );
 }
-

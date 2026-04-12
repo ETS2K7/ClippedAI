@@ -49,7 +49,7 @@ const CAPTION_TEMPLATES = [
     background: false,
     background_color: null,
     shadow: true,
-    position_y: 0.70,
+    position_y: 0.7,
   },
   {
     id: "minimal",
@@ -65,7 +65,7 @@ const CAPTION_TEMPLATES = [
     background: true,
     background_color: "#00000080",
     shadow: false,
-    position_y: 0.80,
+    position_y: 0.8,
   },
   {
     id: "tiktok",

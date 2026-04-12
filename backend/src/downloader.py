@@ -19,6 +19,11 @@ def download_video(url: str) -> str:
     Transcodes to H264 MP4 if necessary.
     """
     logger.info("==================== PHASE 1: DOWNLOAD ====================")
+    
+    # Security: Strict validation to prevent yt-dlp parameter injection
+    if not isinstance(url, str) or not (url.startswith("https://www.youtube.com/") or url.startswith("https://youtu.be/")):
+        raise ValueError("Invalid URL: Must be a standard YouTube URL.")
+
     logger.info(f"Downloading {url}...")
 
     cmd = [

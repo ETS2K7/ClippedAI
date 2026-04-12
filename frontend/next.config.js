@@ -2,10 +2,10 @@ import { fileURLToPath } from "node:url";
 import createJiti from "jiti";
 
 // Polyfill for Node v25 native broken localStorage which causes Next.js dev server overlay to crash
-if (typeof global !== 'undefined') {
-  Object.defineProperty(global, "localStorage", { 
-    value: { getItem: () => null, setItem: () => {}, removeItem: () => {} }, 
-    writable: true 
+if (typeof global !== "undefined") {
+  Object.defineProperty(global, "localStorage", {
+    value: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    writable: true,
   });
 }
 
@@ -67,4 +67,3 @@ const config = {
 };
 
 export default config;
-

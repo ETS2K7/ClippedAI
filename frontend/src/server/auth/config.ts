@@ -20,7 +20,6 @@ declare module "next-auth" {
   }
 }
 
-
 /**
  * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
  *

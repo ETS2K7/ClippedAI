@@ -9,7 +9,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Menu, X, LogOut, List, Settings, Plus, Shield } from "lucide-react";
 
-
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -23,19 +22,19 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   if (!session?.user) return <>{children}</>;
 
   return (
-    <div className="relative min-h-screen bg-black overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden bg-black">
       {/* ── Ambient depth layers (matching landing page) ── */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
+      <div className="pointer-events-none fixed inset-0 z-0">
         {/* Dot grid texture */}
-        <div className="absolute inset-0 bg-[radial-gradient(#222_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_20%,transparent_100%)] opacity-40" />
+        <div className="absolute inset-0 bg-[radial-gradient(#222_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_20%,transparent_100%)] [background-size:24px_24px] opacity-40" />
       </div>
 
       {/* ── Top Navigation Bar ──────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-black/60 backdrop-blur-2xl">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex h-14 items-center justify-between">
             {/* Left: Logo + Brand */}
-            <Link href="/dashboard" className="flex items-center gap-2.5 group">
+            <Link href="/dashboard" className="group flex items-center gap-2.5">
               <Image
                 src="/logo.png"
                 alt="ClippedAI"
@@ -43,20 +42,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 height={22}
                 className="rounded-md"
               />
-              <span className="text-[17px] font-black text-white font-syne uppercase tracking-tight group-hover:text-white/80 transition-colors">
+              <span className="font-syne text-[17px] font-black tracking-tight text-white uppercase transition-colors group-hover:text-white/80">
                 CLIPPEDAI
               </span>
             </Link>
 
             {/* Center: Desktop nav links */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden items-center gap-1 md:flex">
               <Link href="/dashboard">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white hover:text-black hover:bg-white text-[11px] font-bold uppercase tracking-widest font-mono rounded-full border border-white/15 transition-all duration-200 ml-4 h-8 px-4"
+                  className="ml-4 h-8 rounded-full border border-white/15 px-4 font-mono text-[11px] font-bold tracking-widest text-white uppercase transition-all duration-200 hover:bg-white hover:text-black"
                 >
-                  <Plus className="w-3.5 h-3.5 mr-1.5" />
+                  <Plus className="mr-1.5 h-3.5 w-3.5" />
                   NEW CLIP
                 </Button>
               </Link>
@@ -64,7 +63,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white/50 hover:text-white hover:bg-white/[0.04] text-[11px] font-bold uppercase tracking-widest font-mono rounded-full transition-all duration-200 h-8"
+                  className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
                 >
                   GENERATIONS
                 </Button>
@@ -73,7 +72,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white/50 hover:text-white hover:bg-white/[0.04] text-[11px] font-bold uppercase tracking-widest font-mono rounded-full transition-all duration-200 h-8"
+                  className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
                 >
                   SETTINGS
                 </Button>
@@ -83,7 +82,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   variant="ghost"
                   size="sm"
                   asChild
-                  className="text-white/50 hover:text-white hover:bg-white/[0.04] text-[11px] font-bold uppercase tracking-widest font-mono rounded-full transition-all duration-200 h-8"
+                  className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
                 >
                   <Link href="/admin">ADMIN</Link>
                 </Button>
@@ -91,28 +90,30 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             </nav>
 
             {/* Right: User avatar + sign out */}
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden items-center gap-2 md:flex">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="text-white/30 hover:text-white hover:bg-white/[0.04] text-[11px] font-bold uppercase tracking-widest font-mono rounded-full transition-all duration-200 h-8"
+                className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/30 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
               >
                 SIGN OUT
               </Button>
               <Link href="/settings">
-                <div className="flex items-center gap-2.5 rounded-full px-2.5 py-1.5 hover:bg-white/[0.04] transition-colors cursor-pointer border border-transparent hover:border-white/[0.06]">
-                  <Avatar className="w-7 h-7">
+                <div className="flex cursor-pointer items-center gap-2.5 rounded-full border border-transparent px-2.5 py-1.5 transition-colors hover:border-white/[0.06] hover:bg-white/[0.04]">
+                  <Avatar className="h-7 w-7">
                     <AvatarImage src={session.user.image || ""} />
-                    <AvatarFallback className="bg-white/10 text-white/80 text-xs font-bold font-mono">
-                      {session.user.name?.charAt(0) || session.user.email?.charAt(0) || "U"}
+                    <AvatarFallback className="bg-white/10 font-mono text-xs font-bold text-white/80">
+                      {session.user.name?.charAt(0) ||
+                        session.user.email?.charAt(0) ||
+                        "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden lg:block">
-                    <p className="text-xs font-medium text-white/80 leading-none">
+                    <p className="text-xs leading-none font-medium text-white/80">
                       {session.user.name}
                     </p>
-                    <p className="text-[10px] text-white/30 mt-0.5 leading-none font-mono">
+                    <p className="mt-0.5 font-mono text-[10px] leading-none text-white/30">
                       {session.user.email}
                     </p>
                   </div>
@@ -126,10 +127,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="text-white/60 hover:text-white hover:bg-white/[0.06] p-2 rounded-full"
+                className="rounded-full p-2 text-white/60 hover:bg-white/[0.06] hover:text-white"
                 aria-label="Toggle menu"
               >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                {mobileMenuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <Menu className="h-5 w-5" />
+                )}
               </Button>
             </div>
           </div>
@@ -137,23 +142,29 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* ── Mobile Dropdown ──────────────────────────────── */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-white/[0.06] bg-black/95 backdrop-blur-2xl">
-            <div className="px-4 py-3 space-y-1">
+          <div className="border-t border-white/[0.06] bg-black/95 backdrop-blur-2xl md:hidden">
+            <div className="space-y-1 px-4 py-3">
               {/* User info */}
               <Link
                 href="/settings"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.04] transition-colors rounded-xl"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
               >
-                <Avatar className="w-8 h-8">
+                <Avatar className="h-8 w-8">
                   <AvatarImage src={session.user.image || ""} />
-                  <AvatarFallback className="bg-white/10 text-white/80 text-sm font-medium">
-                    {session.user.name?.charAt(0) || session.user.email?.charAt(0) || "U"}
+                  <AvatarFallback className="bg-white/10 text-sm font-medium text-white/80">
+                    {session.user.name?.charAt(0) ||
+                      session.user.email?.charAt(0) ||
+                      "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-white/90 truncate">{session.user.name}</p>
-                  <p className="text-xs text-white/40 truncate">{session.user.email}</p>
+                  <p className="truncate text-sm font-medium text-white/90">
+                    {session.user.name}
+                  </p>
+                  <p className="truncate text-xs text-white/40">
+                    {session.user.email}
+                  </p>
                 </div>
               </Link>
 
@@ -163,35 +174,35 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
               >
-                <Plus className="w-4 h-4 text-white/30" />
+                <Plus className="h-4 w-4 text-white/30" />
                 New Clip
               </Link>
               <Link
                 href="/list"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
               >
-                <List className="w-4 h-4 text-white/30" />
+                <List className="h-4 w-4 text-white/30" />
                 Generations
               </Link>
               {isAdmin && (
                 <Link
                   href="/admin"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
+                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
                 >
-                  <Shield className="w-4 h-4 text-white/30" />
+                  <Shield className="h-4 w-4 text-white/30" />
                   Admin
                 </Link>
               )}
               <Link
                 href="/settings"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 hover:text-white hover:bg-white/[0.04] transition-colors"
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
               >
-                <Settings className="w-4 h-4 text-white/30" />
+                <Settings className="h-4 w-4 text-white/30" />
                 Settings
               </Link>
 
@@ -202,9 +213,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   setMobileMenuOpen(false);
                   handleSignOut();
                 }}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-400/80 hover:text-red-400 hover:bg-red-500/[0.06] transition-colors w-full text-left"
+                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-red-400/80 transition-colors hover:bg-red-500/[0.06] hover:text-red-400"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="h-4 w-4" />
                 Sign Out
               </button>
             </div>
@@ -213,9 +224,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* ── Page Content ──────────────────────────────── */}
-      <main className="relative z-10">
-        {children}
-      </main>
+      <main className="relative z-10">{children}</main>
     </div>
   );
 }

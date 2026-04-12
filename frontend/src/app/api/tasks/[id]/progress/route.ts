@@ -5,7 +5,7 @@ import { db } from "~/server/db";
 // Server-Sent Events endpoint that streams task status until completion
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   const session = await auth();
@@ -22,8 +22,8 @@ export async function GET(
         try {
           controller.enqueue(
             encoder.encode(
-              `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-            )
+              `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+            ),
           );
         } catch {
           // client disconnected
@@ -44,7 +44,11 @@ export async function GET(
           });
 
           if (!file) {
-            send("status", { status: "failed", progress: 0, message: "Task not found" });
+            send("status", {
+              status: "failed",
+              progress: 0,
+              message: "Task not found",
+            });
             cancelled = true;
             controller.close();
             return;
@@ -68,7 +72,10 @@ export async function GET(
             send("status", {
               status: "failed",
               progress: 0,
-              message: file.status === "no credits" ? "Insufficient credits" : "Processing failed",
+              message:
+                file.status === "no credits"
+                  ? "Insufficient credits"
+                  : "Processing failed",
             });
             cancelled = true;
             controller.close();
@@ -79,12 +86,18 @@ export async function GET(
           // Estimate progress based on time elapsed
           const elapsedMs = Date.now() - new Date(file.createdAt).getTime();
           const estimatedTotal = 3 * 60 * 1000; // ~3 min typical
-          const estimated = Math.min(90, Math.round((elapsedMs / estimatedTotal) * 90));
+          const estimated = Math.min(
+            90,
+            Math.round((elapsedMs / estimatedTotal) * 90),
+          );
 
           send("status", {
             status: "processing",
             progress: Math.max(5, estimated),
-            message: file.status === "uploading" ? "Uploading video…" : "Processing video…",
+            message:
+              file.status === "uploading"
+                ? "Uploading video…"
+                : "Processing video…",
             clips_count: clipsCount,
           });
 
@@ -102,7 +115,11 @@ export async function GET(
           }
         } catch (err) {
           console.error("[progress SSE] poll error:", err);
-          send("status", { status: "failed", progress: 0, message: "Server error" });
+          send("status", {
+            status: "failed",
+            progress: 0,
+            message: "Server error",
+          });
           cancelled = true;
           controller.close();
         }

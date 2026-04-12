@@ -31,5 +31,7 @@ export async function requireAdmin(): Promise<AdminResult> {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return { session: session as Session & { user: NonNullable<Session["user"]> } };
+  return {
+    session: session as Session & { user: NonNullable<Session["user"]> },
+  };
 }

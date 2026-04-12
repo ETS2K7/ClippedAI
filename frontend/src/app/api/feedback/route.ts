@@ -55,7 +55,9 @@ export async function POST(req: Request) {
   // Rate limiting — prevent Resend quota exhaustion via spam
   if (isRateLimited(session.user.id)) {
     return NextResponse.json(
-      { error: "Too many requests. Please wait before sending another message." },
+      {
+        error: "Too many requests. Please wait before sending another message.",
+      },
       { status: 429 },
     );
   }
@@ -80,7 +82,7 @@ export async function POST(req: Request) {
 
   // Always log to Oracle Cloud backend logs
   console.log(
-    `[feedback] user=${userIdentifier} category=${category} message=${message.slice(0, 100)}…`
+    `[feedback] user=${userIdentifier} category=${category} message=${message.slice(0, 100)}…`,
   );
 
   // Send an email directly to the admin via Resend

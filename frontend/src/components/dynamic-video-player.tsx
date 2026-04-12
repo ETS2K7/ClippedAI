@@ -21,7 +21,7 @@ const DynamicVideoPlayer: React.FC<DynamicVideoPlayerProps> = ({
 
   return (
     <div
-      className={`relative rounded-lg overflow-hidden ${className}`}
+      className={`relative overflow-hidden rounded-lg ${className}`}
       style={{ height: "min(70vh, 600px)", aspectRatio: "9 / 16" }}
     >
       <video
@@ -32,7 +32,7 @@ const DynamicVideoPlayer: React.FC<DynamicVideoPlayerProps> = ({
         loop={loop}
         {...(poster ? { poster } : {})}
         preload="metadata"
-        className="absolute inset-0 w-full h-full object-contain bg-black"
+        className="absolute inset-0 h-full w-full bg-black object-contain"
         tabIndex={0}
         aria-label="Video player"
       >

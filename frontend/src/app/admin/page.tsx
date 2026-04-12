@@ -16,7 +16,7 @@ import {
   Shield,
   ShieldAlert,
   ArrowLeft,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -44,13 +44,16 @@ export default function AdminPage() {
 
   const { data: stats, error: statsError } = useSWR<AdminStats>(
     session?.user?.isAdmin ? "/api/admin/stats" : null,
-    fetcher
+    fetcher,
   );
 
-  
-  const { data: users, error: usersError, mutate: mutateUsers } = useSWR<AdminUser[]>(
+  const {
+    data: users,
+    error: usersError,
+    mutate: mutateUsers,
+  } = useSWR<AdminUser[]>(
     session?.user?.isAdmin ? "/api/admin/users" : null,
-    fetcher
+    fetcher,
   );
 
   const [togglingAdminId, setTogglingAdminId] = useState<string | null>(null);
@@ -88,12 +91,14 @@ export default function AdminPage() {
       });
 
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
+        const data = (await res.json()) as { error?: string };
         alert(data.error ?? "Failed to toggle admin status.");
       } else {
         await mutateUsers(
-          users?.map(u => u.id === user.id ? { ...u, isAdmin: !user.isAdmin } : u),
-          { revalidate: false }
+          users?.map((u) =>
+            u.id === user.id ? { ...u, isAdmin: !user.isAdmin } : u,
+          ),
+          { revalidate: false },
         );
       }
     } catch (err) {
@@ -110,23 +115,27 @@ export default function AdminPage() {
       return;
     }
 
-    if (!confirm(`Are you absolutely sure you want to permanently delete ${user.email}?\nThis action cannot be undone.`)) {
+    if (
+      !confirm(
+        `Are you absolutely sure you want to permanently delete ${user.email}?\nThis action cannot be undone.`,
+      )
+    ) {
       return;
     }
 
     setDeletingUserId(user.id);
     try {
       const res = await fetch(`/api/admin/users/${user.id}`, {
-        method: "DELETE"
+        method: "DELETE",
       });
 
       if (!res.ok) {
-        const data = await res.json() as { error?: string };
+        const data = (await res.json()) as { error?: string };
         alert(data.error ?? "Failed to delete user.");
       } else {
         await mutateUsers(
-          users?.filter(u => u.id !== user.id),
-          { revalidate: false }
+          users?.filter((u) => u.id !== user.id),
+          { revalidate: false },
         );
       }
     } catch (err) {
@@ -140,39 +149,44 @@ export default function AdminPage() {
   return (
     <AppShell>
       <div className="min-h-screen pb-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          
+        <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-6">
             <div className="space-y-1">
               <div className="flex items-center gap-4">
                 <Link href="/dashboard">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-white/40 hover:text-white rounded-md">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-md text-white/40 hover:text-white"
+                  >
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
                 </Link>
-                <h1 className="text-3xl font-black font-syne uppercase tracking-tighter text-white">SYSTEM ADMIN</h1>
+                <h1 className="font-syne text-3xl font-black tracking-tighter text-white uppercase">
+                  SYSTEM ADMIN
+                </h1>
               </div>
-              <p className="text-white/40 text-xs font-mono uppercase tracking-widest pl-12">
+              <p className="pl-12 font-mono text-xs tracking-widest text-white/40 uppercase">
                 Platform Statistics & User Management
               </p>
             </div>
           </div>
 
           {/* Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
             <Card className="brutal-card bg-black">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-mono font-bold tracking-widest text-white/50 uppercase">
+                <CardTitle className="font-mono text-xs font-bold tracking-widest text-white/50 uppercase">
                   Total Users
                 </CardTitle>
-                <Users className="w-4 h-4 text-white/50" />
+                <Users className="h-4 w-4 text-white/50" />
               </CardHeader>
               <CardContent>
                 {!stats && !statsError ? (
                   <Skeleton className="h-10 w-24" />
                 ) : (
-                  <div className="text-4xl font-black font-syne text-white">
+                  <div className="font-syne text-4xl font-black text-white">
                     {stats?.totalUsers.toLocaleString() ?? "0"}
                   </div>
                 )}
@@ -181,16 +195,16 @@ export default function AdminPage() {
 
             <Card className="brutal-card bg-black">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-mono font-bold tracking-widest text-white/50 uppercase">
+                <CardTitle className="font-mono text-xs font-bold tracking-widest text-white/50 uppercase">
                   Raw Videos
                 </CardTitle>
-                <Video className="w-4 h-4 text-white/50" />
+                <Video className="h-4 w-4 text-white/50" />
               </CardHeader>
               <CardContent>
                 {!stats && !statsError ? (
                   <Skeleton className="h-10 w-24" />
                 ) : (
-                  <div className="text-4xl font-black font-syne text-white">
+                  <div className="font-syne text-4xl font-black text-white">
                     {stats?.totalTasks.toLocaleString() ?? "0"}
                   </div>
                 )}
@@ -199,16 +213,16 @@ export default function AdminPage() {
 
             <Card className="brutal-card bg-black">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-mono font-bold tracking-widest text-white/50 uppercase">
+                <CardTitle className="font-mono text-xs font-bold tracking-widest text-white/50 uppercase">
                   Generations
                 </CardTitle>
-                <Clapperboard className="w-4 h-4 text-white/50" />
+                <Clapperboard className="h-4 w-4 text-white/50" />
               </CardHeader>
               <CardContent>
                 {!stats && !statsError ? (
                   <Skeleton className="h-10 w-24" />
                 ) : (
-                  <div className="text-4xl font-black font-syne text-[url('/textures/noise.png')] text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#FFE600]">
+                  <div className="font-syne bg-gradient-to-r from-red-400 to-[#FFE600] bg-clip-text text-4xl font-black text-[url('/textures/noise.png')] text-transparent">
                     {stats?.totalClips.toLocaleString() ?? "0"}
                   </div>
                 )}
@@ -217,39 +231,50 @@ export default function AdminPage() {
           </div>
 
           {/* User Data Table */}
-          <Card className="brutal-card bg-black border border-white/10 overflow-hidden">
+          <Card className="brutal-card overflow-hidden border border-white/10 bg-black">
             <CardHeader className="border-b border-white/5 pb-4">
-              <CardTitle className="text-sm font-bold font-mono tracking-widest text-white uppercase flex items-center gap-2">
-                <Shield className="w-4 h-4 text-red-500" />
+              <CardTitle className="flex items-center gap-2 font-mono text-sm font-bold tracking-widest text-white uppercase">
+                <Shield className="h-4 w-4 text-red-500" />
                 Directory Access
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 overflow-x-auto">
+            <CardContent className="overflow-x-auto p-0">
               {!users && !usersError ? (
-                <div className="p-8 space-y-4">
+                <div className="space-y-4 p-8">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : usersError ? (
-                <div className="p-8 text-red-500 font-mono text-sm">Failed to load system directory.</div>
+                <div className="p-8 font-mono text-sm text-red-500">
+                  Failed to load system directory.
+                </div>
               ) : (
                 <table className="w-full text-left text-sm text-white/70">
-                  <thead className="bg-[#111] font-mono text-[10px] uppercase tracking-widest text-white/40">
+                  <thead className="bg-[#111] font-mono text-[10px] tracking-widest text-white/40 uppercase">
                     <tr>
                       <th className="px-6 py-4 font-normal">Account</th>
                       <th className="px-6 py-4 font-normal">Raw Files</th>
                       <th className="px-6 py-4 font-normal">Clips Generated</th>
-                      <th className="px-6 py-4 font-normal text-right">Access Level</th>
+                      <th className="px-6 py-4 text-right font-normal">
+                        Access Level
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 font-medium">
                     {users?.map((user) => (
-                      <tr key={user.id} className="hover:bg-white/[0.02] transition-colors">
+                      <tr
+                        key={user.id}
+                        className="transition-colors hover:bg-white/[0.02]"
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex flex-col">
-                            <span className="text-white text-sm">{user.email}</span>
-                            <span className="text-white/30 text-[10px] font-mono mt-1">ID: {user.id}</span>
+                            <span className="text-sm text-white">
+                              {user.email}
+                            </span>
+                            <span className="mt-1 font-mono text-[10px] text-white/30">
+                              ID: {user.id}
+                            </span>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap tabular-nums">
@@ -258,23 +283,27 @@ export default function AdminPage() {
                         <td className="px-6 py-4 whitespace-nowrap tabular-nums">
                           {user._count.clips}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right space-x-2">
+                        <td className="space-x-2 px-6 py-4 text-right whitespace-nowrap">
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={togglingAdminId === user.id || deletingUserId === user.id || user.id === session?.user?.id}
+                            disabled={
+                              togglingAdminId === user.id ||
+                              deletingUserId === user.id ||
+                              user.id === session?.user?.id
+                            }
                             onClick={() => toggleAdminStatus(user)}
-                            className={`rounded-md font-mono text-[10px] uppercase tracking-widest transition-all ${
-                              user.isAdmin 
-                                ? 'bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20 hover:text-red-400' 
-                                : 'bg-transparent text-white/50 border-white/10 hover:bg-white/10 hover:text-white'
+                            className={`rounded-md font-mono text-[10px] tracking-widest uppercase transition-all ${
+                              user.isAdmin
+                                ? "border-red-500/30 bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-400"
+                                : "border-white/10 bg-transparent text-white/50 hover:bg-white/10 hover:text-white"
                             }`}
                           >
                             {togglingAdminId === user.id ? (
                               "Updating..."
                             ) : user.isAdmin ? (
                               <>
-                                <ShieldAlert className="w-3 h-3 mr-2" />
+                                <ShieldAlert className="mr-2 h-3 w-3" />
                                 Admin
                               </>
                             ) : (
@@ -288,9 +317,13 @@ export default function AdminPage() {
                               size="sm"
                               disabled={deletingUserId === user.id}
                               onClick={() => deleteUser(user)}
-                              className="rounded-md font-mono text-[10px] uppercase tracking-widest transition-all bg-transparent text-red-500/50 border-red-500/20 hover:bg-red-500/10 hover:border-red-500/30 hover:text-red-500"
+                              className="rounded-md border-red-500/20 bg-transparent font-mono text-[10px] tracking-widest text-red-500/50 uppercase transition-all hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500"
                             >
-                              {deletingUserId === user.id ? "..." : <Trash2 className="w-4 h-4" />}
+                              {deletingUserId === user.id ? (
+                                "..."
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
                             </Button>
                           )}
                         </td>
@@ -301,7 +334,6 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
-
         </div>
       </div>
     </AppShell>

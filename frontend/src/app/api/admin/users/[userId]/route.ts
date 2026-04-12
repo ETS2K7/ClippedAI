@@ -4,7 +4,7 @@ import { db } from "~/server/db";
 
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ userId: string }> },
 ) {
   const result = await requireAdmin();
   if (result instanceof NextResponse) return result;
@@ -14,7 +14,10 @@ export async function DELETE(
 
     // Prevent self-deletion via admin panel
     if (result.session.user.id === userId) {
-      return NextResponse.json({ error: "Cannot delete your own account" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Cannot delete your own account" },
+        { status: 400 },
+      );
     }
 
     // Attempt to delete the user.
@@ -27,6 +30,9 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Admin user delete error:", error);
-    return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete user" },
+      { status: 500 },
+    );
   }
 }

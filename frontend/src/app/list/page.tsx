@@ -72,31 +72,36 @@ const STATUS_CONFIG: Record<
   completed: {
     label: "COMPLETED",
     dotClass: "bg-black",
-    bgClass: "bg-white border text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    bgClass:
+      "bg-white border text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
     textClass: "text-black",
   },
   processing: {
     label: "PROCESSING",
     dotClass: "bg-white animate-pulse",
-    bgClass: "bg-transparent border border-white/30 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    bgClass:
+      "bg-transparent border border-white/30 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
     textClass: "text-white",
   },
   queued: {
     label: "QUEUED",
     dotClass: "bg-white/70",
-    bgClass: "bg-transparent border border-white/20 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    bgClass:
+      "bg-transparent border border-white/20 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
     textClass: "text-white/70",
   },
   error: {
     label: "ERROR",
     dotClass: "bg-white",
-    bgClass: "bg-red-500 border-red-500 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    bgClass:
+      "bg-red-500 border-red-500 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
     textClass: "text-white",
   },
   cancelled: {
     label: "CANCELLED",
     dotClass: "bg-white/40",
-    bgClass: "bg-transparent border-white/10 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
+    bgClass:
+      "bg-transparent border-white/10 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
     textClass: "text-white/40",
   },
 };
@@ -113,32 +118,52 @@ export default function ListPage() {
 
   // SWR: Data Fetching
   const swrOptions = { revalidateOnFocus: false };
-  const { data: tasksData, error: fetchError, mutate: mutateTasks } = useSWR(session?.user ? "/api/tasks/" : null, fetcher, swrOptions);
+  const {
+    data: tasksData,
+    error: fetchError,
+    mutate: mutateTasks,
+  } = useSWR(session?.user ? "/api/tasks/" : null, fetcher, swrOptions);
 
   const tasks: Task[] = tasksData?.tasks || [];
   const isLoading = session?.user && !tasksData && !fetchError;
-  const error = fetchError ? (fetchError instanceof Error ? fetchError.message : "Failed to load tasks") : null;
+  const error = fetchError
+    ? fetchError instanceof Error
+      ? fetchError.message
+      : "Failed to load tasks"
+    : null;
 
   const refreshTasks = async () => {
     const nextData = await mutateTasks();
     const nextTasks = nextData?.tasks || [];
     setSelectedTaskIds((current) =>
-      current.filter((taskId) => nextTasks.some((task: Task) => task.id === taskId)),
+      current.filter((taskId) =>
+        nextTasks.some((task: Task) => task.id === taskId),
+      ),
     );
   };
 
-  const selectedTasks = tasks.filter((task) => selectedTaskIds.includes(task.id));
+  const selectedTasks = tasks.filter((task) =>
+    selectedTaskIds.includes(task.id),
+  );
   const selectedCount = selectedTasks.length;
-  const completedCount = tasks.filter((task) => task.status === "completed").length;
-  const activeCount = tasks.filter((task) => ACTIVE_TASK_STATUSES.includes(task.status)).length;
-  const attentionCount = tasks.filter((task) => RESUMABLE_TASK_STATUSES.includes(task.status)).length;
+  const completedCount = tasks.filter(
+    (task) => task.status === "completed",
+  ).length;
+  const activeCount = tasks.filter((task) =>
+    ACTIVE_TASK_STATUSES.includes(task.status),
+  ).length;
+  const attentionCount = tasks.filter((task) =>
+    RESUMABLE_TASK_STATUSES.includes(task.status),
+  ).length;
   const cancelableCount = selectedTasks.filter((task) =>
     ACTIVE_TASK_STATUSES.includes(task.status),
   ).length;
   const resumableCount = selectedTasks.filter((task) =>
     RESUMABLE_TASK_STATUSES.includes(task.status),
   ).length;
-  const allVisibleSelected = tasks.length > 0 && tasks.every((task) => selectedTaskIds.includes(task.id));
+  const allVisibleSelected =
+    tasks.length > 0 &&
+    tasks.every((task) => selectedTaskIds.includes(task.id));
   const someSelected = selectedCount > 0 && !allVisibleSelected;
 
   const formatDate = (dateString: string) => {
@@ -178,7 +203,11 @@ export default function ListPage() {
       empty: string;
       fallback: string;
       success: (count: number) => string;
-      partial: (successCount: number, failureCount: number, firstError: string) => string;
+      partial: (
+        successCount: number,
+        failureCount: number,
+        firstError: string,
+      ) => string;
     },
   ) => {
     if (!session?.user?.id) return;
@@ -202,7 +231,8 @@ export default function ListPage() {
     );
 
     const fulfilled = results.filter(
-      (result): result is PromiseFulfilledResult<string> => result.status === "fulfilled",
+      (result): result is PromiseFulfilledResult<string> =>
+        result.status === "fulfilled",
     );
     const rejected = results.filter(
       (result): result is PromiseRejectedResult => result.status === "rejected",
@@ -212,7 +242,10 @@ export default function ListPage() {
       if (fulfilled.length > 0) await refreshTasks();
 
       if (rejected.length === 0) {
-        setBatchNotice({ tone: "success", message: labels.success(fulfilled.length) });
+        setBatchNotice({
+          tone: "success",
+          message: labels.success(fulfilled.length),
+        });
       } else {
         const firstFailure = rejected[0]?.reason;
         const firstError =
@@ -223,7 +256,11 @@ export default function ListPage() {
               : labels.fallback;
         setBatchNotice({
           tone: "error",
-          message: labels.partial(fulfilled.length, rejected.length, firstError),
+          message: labels.partial(
+            fulfilled.length,
+            rejected.length,
+            firstError,
+          ),
         });
       }
     } catch (refreshError) {
@@ -252,7 +289,8 @@ export default function ListPage() {
       {
         empty: "No active generations in selection to cancel.",
         fallback: "Failed to cancel generation",
-        success: (count) => `${count} generation${count === 1 ? "" : "s"} cancelled.`,
+        success: (count) =>
+          `${count} generation${count === 1 ? "" : "s"} cancelled.`,
         partial: (s, f, err) => `${s} cancelled, ${f} failed. ${err}`,
       },
     );
@@ -270,7 +308,8 @@ export default function ListPage() {
       {
         empty: "No failed or cancelled generations in selection to resume.",
         fallback: "Failed to resume generation",
-        success: (count) => `${count} generation${count === 1 ? "" : "s"} resumed.`,
+        success: (count) =>
+          `${count} generation${count === 1 ? "" : "s"} resumed.`,
         partial: (s, f, err) => `${s} resumed, ${f} failed. ${err}`,
       },
     );
@@ -286,7 +325,8 @@ export default function ListPage() {
       {
         empty: "Select at least one generation to delete.",
         fallback: "Failed to delete generation",
-        success: (count) => `${count} generation${count === 1 ? "" : "s"} deleted.`,
+        success: (count) =>
+          `${count} generation${count === 1 ? "" : "s"} deleted.`,
         partial: (s, f, err) => `${s} deleted, ${f} failed. ${err}`,
       },
     );
@@ -298,11 +338,11 @@ export default function ListPage() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="flex min-h-screen items-center justify-center p-4">
         <div className="space-y-4">
-          <Skeleton className="h-4 w-32 mx-auto rounded-md bg-white/[0.1]" />
-          <Skeleton className="h-4 w-48 mx-auto rounded-md bg-white/[0.1]" />
-          <Skeleton className="h-4 w-24 mx-auto rounded-md bg-white/[0.1]" />
+          <Skeleton className="mx-auto h-4 w-32 rounded-md bg-white/[0.1]" />
+          <Skeleton className="mx-auto h-4 w-48 rounded-md bg-white/[0.1]" />
+          <Skeleton className="mx-auto h-4 w-24 rounded-md bg-white/[0.1]" />
         </div>
       </div>
     );
@@ -311,13 +351,20 @@ export default function ListPage() {
   if (!session?.user) {
     return (
       <div className="min-h-screen">
-        <div className="max-w-4xl mx-auto px-4 py-24 text-center">
-          <h1 className="text-4xl md:text-5xl font-black font-syne uppercase text-white mb-4">SIGN IN REQUIRED.</h1>
-          <p className="text-white/40 mb-8 font-mono tracking-widest text-xs uppercase">
+        <div className="mx-auto max-w-4xl px-4 py-24 text-center">
+          <h1 className="font-syne mb-4 text-4xl font-black text-white uppercase md:text-5xl">
+            SIGN IN REQUIRED.
+          </h1>
+          <p className="mb-8 font-mono text-xs tracking-widest text-white/40 uppercase">
             You need to be signed in to view your generations.
           </p>
           <Link href="/login">
-            <Button size="lg" className="bg-white hover:bg-white/90 text-black font-black uppercase font-syne tracking-widest rounded-md">Sign In</Button>
+            <Button
+              size="lg"
+              className="font-syne rounded-md bg-white font-black tracking-widest text-black uppercase hover:bg-white/90"
+            >
+              Sign In
+            </Button>
           </Link>
         </div>
       </div>
@@ -330,7 +377,10 @@ export default function ListPage() {
     const config = STATUS_CONFIG[status];
     if (!config) {
       return (
-        <Badge variant="outline" className="capitalize text-white/50 border-white/10">
+        <Badge
+          variant="outline"
+          className="border-white/10 text-white/50 capitalize"
+        >
           {status}
         </Badge>
       );
@@ -356,22 +406,26 @@ export default function ListPage() {
       <div className="min-h-screen">
         {/* ── Page header ──────────────────────────────────────── */}
         <div className="border-b border-white/[0.06]">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-5">
-            <div className="flex items-center gap-3 mb-4">
+          <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+            <div className="mb-4 flex items-center gap-3">
               <Link href="/dashboard">
-                <Button variant="ghost" size="sm" className="text-white/40 hover:text-white hover:bg-white/[0.06]">
-                  <ArrowLeft className="w-4 h-4" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-white/40 hover:bg-white/[0.06] hover:text-white"
+                >
+                  <ArrowLeft className="h-4 w-4" />
                   Back
                 </Button>
               </Link>
             </div>
 
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between pt-4">
+            <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-syne uppercase tracking-tighter text-white leading-none">
+                <h1 className="font-syne text-3xl leading-none font-black tracking-tighter text-white uppercase sm:text-4xl md:text-5xl">
                   GENERATIONS.
                 </h1>
-                <p className="mt-3 sm:mt-4 text-[10px] sm:text-xs font-mono tracking-widest uppercase text-white/40">
+                <p className="mt-3 font-mono text-[10px] tracking-widest text-white/40 uppercase sm:mt-4 sm:text-xs">
                   {tasks.length} total &middot; manage and review your clips
                 </p>
               </div>
@@ -379,19 +433,19 @@ export default function ListPage() {
               {!isLoading && !error && tasks.length > 0 && (
                 <div className="flex items-center gap-2">
                   {completedCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 bg-white text-black px-2.5 py-0.5 text-[10px] font-bold font-mono uppercase tracking-widest">
+                    <span className="inline-flex items-center gap-1.5 bg-white px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-black uppercase">
                       <span className="h-1.5 w-1.5 rounded-full bg-black" />
                       {completedCount} done
                     </span>
                   )}
                   {activeCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 border border-white/30 text-white px-2.5 py-0.5 text-[10px] font-bold font-mono uppercase tracking-widest">
-                      <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                    <span className="inline-flex items-center gap-1.5 border border-white/30 px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-white uppercase">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
                       {activeCount} active
                     </span>
                   )}
                   {attentionCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 border border-red-500/50 bg-red-500/10 text-red-500 px-2.5 py-0.5 text-[10px] font-bold font-mono uppercase tracking-widest">
+                    <span className="inline-flex items-center gap-1.5 border border-red-500/50 bg-red-500/10 px-2.5 py-0.5 font-mono text-[10px] font-bold tracking-widest text-red-500 uppercase">
                       <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
                       {attentionCount} need attention
                     </span>
@@ -403,7 +457,12 @@ export default function ListPage() {
         </div>
 
         {/* ── Content ──────────────────────────────────────────── */}
-        <div className={cn("max-w-5xl mx-auto px-4 sm:px-6 py-6", selectedCount > 0 && "pb-28")}>
+        <div
+          className={cn(
+            "mx-auto max-w-5xl px-4 py-6 sm:px-6",
+            selectedCount > 0 && "pb-28",
+          )}
+        >
           {/* Batch notice */}
           {batchNotice && (
             <Alert
@@ -430,7 +489,7 @@ export default function ListPage() {
               {[1, 2, 3, 4].map((i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-4 brutal-card p-4"
+                  className="brutal-card flex items-center gap-4 p-4"
                 >
                   <Skeleton className="h-5 w-5 rounded-md bg-white/[0.1]" />
                   <div className="flex-1 space-y-2">
@@ -444,20 +503,26 @@ export default function ListPage() {
           ) : error ? (
             <Alert className="border-red-500/20 bg-red-500/5">
               <AlertCircle className="h-4 w-4 text-red-400" />
-              <AlertDescription className="text-white/70">{error}</AlertDescription>
+              <AlertDescription className="text-white/70">
+                {error}
+              </AlertDescription>
             </Alert>
           ) : tasks.length === 0 ? (
             <Card className="brutal-card border-white/10">
               <CardContent className="p-12 text-center">
-                <div className="w-16 h-16 bg-white/[0.04] rounded-md flex items-center justify-center mx-auto mb-4 border border-white/10">
-                  <PlayCircle className="w-8 h-8 text-white" />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-md border border-white/10 bg-white/[0.04]">
+                  <PlayCircle className="h-8 w-8 text-white" />
                 </div>
-                <h2 className="text-xl font-syne uppercase font-bold text-white mb-2">No generations yet</h2>
-                <p className="text-white/35 font-mono uppercase tracking-widest text-xs mb-6">
+                <h2 className="font-syne mb-2 text-xl font-bold text-white uppercase">
+                  No generations yet
+                </h2>
+                <p className="mb-6 font-mono text-xs tracking-widest text-white/35 uppercase">
                   Start by processing your first video to create clips.
                 </p>
                 <Link href="/dashboard">
-                  <Button className="bg-white hover:bg-white/90 text-black font-black uppercase font-syne tracking-widest rounded-md">Create New Generation</Button>
+                  <Button className="font-syne rounded-md bg-white font-black tracking-widest text-black uppercase hover:bg-white/90">
+                    Create New Generation
+                  </Button>
                 </Link>
               </CardContent>
             </Card>
@@ -466,14 +531,22 @@ export default function ListPage() {
               {/* ── Table header row ────────────────────────────── */}
               <div className="mb-2 flex items-center gap-4 px-4 py-2">
                 <Checkbox
-                  checked={allVisibleSelected ? true : someSelected ? "indeterminate" : false}
+                  checked={
+                    allVisibleSelected
+                      ? true
+                      : someSelected
+                        ? "indeterminate"
+                        : false
+                  }
                   onCheckedChange={handleToggleAllVisible}
                   disabled={activeBatchAction !== null}
                   aria-label="Select all generations"
-                  className="border-white/20 rounded-md data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=checked]:border-white data-[state=indeterminate]:bg-white/20 data-[state=indeterminate]:border-white/20"
+                  className="rounded-md border-white/20 data-[state=checked]:border-white data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=indeterminate]:border-white/20 data-[state=indeterminate]:bg-white/20"
                 />
-                <span className="text-xs font-medium uppercase tracking-widest text-white/25">
-                  {selectedCount > 0 ? `${selectedCount} of ${tasks.length} selected` : "Select"}
+                <span className="text-xs font-medium tracking-widest text-white/25 uppercase">
+                  {selectedCount > 0
+                    ? `${selectedCount} of ${tasks.length} selected`
+                    : "Select"}
                 </span>
               </div>
 
@@ -486,16 +559,16 @@ export default function ListPage() {
                     <div
                       key={task.id}
                       className={cn(
-                        "group relative flex items-start gap-3 sm:gap-4 p-3 sm:p-4 transition-all duration-150 brutal-card",
+                        "group brutal-card relative flex items-start gap-3 p-3 transition-all duration-150 sm:gap-4 sm:p-4",
                         isSelected
-                          ? "border-white border-bg-white/5 ring-1 ring-white/10"
+                          ? "border-bg-white/5 border-white ring-1 ring-white/10"
                           : "border-white/[0.1] bg-black hover:border-white/[0.3] hover:bg-white/[0.02]",
                       )}
                     >
                       {/* Selection indicator bar */}
                       <div
                         className={cn(
-                          "absolute left-0 top-3 bottom-3 w-0.5 transition-all duration-150",
+                          "absolute top-3 bottom-3 left-0 w-0.5 transition-all duration-150",
                           isSelected ? "bg-white" : "bg-transparent",
                         )}
                       />
@@ -511,29 +584,39 @@ export default function ListPage() {
                               ? `Deselect ${task.source_title}`
                               : `Select ${task.source_title}`
                           }
-                          className="border-white/20 rounded-md data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=checked]:border-white"
+                          className="rounded-md border-white/20 data-[state=checked]:border-white data-[state=checked]:bg-white data-[state=checked]:text-black"
                         />
                       </div>
 
                       {/* Content — links to task detail */}
-                      <Link href={`/tasks/${task.id}`} className="flex-1 min-w-0">
+                      <Link
+                        href={`/tasks/${task.id}`}
+                        className="min-w-0 flex-1"
+                      >
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
-                            <h3 className="truncate text-xs sm:text-sm font-semibold text-white/90 transition-colors group-hover:text-white">
+                            <h3 className="truncate text-xs font-semibold text-white/90 transition-colors group-hover:text-white sm:text-sm">
                               {task.source_title}
                             </h3>
                             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/25">
-                              <span className="uppercase tracking-wide font-medium text-white/35">
+                              <span className="font-medium tracking-wide text-white/35 uppercase">
                                 {task.source_type}
                               </span>
-                              <Separator orientation="vertical" className="h-3 bg-white/[0.08]" />
+                              <Separator
+                                orientation="vertical"
+                                className="h-3 bg-white/[0.08]"
+                              />
                               <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
+                                <Clock className="h-3 w-3" />
                                 {formatDate(task.created_at)}
                               </span>
-                              <Separator orientation="vertical" className="h-3 bg-white/[0.08]" />
+                              <Separator
+                                orientation="vertical"
+                                className="h-3 bg-white/[0.08]"
+                              />
                               <span>
-                                {task.clips_count} {task.clips_count === 1 ? "clip" : "clips"}
+                                {task.clips_count}{" "}
+                                {task.clips_count === 1 ? "clip" : "clips"}
                               </span>
                             </div>
                           </div>
@@ -554,30 +637,38 @@ export default function ListPage() {
         {/* ── Floating batch command bar ────────────────────────── */}
         {selectedCount > 0 && (
           <div
-            className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-5 pointer-events-none"
-            style={{ animation: "command-bar-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both" }}
+            className="pointer-events-none fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-5"
+            style={{
+              animation:
+                "command-bar-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both",
+            }}
           >
-            <div
-              className="pointer-events-auto flex items-center gap-1 border border-white/[0.2] bg-black px-2 py-2"
-            >
+            <div className="pointer-events-auto flex items-center gap-1 border border-white/[0.2] bg-black px-2 py-2">
               {/* Select all checkbox */}
-              <div className="flex items-center gap-2.5 pl-2 pr-3">
+              <div className="flex items-center gap-2.5 pr-3 pl-2">
                 <Checkbox
-                  checked={allVisibleSelected ? true : someSelected ? "indeterminate" : false}
+                  checked={
+                    allVisibleSelected
+                      ? true
+                      : someSelected
+                        ? "indeterminate"
+                        : false
+                  }
                   onCheckedChange={handleToggleAllVisible}
                   disabled={activeBatchAction !== null}
                   aria-label="Select all"
-                  className="border-white/20 rounded-md data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=checked]:border-white data-[state=indeterminate]:bg-white/20 data-[state=indeterminate]:border-white/20"
+                  className="rounded-md border-white/20 data-[state=checked]:border-white data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=indeterminate]:border-white/20 data-[state=indeterminate]:bg-white/20"
                 />
                 <span className="text-sm font-medium text-white tabular-nums">
                   {selectedCount}
-                  <span className="text-white/40 ml-0.5">
-                    {" "}selected
-                  </span>
+                  <span className="ml-0.5 text-white/40"> selected</span>
                 </span>
               </div>
 
-              <Separator orientation="vertical" className="h-6 bg-white/[0.08]" />
+              <Separator
+                orientation="vertical"
+                className="h-6 bg-white/[0.08]"
+              />
 
               {/* Action buttons */}
               <div className="flex items-center gap-0.5 px-1">
@@ -587,22 +678,27 @@ export default function ListPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => void handleCancelSelected()}
-                      disabled={cancelableCount === 0 || activeBatchAction !== null}
-                      className="text-white/50 hover:text-white hover:bg-white/[0.06] disabled:text-white/15 disabled:hover:bg-transparent"
+                      disabled={
+                        cancelableCount === 0 || activeBatchAction !== null
+                      }
+                      className="text-white/50 hover:bg-white/[0.06] hover:text-white disabled:text-white/15 disabled:hover:bg-transparent"
                     >
                       {activeBatchAction === "cancel" ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <PauseCircle className="w-4 h-4" />
+                        <PauseCircle className="h-4 w-4" />
                       )}
                       <span className="hidden sm:inline">Cancel</span>
                       {cancelableCount > 0 && (
-                        <span className="text-xs text-white/30">{cancelableCount}</span>
+                        <span className="text-xs text-white/30">
+                          {cancelableCount}
+                        </span>
                       )}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" sideOffset={8}>
-                    Cancel {cancelableCount} active generation{cancelableCount === 1 ? "" : "s"}
+                    Cancel {cancelableCount} active generation
+                    {cancelableCount === 1 ? "" : "s"}
                   </TooltipContent>
                 </Tooltip>
 
@@ -612,26 +708,34 @@ export default function ListPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => void handleResumeSelected()}
-                      disabled={resumableCount === 0 || activeBatchAction !== null}
-                      className="text-white/50 hover:text-white hover:bg-white/[0.06] disabled:text-white/15 disabled:hover:bg-transparent"
+                      disabled={
+                        resumableCount === 0 || activeBatchAction !== null
+                      }
+                      className="text-white/50 hover:bg-white/[0.06] hover:text-white disabled:text-white/15 disabled:hover:bg-transparent"
                     >
                       {activeBatchAction === "resume" ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <RotateCcw className="w-4 h-4" />
+                        <RotateCcw className="h-4 w-4" />
                       )}
                       <span className="hidden sm:inline">Resume</span>
                       {resumableCount > 0 && (
-                        <span className="text-xs text-white/30">{resumableCount}</span>
+                        <span className="text-xs text-white/30">
+                          {resumableCount}
+                        </span>
                       )}
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" sideOffset={8}>
-                    Resume {resumableCount} failed/cancelled generation{resumableCount === 1 ? "" : "s"}
+                    Resume {resumableCount} failed/cancelled generation
+                    {resumableCount === 1 ? "" : "s"}
                   </TooltipContent>
                 </Tooltip>
 
-                <Separator orientation="vertical" className="h-6 bg-white/[0.08]" />
+                <Separator
+                  orientation="vertical"
+                  className="h-6 bg-white/[0.08]"
+                />
 
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -639,24 +743,30 @@ export default function ListPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => setShowDeleteDialog(true)}
-                      disabled={selectedCount === 0 || activeBatchAction !== null}
-                      className="text-red-400/70 hover:text-red-400 hover:bg-red-500/[0.06] disabled:text-white/15 disabled:hover:bg-transparent"
+                      disabled={
+                        selectedCount === 0 || activeBatchAction !== null
+                      }
+                      className="text-red-400/70 hover:bg-red-500/[0.06] hover:text-red-400 disabled:text-white/15 disabled:hover:bg-transparent"
                     >
                       {activeBatchAction === "delete" ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="h-4 w-4" />
                       )}
                       <span className="hidden sm:inline">Delete</span>
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top" sideOffset={8}>
-                    Delete {selectedCount} generation{selectedCount === 1 ? "" : "s"}
+                    Delete {selectedCount} generation
+                    {selectedCount === 1 ? "" : "s"}
                   </TooltipContent>
                 </Tooltip>
               </div>
 
-              <Separator orientation="vertical" className="h-6 bg-white/[0.08]" />
+              <Separator
+                orientation="vertical"
+                className="h-6 bg-white/[0.08]"
+              />
 
               {/* Clear selection */}
               <Tooltip>
@@ -669,10 +779,10 @@ export default function ListPage() {
                       setBatchNotice(null);
                     }}
                     disabled={activeBatchAction !== null}
-                    className="text-white/30 hover:text-white hover:bg-white/[0.06] rounded-xl"
+                    className="rounded-xl text-white/30 hover:bg-white/[0.06] hover:text-white"
                     aria-label="Clear selection"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top" sideOffset={8}>
@@ -687,22 +797,28 @@ export default function ListPage() {
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete {selectedCount} generation{selectedCount === 1 ? "" : "s"}?</AlertDialogTitle>
+              <AlertDialogTitle>
+                Delete {selectedCount} generation
+                {selectedCount === 1 ? "" : "s"}?
+              </AlertDialogTitle>
               <AlertDialogDescription>
-                This will permanently remove {selectedCount === 1 ? "this generation" : "these generations"} and all
-                associated clips. This cannot be undone.
+                This will permanently remove{" "}
+                {selectedCount === 1 ? "this generation" : "these generations"}{" "}
+                and all associated clips. This cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={activeBatchAction === "delete"}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={activeBatchAction === "delete"}>
+                Cancel
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => void handleDeleteSelected()}
                 disabled={activeBatchAction === "delete" || selectedCount === 0}
-                className="bg-white hover:bg-red-600 text-black rounded-md uppercase font-syne font-bold tracking-widest"
+                className="font-syne rounded-md bg-white font-bold tracking-widest text-black uppercase hover:bg-red-600"
               >
                 {activeBatchAction === "delete" ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     DELETING...
                   </>
                 ) : (

@@ -7,7 +7,8 @@ import { TooltipProvider } from "~/components/ui/tooltip";
 
 export const metadata: Metadata = {
   title: {
-    default: "ClippedAI — AI Video Clipping Tool | Turn Long Videos Into Viral Shorts",
+    default:
+      "ClippedAI — AI Video Clipping Tool | Turn Long Videos Into Viral Shorts",
     template: "%s | ClippedAI",
   },
   description:
@@ -32,20 +33,29 @@ export const metadata: Metadata = {
   applicationName: "ClippedAI",
   category: "Technology",
   openGraph: {
-    title: "ClippedAI — AI Video Clipping Tool | Turn Long Videos Into Viral Shorts",
+    title:
+      "ClippedAI — AI Video Clipping Tool | Turn Long Videos Into Viral Shorts",
     description:
       "Paste a YouTube link or upload a video. ClippedAI's AI engine finds the best moments, auto-reframes for 9:16, burns in captions, and delivers viral-ready clips instantly.",
     url: "https://clippedai.app",
     type: "website",
     locale: "en_US",
     siteName: "ClippedAI",
-    images: [{ url: "https://clippedai.app/images/og-image.png", width: 1200, height: 630, alt: "ClippedAI — AI Video Clipping Tool" }],
+    images: [
+      {
+        url: "https://clippedai.app/images/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "ClippedAI — AI Video Clipping Tool",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     site: "@clippedai",
     title: "ClippedAI — AI Video Clipping Tool",
-    description: "Paste a YouTube link. Get viral-ready clips in minutes. AI-powered reframing, captions, and highlight extraction.",
+    description:
+      "Paste a YouTube link. Get viral-ready clips in minutes. AI-powered reframing, captions, and highlight extraction.",
     images: ["https://clippedai.app/images/og-image.png"],
   },
   alternates: {
@@ -54,7 +64,13 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-    googleBot: { index: true, follow: true, "max-video-preview": -1, "max-image-preview": "large", "max-snippet": -1 },
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   icons: {
     icon: "/icon.png",
@@ -84,7 +100,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} ${syne.variable} antialiased`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${syne.variable} antialiased`}
+      >
         <TooltipProvider>{children}</TooltipProvider>
       </body>
     </html>

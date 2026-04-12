@@ -26,13 +26,13 @@ function isRateLimited(userId: string): boolean {
 /** Accepted video MIME types */
 const ALLOWED_MIME_TYPES = new Set([
   "video/mp4",
-  "video/quicktime",   // .mov
+  "video/quicktime", // .mov
   "video/webm",
-  "video/x-matroska",  // .mkv
+  "video/x-matroska", // .mkv
   "video/avi",
-  "video/x-msvideo",   // .avi (alternate)
-  "video/x-ms-wmv",    // .wmv
-  "video/3gpp",        // .3gp
+  "video/x-msvideo", // .avi (alternate)
+  "video/x-ms-wmv", // .wmv
+  "video/3gpp", // .3gp
   "video/mpeg",
 ]);
 
@@ -108,7 +108,10 @@ export async function POST(req: Request) {
   const header = new Uint8Array(headerSlice);
   if (!hasValidMagicBytes(header)) {
     return NextResponse.json(
-      { error: "File does not appear to be a valid video. The file header does not match any known video format." },
+      {
+        error:
+          "File does not appear to be a valid video. The file header does not match any known video format.",
+      },
       { status: 415 },
     );
   }
@@ -120,9 +123,13 @@ export async function POST(req: Request) {
 
     // Preserve the original filename so task titles look human-readable.
     // Strip extension, cap at 200 chars, remove non-printable characters to prevent DB abuse.
-    const rawName = file.name !== "blob" ? file.name.replace(/\.[^.]+$/, "") : undefined;
+    const rawName =
+      file.name !== "blob" ? file.name.replace(/\.[^.]+$/, "") : undefined;
     const displayName = rawName
-      ? rawName.replace(/[^\x20-\x7E]/g, "").trim().slice(0, 200) || undefined
+      ? rawName
+          .replace(/[^\x20-\x7E]/g, "")
+          .trim()
+          .slice(0, 200) || undefined
       : undefined;
 
     const upload = new Upload({
@@ -142,7 +149,7 @@ export async function POST(req: Request) {
       data: {
         userId: session.user.id,
         s3Key,
-        displayName,   // persisted so GET /api/tasks returns a human-readable title
+        displayName, // persisted so GET /api/tasks returns a human-readable title
         status: "uploading",
       },
     });
@@ -153,4 +160,3 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Upload failed" }, { status: 500 });
   }
 }
-

@@ -54,15 +54,20 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
 
     logger.info(f"Polling transcription {transcript_id}...")
     for attempt in range(MAX_POLL_ATTEMPTS):
-        res = requests.get(
-            f"https://api.assemblyai.com/v2/transcript/{transcript_id}", headers=headers,
-            timeout=30,
-        )
-        if res.status_code != 200:
-            logger.warning(f"Poll returned HTTP {res.status_code}, retrying...")
+        try:
+            res = requests.get(
+                f"https://api.assemblyai.com/v2/transcript/{transcript_id}", headers=headers,
+                timeout=30,
+            )
+            if res.status_code != 200:
+                logger.warning(f"Poll returned HTTP {res.status_code}, retrying...")
+                time.sleep(3)
+                continue
+            data = res.json()
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Network error during poll: {e}. Retrying in 3s...")
             time.sleep(3)
             continue
-        data = res.json()
         status = data["status"]
 
         if status == "completed":

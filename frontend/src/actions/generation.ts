@@ -37,3 +37,35 @@ export async function getClipPlayUrl(
     return { success: false, error: "Failed to generate play URL." };
   }
 }
+
+export async function getClipDownloadUrl(
+  clipId: string,
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    const clip = await db.clip.findUniqueOrThrow({
+      where: {
+        id: clipId,
+        userId: session.user.id,
+      },
+    });
+
+    const command = new GetObjectCommand({
+      Bucket: env.S3_BUCKET_NAME,
+      Key: clip.s3Key,
+      ResponseContentDisposition: 'attachment; filename="ClippedAI_Video.mp4"',
+    });
+
+    const signedUrl = await getSignedUrl(s3Client, command, {
+      expiresIn: 3600,
+    });
+
+    return { success: true, url: signedUrl };
+  } catch {
+    return { success: false, error: "Failed to generate download URL." };
+  }
+}

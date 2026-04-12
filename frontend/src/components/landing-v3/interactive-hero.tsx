@@ -1,8 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { ArrowRight, Loader2, Scissors, Volume2, Zap, RotateCcw } from "lucide-react";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "framer-motion";
+import {
+  ArrowRight,
+  Loader2,
+  Scissors,
+  Volume2,
+  Zap,
+  RotateCcw,
+} from "lucide-react";
 import { cn } from "~/lib/utils";
 
 const processingSteps = [
@@ -14,22 +27,22 @@ const processingSteps = [
   "[~] Auto-reframing 16:9 to 9:16...",
   "[+] Adding dynamic captions...",
   "Rendering final asset...",
-  "Done."
+  "Done.",
 ];
 
 /* ─── Floating Particle Field ─── */
 const ParticleField = () => {
   const particles = Array.from({ length: 25 }, (_, i) => ({
     id: i,
-    x: ((i * 73 + 17) % 100),
-    y: ((i * 47 + 31) % 100),
+    x: (i * 73 + 17) % 100,
+    y: (i * 47 + 31) % 100,
     size: 1 + (i % 3),
     duration: 15 + (i % 20),
     delay: (i * 0.3) % 8,
   }));
 
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-[1]">
+    <div className="pointer-events-none absolute inset-0 z-[1] overflow-hidden">
       {particles.map((p) => (
         <motion.div
           key={p.id}
@@ -74,13 +87,14 @@ const Spotlight = () => {
 
   return (
     <motion.div
-      className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none z-[1]"
+      className="pointer-events-none absolute top-0 left-0 z-[1] h-[600px] w-[600px] rounded-full"
       style={{
         x: smoothX,
         y: smoothY,
         translateX: "-50%",
         translateY: "-50%",
-        background: "radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)",
+        background:
+          "radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%)",
       }}
     />
   );
@@ -88,17 +102,22 @@ const Spotlight = () => {
 
 /* ─── Animated Grid Background ─── */
 const AnimatedGrid = () => (
-  <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+  <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
     <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:80px_80px]" />
     <motion.div
-      className="absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent"
+      className="absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent"
       animate={{ opacity: [0.3, 0.8, 0.3] }}
       transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
     />
     <motion.div
-      className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
+      className="absolute top-1/2 right-0 left-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
       animate={{ opacity: [0.3, 0.8, 0.3] }}
-      transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+      transition={{
+        duration: 4,
+        repeat: Infinity,
+        ease: "easeInOut",
+        delay: 2,
+      }}
     />
   </div>
 );
@@ -124,91 +143,98 @@ const LiveDemoPreview = () => {
       initial={{ opacity: 0, x: 60, rotateY: -15 }}
       animate={{ opacity: 1, x: 0, rotateY: 0 }}
       transition={{ duration: 1.2, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
-      className="hidden lg:flex flex-col gap-4 w-[340px] shrink-0"
+      className="hidden w-[340px] shrink-0 flex-col gap-4 lg:flex"
       style={{ perspective: "1200px" }}
     >
-      <div className="relative w-[260px] h-[462px] mx-auto bg-black border-[6px] border-[#1a1a1a] rounded-[36px] overflow-hidden shadow-[0_0_80px_rgba(255,255,255,0.08)]">
+      <div className="relative mx-auto h-[462px] w-[260px] overflow-hidden rounded-[36px] border-[6px] border-[#1a1a1a] bg-black shadow-[0_0_80px_rgba(255,255,255,0.08)]">
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
           <motion.div
             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
             animate={{ x: ["-100%", "200%"] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", repeatDelay: 1 }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+              repeatDelay: 1,
+            }}
           />
         </div>
 
-        <div className="absolute bottom-24 left-4 right-4 flex items-end gap-[2px] h-10">
+        <div className="absolute right-4 bottom-24 left-4 flex h-10 items-end gap-[2px]">
           {Array.from({ length: 32 }, (_, i) => {
             const h = 15 + ((i * i * 13 + i * 7) % 85);
             return (
               <motion.div
                 key={i}
-                className="flex-1 bg-white/40 rounded-t-sm"
-                animate={{ 
+                className="flex-1 rounded-t-sm bg-white/40"
+                animate={{
                   height: [`${h}%`, `${(h + 30) % 100}%`, `${h}%`],
-                  opacity: [0.3, 0.7, 0.3]
+                  opacity: [0.3, 0.7, 0.3],
                 }}
-                transition={{ 
+                transition={{
                   duration: 1.5 + (i % 3) * 0.5,
                   repeat: Infinity,
                   delay: i * 0.05,
-                  ease: "easeInOut"
+                  ease: "easeInOut",
                 }}
               />
             );
           })}
         </div>
 
-        <div className="absolute bottom-32 inset-x-0 flex flex-col items-center gap-1 px-4">
+        <div className="absolute inset-x-0 bottom-32 flex flex-col items-center gap-1 px-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeClip}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="bg-white text-black font-black text-sm px-3 py-1 uppercase italic -rotate-1"
+              className="-rotate-1 bg-white px-3 py-1 text-sm font-black text-black uppercase italic"
             >
               {clips[activeClip]?.label}
             </motion.div>
           </AnimatePresence>
         </div>
 
-        <div className="absolute bottom-4 inset-x-4 flex justify-between items-center">
+        <div className="absolute inset-x-4 bottom-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
-              <Volume2 className="w-3 h-3 text-white" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20">
+              <Volume2 className="h-3 w-3 text-white" />
             </div>
           </div>
-          <div className="text-white/60 text-[10px] font-mono uppercase">
+          <div className="font-mono text-[10px] text-white/60 uppercase">
             {clips[activeClip]?.time}
           </div>
         </div>
 
-        <div className="absolute top-2 inset-x-0 flex justify-center">
-          <div className="w-20 h-5 bg-black rounded-full" />
+        <div className="absolute inset-x-0 top-2 flex justify-center">
+          <div className="h-5 w-20 rounded-full bg-black" />
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 mt-2">
+      <div className="mt-2 flex flex-col gap-2">
         {clips.map((clip, i) => (
           <motion.div
             key={i}
-            animate={{ 
+            animate={{
               opacity: i === activeClip ? 1 : 0.3,
               x: i === activeClip ? 0 : 8,
               scale: i === activeClip ? 1 : 0.97,
             }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3 font-mono text-xs"
+            className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 font-mono text-xs"
           >
-            <span className="text-white font-bold flex items-center gap-2">
-              <Scissors className="w-3 h-3" />
+            <span className="flex items-center gap-2 font-bold text-white">
+              <Scissors className="h-3 w-3" />
               {clip.label}
             </span>
             <span className="text-white/50">{clip.time}</span>
-            <span className={cn(
-              "font-black tabular-nums",
-              i === activeClip ? "text-white" : "text-white/30"
-            )}>
+            <span
+              className={cn(
+                "font-black tabular-nums",
+                i === activeClip ? "text-white" : "text-white/30",
+              )}
+            >
               {clip.score}
             </span>
           </motion.div>
@@ -217,7 +243,6 @@ const LiveDemoPreview = () => {
     </motion.div>
   );
 };
-
 
 export const InteractiveHero = () => {
   const [inputValue, setInputValue] = useState("");
@@ -239,7 +264,10 @@ export const InteractiveHero = () => {
     my.set((e.clientY - rect.top) / rect.height - 0.5);
   };
 
-  const handleMouseLeave = () => { mx.set(0); my.set(0); };
+  const handleMouseLeave = () => {
+    mx.set(0);
+    my.set(0);
+  };
 
   const handleStart = () => {
     if (!inputValue) return;
@@ -262,7 +290,8 @@ export const InteractiveHero = () => {
         if (step < processingSteps.length) {
           const s = processingSteps[step];
           if (s) setLogs((prev) => [...prev, s]);
-          if (step === processingSteps.length - 1) setTimeout(() => setShowResult(true), 1200);
+          if (step === processingSteps.length - 1)
+            setTimeout(() => setShowResult(true), 1200);
           step++;
         } else clearInterval(interval);
       }, 350);
@@ -271,16 +300,15 @@ export const InteractiveHero = () => {
   }, [isProcessing]);
 
   return (
-    <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden bg-black text-white px-6 md:px-12 pt-24 pb-16">
-      
+    <section className="relative flex min-h-[100vh] items-center justify-center overflow-hidden bg-black px-6 pt-24 pb-16 text-white md:px-12">
       {/* ─── Background Layers (all scoped to this section via overflow-hidden + relative) ─── */}
       <AnimatedGrid />
       <ParticleField />
       <Spotlight />
-      
+
       {/* Ambient gradients */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,255,255,0.12),transparent)] pointer-events-none z-[1]" />
-      <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-black to-transparent pointer-events-none z-[2]" />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(255,255,255,0.12),transparent)]" />
+      <div className="pointer-events-none absolute right-0 bottom-0 left-0 z-[2] h-64 bg-gradient-to-t from-black to-transparent" />
 
       {/* ─── Hero Content ─── */}
       <AnimatePresence mode="wait">
@@ -291,44 +319,56 @@ export const InteractiveHero = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, scale: 0.95, filter: "blur(12px)" }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full max-w-[1400px] flex flex-col lg:flex-row items-center lg:items-center justify-between gap-12 lg:gap-16 z-10"
+            className="z-10 flex w-full max-w-[1400px] flex-col items-center justify-between gap-12 lg:flex-row lg:items-center lg:gap-16"
           >
             {/* Left — Text & Input */}
-            <div className="flex flex-col items-center lg:items-start text-center lg:text-left max-w-2xl">
-              
+            <div className="flex max-w-2xl flex-col items-center text-center lg:items-start lg:text-left">
               {/* Status badge */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.6 }}
-                className="flex items-center gap-3 px-5 py-2 mb-10 border border-white/10 rounded-full bg-white/[0.03] backdrop-blur-md"
+                className="mb-10 flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-5 py-2 backdrop-blur-md"
               >
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
                 </span>
-                <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/60">Engine v2.0 Online</span>
+                <span className="text-xs font-bold tracking-[0.2em] text-white/60 uppercase">
+                  Engine v2.0 Online
+                </span>
               </motion.div>
 
               {/* Main heading */}
-              <h1 className="flex flex-col text-6xl md:text-8xl lg:text-[120px] xl:text-[140px] font-black tracking-[-0.04em] leading-[0.88] uppercase font-syne text-white mb-8">
-                <div className="overflow-hidden pb-2 -mb-2">
+              <h1 className="font-syne mb-8 flex flex-col text-6xl leading-[0.88] font-black tracking-[-0.04em] text-white uppercase md:text-8xl lg:text-[120px] xl:text-[140px]">
+                <div className="-mb-2 overflow-hidden pb-2">
                   <motion.span
                     initial={{ y: "110%" }}
                     animate={{ y: "0%" }}
-                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+                    transition={{
+                      duration: 0.8,
+                      ease: [0.22, 1, 0.36, 1],
+                      delay: 0.15,
+                    }}
                     className="block"
                   >
                     SKIP THE
                   </motion.span>
                 </div>
-                <div className="overflow-hidden pr-4 -mr-4 pb-2 -mb-2">
+                <div className="-mr-4 -mb-2 overflow-hidden pr-4 pb-2">
                   <motion.span
                     initial={{ y: "110%" }}
                     animate={{ y: "0%" }}
-                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.25 }}
+                    transition={{
+                      duration: 0.8,
+                      ease: [0.22, 1, 0.36, 1],
+                      delay: 0.25,
+                    }}
                     className="block"
-                    style={{ WebkitTextStroke: '2px rgba(255,255,255,0.7)', color: 'transparent' }}
+                    style={{
+                      WebkitTextStroke: "2px rgba(255,255,255,0.7)",
+                      color: "transparent",
+                    }}
                   >
                     EDITING.
                   </motion.span>
@@ -340,11 +380,11 @@ export const InteractiveHero = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.7 }}
-                className="text-white/40 text-lg md:text-xl lg:text-2xl font-medium leading-relaxed mb-12 max-w-xl"
+                className="mb-12 max-w-xl text-lg leading-relaxed font-medium text-white/40 md:text-xl lg:text-2xl"
               >
-                Paste a YouTube link. Our engine extracts the most viral moments, 
-                tracks the speaker, and burns in captions.{" "}
-                <span className="text-white font-semibold">Instantly.</span>
+                Paste a YouTube link. Our engine extracts the most viral
+                moments, tracks the speaker, and burns in captions.{" "}
+                <span className="font-semibold text-white">Instantly.</span>
               </motion.p>
 
               {/* Input */}
@@ -352,19 +392,23 @@ export const InteractiveHero = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.65, duration: 0.7 }}
-                className="w-full max-w-xl relative group"
+                className="group relative w-full max-w-xl"
               >
-                <div className="absolute -inset-[1px] rounded-2xl overflow-hidden z-0">
+                <div className="absolute -inset-[1px] z-0 overflow-hidden rounded-2xl">
                   <motion.div
                     className="absolute inset-0 bg-[conic-gradient(from_0deg,transparent_0_330deg,rgba(255,255,255,0.3)_360deg)]"
                     animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+                    transition={{
+                      duration: 6,
+                      repeat: Infinity,
+                      ease: "linear",
+                    }}
                   />
                 </div>
-                
-                <div className="relative flex items-center bg-[#0a0a0a] border border-white/[0.08] rounded-2xl overflow-hidden p-1.5 z-[1]">
-                  <div className="flex items-center pl-5 gap-3 text-white/20">
-                    <Zap className="w-4 h-4" />
+
+                <div className="relative z-[1] flex items-center overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-1.5">
+                  <div className="flex items-center gap-3 pl-5 text-white/20">
+                    <Zap className="h-4 w-4" />
                   </div>
                   <input
                     type="text"
@@ -372,16 +416,18 @@ export const InteractiveHero = () => {
                     aria-label="YouTube video URL"
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleStart(); }}
-                    className="w-full bg-transparent text-white px-4 py-4 outline-none placeholder:text-white/20 font-mono text-base"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleStart();
+                    }}
+                    className="w-full bg-transparent px-4 py-4 font-mono text-base text-white outline-none placeholder:text-white/20"
                   />
                   <button
                     onClick={handleStart}
                     disabled={!inputValue}
                     aria-label="Start clipping"
-                    className="shrink-0 bg-white text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-sm flex items-center gap-2 hover:bg-white/90 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(255,255,255,0.15)]"
+                    className="flex shrink-0 items-center gap-2 rounded-xl bg-white px-8 py-4 text-sm font-black tracking-widest text-black uppercase shadow-[0_0_30px_rgba(255,255,255,0.15)] transition-all hover:bg-white/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30"
                   >
-                    CLIP <ArrowRight className="w-4 h-4" />
+                    CLIP <ArrowRight className="h-4 w-4" />
                   </button>
                 </div>
               </motion.div>
@@ -391,12 +437,12 @@ export const InteractiveHero = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.0 }}
-                className="flex items-center gap-4 sm:gap-6 mt-8 text-white/20 text-[10px] sm:text-xs font-mono uppercase tracking-widest flex-wrap justify-center lg:justify-start"
+                className="mt-8 flex flex-wrap items-center justify-center gap-4 font-mono text-[10px] tracking-widest text-white/20 uppercase sm:gap-6 sm:text-xs lg:justify-start"
               >
                 <span>No signup required</span>
-                <span className="w-1 h-1 rounded-full bg-white/20" />
+                <span className="h-1 w-1 rounded-full bg-white/20" />
                 <span>Free to try</span>
-                <span className="w-1 h-1 rounded-full bg-white/20" />
+                <span className="h-1 w-1 rounded-full bg-white/20" />
                 <span>Instant results</span>
               </motion.div>
             </div>
@@ -413,7 +459,7 @@ export const InteractiveHero = () => {
             initial={{ opacity: 0, filter: "blur(20px)" }}
             animate={{ opacity: 1, filter: "blur(0px)" }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className="w-full max-w-6xl z-10 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-16 items-center"
+            className="z-10 grid w-full max-w-6xl grid-cols-1 items-center gap-8 md:grid-cols-2 md:gap-16"
             style={{ perspective: "2000px" }}
           >
             {/* Terminal View */}
@@ -423,11 +469,12 @@ export const InteractiveHero = () => {
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
               style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-              className="flex flex-col font-mono text-sm bg-[#0a0a0a] p-6 md:p-8 border border-white/[0.08] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] rounded-3xl h-[400px] md:h-[500px]"
+              className="flex h-[400px] flex-col rounded-3xl border border-white/[0.08] bg-[#0a0a0a] p-6 font-mono text-sm shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] md:h-[500px] md:p-8"
             >
-              <div className="text-white/40 flex items-center justify-between mb-6 pb-6 border-b border-white/[0.06]">
-                <span className="flex items-center gap-3 font-bold uppercase tracking-[0.2em] text-[10px]">
-                  <Loader2 className="w-4 h-4 animate-spin text-white/60" /> PROCESSING_SOURCE
+              <div className="mb-6 flex items-center justify-between border-b border-white/[0.06] pb-6 text-white/40">
+                <span className="flex items-center gap-3 text-[10px] font-bold tracking-[0.2em] uppercase">
+                  <Loader2 className="h-4 w-4 animate-spin text-white/60" />{" "}
+                  PROCESSING_SOURCE
                 </span>
                 {/* Reset button */}
                 {showResult && (
@@ -435,9 +482,9 @@ export const InteractiveHero = () => {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     onClick={handleReset}
-                    className="flex items-center gap-2 text-white/40 hover:text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/30 hover:bg-white/5 transition-all"
+                    className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-1.5 text-[10px] font-bold tracking-widest text-white/40 uppercase transition-all hover:border-white/30 hover:bg-white/5 hover:text-white"
                   >
-                    <RotateCcw className="w-3 h-3" /> Try Another
+                    <RotateCcw className="h-3 w-3" /> Try Another
                   </motion.button>
                 )}
               </div>
@@ -453,14 +500,20 @@ export const InteractiveHero = () => {
                       animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
                       transition={{ duration: 0.3 }}
                       className={cn(
-                        "flex gap-3 items-start",
+                        "flex items-start gap-3",
                         isPlus && "text-white/40",
-                        isStar && "text-white font-bold bg-white/[0.06] p-2.5 rounded-lg",
+                        isStar &&
+                          "rounded-lg bg-white/[0.06] p-2.5 font-bold text-white",
                         isTilde && "text-white/30 italic",
-                        !isPlus && !isStar && !isTilde && "text-white/60 font-bold"
+                        !isPlus &&
+                          !isStar &&
+                          !isTilde &&
+                          "font-bold text-white/60",
                       )}
                     >
-                      {isStar && <span className="animate-pulse bg-white w-1.5 h-4 rounded-full block mt-0.5 shrink-0" />}
+                      {isStar && (
+                        <span className="mt-0.5 block h-4 w-1.5 shrink-0 animate-pulse rounded-full bg-white" />
+                      )}
                       {log}
                     </motion.div>
                   );
@@ -469,24 +522,27 @@ export const InteractiveHero = () => {
             </motion.div>
 
             {/* Generated Clip Preview */}
-            <div className="flex justify-center" style={{ perspective: "2000px" }}>
+            <div
+              className="flex justify-center"
+              style={{ perspective: "2000px" }}
+            >
               <AnimatePresence>
                 {showResult && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.8, rotateY: 30, z: -200 }}
                     animate={{ opacity: 1, scale: 1, rotateY: -8, z: 0 }}
                     transition={{ type: "spring", damping: 25, stiffness: 120 }}
-                    className="relative w-[260px] h-[462px] md:w-[300px] md:h-[534px] bg-black border-[8px] border-[#111] rounded-[44px] overflow-hidden shadow-[0_0_80px_rgba(255,255,255,0.08)] flex items-center justify-center group"
+                    className="group relative flex h-[462px] w-[260px] items-center justify-center overflow-hidden rounded-[44px] border-[8px] border-[#111] bg-black shadow-[0_0_80px_rgba(255,255,255,0.08)] md:h-[534px] md:w-[300px]"
                   >
                     <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 via-neutral-900 to-black" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
 
-                    <div className="absolute top-1/2 left-0 w-full flex flex-col items-center -translate-y-1/2 z-20 pointer-events-none">
+                    <div className="pointer-events-none absolute top-1/2 left-0 z-20 flex w-full -translate-y-1/2 flex-col items-center">
                       <motion.div
                         initial={{ opacity: 0, y: 20, scale: 0.8 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ delay: 0.2, type: "spring" }}
-                        className="bg-white text-black font-black px-4 py-2 text-2xl uppercase italic whitespace-nowrap -rotate-2"
+                        className="-rotate-2 bg-white px-4 py-2 text-2xl font-black whitespace-nowrap text-black uppercase italic"
                       >
                         THE PERFECT
                       </motion.div>
@@ -494,7 +550,7 @@ export const InteractiveHero = () => {
                         initial={{ opacity: 0, y: 20, scale: 0.8 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         transition={{ delay: 0.4, type: "spring" }}
-                        className="text-white font-black px-4 py-2 text-4xl uppercase italic whitespace-nowrap drop-shadow-[0_8px_8px_rgba(0,0,0,0.8)]"
+                        className="px-4 py-2 text-4xl font-black whitespace-nowrap text-white uppercase italic drop-shadow-[0_8px_8px_rgba(0,0,0,0.8)]"
                       >
                         HOOK.
                       </motion.div>
@@ -504,13 +560,13 @@ export const InteractiveHero = () => {
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.8 }}
-                      className="absolute bottom-8 inset-x-6 flex justify-center z-30"
+                      className="absolute inset-x-6 bottom-8 z-30 flex justify-center"
                     >
                       <button
                         onClick={handleReset}
-                        className="bg-white text-black font-black uppercase tracking-widest py-3.5 px-10 rounded-full w-full flex justify-center items-center gap-2 text-sm hover:scale-105 active:scale-95 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                        className="flex w-full items-center justify-center gap-2 rounded-full bg-white px-10 py-3.5 text-sm font-black tracking-widest text-black uppercase shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-transform hover:scale-105 active:scale-95"
                       >
-                        <RotateCcw className="w-4 h-4" /> CLIP ANOTHER
+                        <RotateCcw className="h-4 w-4" /> CLIP ANOTHER
                       </button>
                     </motion.div>
                   </motion.div>

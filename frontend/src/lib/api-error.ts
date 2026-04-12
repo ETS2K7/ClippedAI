@@ -37,7 +37,7 @@ function normalizeMessage(payload: ErrorPayload, fallback: string): string {
 
 export async function parseApiError(
   response: Response,
-  fallbackMessage: string
+  fallbackMessage: string,
 ): Promise<ApiErrorInfo> {
   const traceHeader = response.headers.get("x-trace-id");
   let payload: ErrorPayload = {};
@@ -59,7 +59,10 @@ export async function parseApiError(
   };
 }
 
-export function formatSupportMessage({ message, traceId }: ApiErrorInfo): string {
+export function formatSupportMessage({
+  message,
+  traceId,
+}: ApiErrorInfo): string {
   if (!traceId) {
     return message;
   }

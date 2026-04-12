@@ -29,6 +29,10 @@ class ProcessVideoRequest(BaseModel):
     user_id: str | None = None
     webhook_url: str | None = None
     webhook_secret: str | None = None
+    # Formatting Configuration (Architecture Bridge)
+    font_family: str | None = None
+    font_color: str | None = None
+    font_size: int | None = None
 
 image = (modal.Image.debian_slim(python_version="3.10")
     .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget"])

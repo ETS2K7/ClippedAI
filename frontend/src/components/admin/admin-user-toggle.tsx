@@ -10,7 +10,11 @@ interface AdminUserToggleProps {
   isCurrentUser: boolean;
 }
 
-export function AdminUserToggle({ userId, isAdmin, isCurrentUser }: AdminUserToggleProps) {
+export function AdminUserToggle({
+  userId,
+  isAdmin,
+  isCurrentUser,
+}: AdminUserToggleProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -39,7 +43,11 @@ export function AdminUserToggle({ userId, isAdmin, isCurrentUser }: AdminUserTog
 
       router.refresh();
     } catch (toggleError) {
-      setError(toggleError instanceof Error ? toggleError.message : "Failed to update user");
+      setError(
+        toggleError instanceof Error
+          ? toggleError.message
+          : "Failed to update user",
+      );
     } finally {
       setIsLoading(false);
     }

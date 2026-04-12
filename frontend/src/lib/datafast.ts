@@ -22,7 +22,9 @@ const dataFastDomain = process.env.NEXT_PUBLIC_DATAFAST_DOMAIN;
 
 const isClient = () => typeof window !== "undefined";
 
-export const isDataFastConfigured = Boolean(dataFastWebsiteId && dataFastDomain);
+export const isDataFastConfigured = Boolean(
+  dataFastWebsiteId && dataFastDomain,
+);
 
 const sanitizeKey = (key: string) =>
   key

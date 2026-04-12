@@ -14,7 +14,7 @@ const bodySchema = z.object({
  */
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ userId: string }> }
+  { params }: { params: Promise<{ userId: string }> },
 ) {
   const result = await requireAdmin();
   if (result instanceof NextResponse) return result;

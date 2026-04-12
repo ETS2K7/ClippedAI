@@ -28,7 +28,10 @@ function toISO(val: Date | number | string): string {
 }
 
 /** Derive a human-readable title from a file record. */
-function getSourceTitle(file: { displayName?: string | null; s3Key: string }): string {
+function getSourceTitle(file: {
+  displayName?: string | null;
+  s3Key: string;
+}): string {
   if (file.displayName) return file.displayName;
   // YouTube keys look like: youtube-downloads/<userId>-<ts>/<videoId>/original.mp4
   const parts = file.s3Key.split("/");
@@ -47,19 +50,24 @@ async function getPresignedUrl(s3Key: string): Promise<string | null> {
     return await getSignedUrl(
       s3Client,
       new GetObjectCommand({ Bucket: env.S3_BUCKET_NAME, Key: s3Key }),
-      { expiresIn: 3600 }
+      { expiresIn: 3600 },
     );
   } catch {
     return null;
   }
 }
 
-async function getThumbnailUrl(thumbnailKey: string | null): Promise<string | null> {
+async function getThumbnailUrl(
+  thumbnailKey: string | null,
+): Promise<string | null> {
   if (!thumbnailKey) return null;
   return getPresignedUrl(thumbnailKey);
 }
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
@@ -89,7 +97,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         created_at: toISO(clip.createdAt),
         task_id: file.id,
       };
-    })
+    }),
   );
 
   return NextResponse.json({
@@ -104,20 +112,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   });
 }
 
-
-
 /**
  * DELETE /api/tasks/[id]
  * Deletes the task, all associated S3 objects, and all DB clips (cascade via Prisma schema).
  */
-export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const session = await auth();
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
 
   const file = await db.uploadedFile.findUnique({
     where: { id, userId: session.user.id },
-    select: { id: true, s3Key: true, clips: { select: { s3Key: true, thumbnailKey: true } } },
+    select: {
+      id: true,
+      s3Key: true,
+      clips: { select: { s3Key: true, thumbnailKey: true } },
+    },
   });
 
   if (!file) return new NextResponse(null, { status: 404 });
@@ -139,7 +152,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
             Objects: keysToDelete.map((k) => ({ Key: k })),
             Quiet: true,
           },
-        })
+        }),
       );
     } catch (err) {
       console.error("[tasks/DELETE] Failed to cleanup S3 objects:", err);
@@ -151,4 +164,3 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
 
   return new NextResponse(null, { status: 204 });
 }
-
