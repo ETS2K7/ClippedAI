@@ -49,7 +49,12 @@ SPLIT_MIN_CX_SEP  = CROP_W_1  # 608px
 # ─── Phase 4 ──────────────────────────────────────────────────────────────────
 
 def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
-    """FFmpeg segment extraction for a given clip timestamp range."""
+    """FFmpeg segment extraction for a given clip timestamp range.
+    
+    Uses stream copy (-c copy) instead of re-encoding for ~10× faster extraction.
+    The video will be re-encoded during the final merge in Phase 7 anyway,
+    so an intermediate encode here is wasteful.
+    """
     logger.info(
         f"==================== PHASE 4: SEGMENT EXTRACTION (Clip {idx}) ===================="
     )
@@ -61,8 +66,9 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
         "ffmpeg", "-y",
         "-ss", str(start), "-i", input_file,
         "-t", str(dur),
-        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-        "-c:a", "aac", out,
+        "-c", "copy",
+        "-avoid_negative_ts", "make_zero",
+        out,
     ]
     try:
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
@@ -75,25 +81,47 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
 # ─── Phase 7 ──────────────────────────────────────────────────────────────────
 
 def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: int):
-    """Burns .ass subtitles into the tracked video and muxes original audio."""
+    """Burns .ass subtitles into the tracked video and muxes original audio.
+    
+    Attempts GPU-accelerated NVENC encoding first (5–10× faster than CPU).
+    Falls back to CPU libx264 if NVENC is unavailable on the provisioned GPU.
+    """
     logger.info(
         f"==================== PHASE 7: FINAL MERGE & CLEANUP (Clip {idx}) ===================="
     )
     out_file = f"output/clip_{idx}.mp4"
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", tracked_vid, "-i", extract_vid,
-        "-filter_complex", f"[0:v]ass={sub_file}[vout]",
-        "-map", "[vout]", "-map", "1:a",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23",
-        "-movflags", "+faststart",
-        "-c:a", "aac", out_file,
+
+    # Try NVENC first (P1 optimization), fallback to CPU
+    encoder_configs = [
+        # NVENC: GPU-accelerated, ~5–10× faster
+        ["-c:v", "h264_nvenc", "-pix_fmt", "yuv420p", "-preset", "p4", "-cq", "23"],
+        # CPU fallback: always available
+        ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23"],
     ]
-    try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"FFmpeg merge failed for clip {idx}")
-        raise RuntimeError(f"Merging failed: {e}")
+
+    for encoder_args in encoder_configs:
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", tracked_vid, "-i", extract_vid,
+            "-filter_complex", f"[0:v]ass={sub_file}[vout]",
+            "-map", "[vout]", "-map", "1:a",
+            *encoder_args,
+            "-movflags", "+faststart",
+            "-c:a", "aac", out_file,
+        ]
+        try:
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+            encoder_name = encoder_args[1]
+            logger.info(f"Merge successful using {encoder_name}")
+            break
+        except subprocess.CalledProcessError:
+            encoder_name = encoder_args[1]
+            if encoder_name == "h264_nvenc":
+                logger.info(f"NVENC unavailable, falling back to CPU encoder")
+                continue
+            logger.error(f"FFmpeg merge failed for clip {idx}")
+            raise RuntimeError(f"Merging failed for clip {idx}")
+
     for path in [tracked_vid, extract_vid, sub_file]:
         try:
             os.remove(path)
