@@ -23,11 +23,9 @@ logger = get_logger(__name__)
 
 
 def _create_s3_client():
-    """Creates an S3 client with Transfer Acceleration enabled.
-    Falls back to standard endpoint if acceleration is not configured on the bucket."""
+    """Creates a standard S3 client."""
     try:
         return boto3.client("s3", config=BotoConfig(
-            s3={"use_accelerate_endpoint": True},
             max_pool_connections=20,
         ))
     except Exception:

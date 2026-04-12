@@ -82,8 +82,7 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
     logger.info("Requesting transcription...")
     json_payload = {
         "audio_url": upload_url,
-        # AssemblyAI v2: singular string key, value is the model name
-        "speech_model": "universal_2",
+        # Fallback to AssemblyAI default (Universal) by omitting deprecated speech_model.
         "speaker_labels": True,
     }
 
