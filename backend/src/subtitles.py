@@ -1,7 +1,39 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from config import get_logger
 
 logger = get_logger(__name__)
+
+# ─── Default subtitle styling ─────────────────────────────────────────────────
+DEFAULT_FONT_FAMILY = "Arial Black"
+DEFAULT_FONT_SIZE = 50
+DEFAULT_FONT_COLOR = "&H00FFFFFF"   # ASS format: white
+DEFAULT_KARAOKE_COLOR = "&H0000FF00"  # ASS format: green
+
+
+def _hex_to_ass_color(hex_color: str) -> str:
+    """Converts a hex color string (#RRGGBB or RRGGBB) to ASS format (&H00BBGGRR).
+    Returns the default white if parsing fails."""
+    try:
+        hex_color = hex_color.lstrip("#")
+        if len(hex_color) != 6:
+            return DEFAULT_FONT_COLOR
+        r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+        return f"&H00{b:02X}{g:02X}{r:02X}"
+    except (ValueError, TypeError):
+        return DEFAULT_FONT_COLOR
+
+
+def _pick_karaoke_color(primary_ass_color: str) -> str:
+    """Picks a contrasting karaoke highlight color based on the primary font color.
+    Green for white/light text, yellow for dark text."""
+    # If the primary color is white or near-white, use green highlight
+    if primary_ass_color.upper() in ("&H00FFFFFF", "&HFFFFFFFF"):
+        return "&H0000FF00"  # green
+    # If the primary color is green, use yellow to avoid collision
+    if "00FF00" in primary_ass_color.upper():
+        return "&H0000FFFF"  # yellow
+    # Default: green contrasts well with most colors
+    return "&H0000FF00"
 
 
 def ms_to_ass_time(ms: float) -> str:
@@ -18,10 +50,18 @@ def generate_subtitles(
     clip: Dict[str, Any],
     idx: int,
     framing_meta: List[Dict[str, Any]],
+    font_family: Optional[str] = None,
+    font_size: Optional[int] = None,
+    font_color: Optional[str] = None,
 ) -> str:
     """
     Generates an .ASS subtitle file dynamically mapping words iteratively to
     the bounding box framing logic dictating its positional styling.
+
+    Accepts optional font configuration from the frontend typography bridge:
+      - font_family: e.g. "Montserrat", "Impact" (default: "Arial Black")
+      - font_size:   e.g. 40, 60 (default: 50)
+      - font_color:  hex string e.g. "#FFFFFF", "#FFD700" (default: white)
     """
     logger.info(
         f"==================== PHASE 6: SUBTITLE GENERATION (Clip {idx}) ===================="
@@ -29,6 +69,14 @@ def generate_subtitles(
     out = f"temp_subtitles_{idx}.ass"
     start_ms = clip["start_time"] * 1000
     end_ms = clip["end_time"] * 1000
+
+    # Resolve font configuration (frontend overrides → defaults)
+    resolved_family = font_family or DEFAULT_FONT_FAMILY
+    resolved_size = font_size or DEFAULT_FONT_SIZE
+    resolved_ass_color = _hex_to_ass_color(font_color) if font_color else DEFAULT_FONT_COLOR
+    karaoke_color = _pick_karaoke_color(resolved_ass_color)
+
+    logger.info(f"Subtitle style: {resolved_family} / {resolved_size}pt / color={resolved_ass_color}")
 
     def get_layout_for_time(ms: float) -> str:
         for meta in framing_meta:
@@ -40,7 +88,8 @@ def generate_subtitles(
         w for w in words if w.get("start", 0) >= start_ms and w.get("end", 0) <= end_ms
     ]
 
-    header = """[Script Info]
+    # Dynamically build ASS header with resolved font configuration
+    header = f"""[Script Info]
 ScriptType: v4.00+
 PlayResX: 1080
 PlayResY: 1920
@@ -48,7 +97,7 @@ WrapStyle: 1
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Hormozi,Arial Black,50,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,3,2,10,10,350,1
+Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,3,2,10,10,350,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -120,8 +169,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 clean_txt = raw_txt.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
                 if j == w_idx:
                     text_parts.append(
-                        f"{{\\c&H0000FF00&}}{clean_txt}{{\\c&H00FFFFFF&}}"
-                    )  # Green karaoke
+                        f"{{\\c{karaoke_color}&}}{clean_txt}{{\\c{resolved_ass_color}&}}"
+                    )  # Karaoke highlight
                 else:
                     text_parts.append(clean_txt)
 
@@ -135,3 +184,4 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             f.write(line + "\n")
 
     return out
+

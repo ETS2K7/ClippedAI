@@ -344,17 +344,48 @@ def track_speaker_and_frame(
     )
 
     # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
-    logger.info("Calling Modal Fast-ASD tracker...")
-    Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-    tracker = Tracker()
-    with open(clip_file, "rb") as vf:
-        video_bytes = vf.read()
+    # P3 optimization: run ASD locally instead of cross-Modal remote call.
+    # Eliminates video serialization + network hop (~5-15s per clip).
+    import sys
+    import tempfile
+
+    tracking_data = None
+
+    # Try local ASD first (runs in-process, no network overhead)
     try:
-        result_json = tracker.process_video.remote(video_bytes)
-        tracking_data = json.loads(result_json)
-    except Exception as e:
-        logger.error(f"Fast-ASD tracker failed: {e}")
-        raise
+        import os as _os
+        _os.chdir("/fast-asd/talknet")
+        if "/fast-asd/talknet" not in sys.path:
+            sys.path.append("/fast-asd/talknet")
+        import demoTalkNet
+
+        logger.info("Running Fast-ASD locally (in-process)...")
+        tracking_data = demoTalkNet.main(
+            s=None,  # Will use global state from setup()
+            DET=None,
+            video_path=clip_file,
+            start_seconds=0,
+            end_seconds=-1,
+            return_visualization=False,
+            in_memory_threshold=0,
+        )
+        logger.info(f"Local ASD complete: {len(tracking_data)} frames tracked")
+    except Exception as local_err:
+        logger.warning(f"Local ASD failed ({local_err}), falling back to remote Modal call...")
+
+    # Fallback: remote Modal call (original path)
+    if tracking_data is None:
+        logger.info("Calling Modal Fast-ASD tracker (remote fallback)...")
+        Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+        tracker = Tracker()
+        with open(clip_file, "rb") as vf:
+            video_bytes = vf.read()
+        try:
+            result_json = tracker.process_video.remote(video_bytes)
+            tracking_data = json.loads(result_json)
+        except Exception as e:
+            logger.error(f"Fast-ASD tracker failed (both local and remote): {e}")
+            raise
 
     # ── 2. Video metadata ─────────────────────────────────────────────────────
     cap = cv2.VideoCapture(clip_file)

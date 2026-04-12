@@ -81,9 +81,28 @@ class ProcessVideoRequest(BaseModel):
     font_size: int | None = None
 
 image = (modal.Image.debian_slim(python_version="3.10")
-    .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget"])
+    .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git"])
     .pip_install_from_requirements("requirements.txt")
     .pip_install("apify-client")
+    # ── Fast-ASD dependencies (consolidated from separate Modal app) ──────
+    # Eliminates cross-container network hop (~5-15s saved per clip)
+    .pip_install(
+        "torch==2.1.2",
+        "torchvision==0.16.2",
+        "torchaudio==2.1.2",
+        "ffmpeg-python",
+        "gdown",
+        "python_speech_features",
+        "tqdm",
+        "pandas",
+    )
+    .run_commands(
+        "git clone https://github.com/sieve-community/fast-asd.git /fast-asd",
+        "mkdir -p /root/.cache/models",
+        "mkdir -p /root/model/faceDetector/s3fd",
+        "gdown --id 1AbN9fCf9IexMxEKXLQY2KYBlb-IhSEea -O /root/.cache/models/pretrain_TalkSet.model",
+        "wget -O /root/model/faceDetector/s3fd/sfd_face.pth https://storage.googleapis.com/mango-public-models/sfd_face.pth",
+    )
     .add_local_dir("src", remote_path="/root/src", copy=True)
     .add_local_file("config.py", remote_path="/root/config.py", copy=True)
 )
@@ -159,6 +178,9 @@ def _process_single_clip(
     s3_client,
     bucket: str,
     s3_key_dir: str,
+    font_family: str | None = None,
+    font_color: str | None = None,
+    font_size: int | None = None,
 ) -> str:
     """
     Processes a single clip through the full sub-pipeline:
@@ -170,7 +192,12 @@ def _process_single_clip(
     logger.info(f"--- Processing Clip {index + 1} (parallel) ---")
     ext_vid = extract_segment(video_path, clip, index)
     trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words)
-    sub_file = generate_subtitles(words, clip, index, chunk_meta)
+    sub_file = generate_subtitles(
+        words, clip, index, chunk_meta,
+        font_family=font_family,
+        font_size=font_size,
+        font_color=font_color,
+    )
     merge_and_cleanup(trk_vid, ext_vid, sub_file, index)
 
     clip_out_path = f"output/clip_{index}.mp4"
@@ -186,6 +213,9 @@ def _process_single_clip(
 def _process_video_pipeline(
     s3_key: str,
     youtube_url: str | None = None,
+    font_family: str | None = None,
+    font_color: str | None = None,
+    font_size: int | None = None,
 ) -> dict:
     """
     Shared video processing pipeline used by both CLI and HTTP endpoints.
@@ -245,6 +275,7 @@ def _process_video_pipeline(
                     _process_single_clip,
                     str(video_path), clip, index, words,
                     s3_client, bucket, s3_key_dir,
+                    font_family, font_color, font_size,
                 ): index
                 for index, clip in enumerate(clips)
             }
@@ -336,6 +367,23 @@ class ClippedAI:
             logger.info(f"NVENC available: {self._has_nvenc}")
         except Exception:
             self._has_nvenc = False
+
+        # Pre-load Fast-ASD TalkNet model into GPU memory (P3 optimization)
+        # Eliminates ~10s model loading delay on first request
+        import sys
+        import os as _os
+        _os.chdir("/fast-asd/talknet")
+        if "/fast-asd/talknet" not in sys.path:
+            sys.path.append("/fast-asd/talknet")
+        try:
+            import demoTalkNet
+            self._asd_s, self._asd_DET = demoTalkNet.setup()
+            self._asd_module = demoTalkNet
+            logger.info("Fast-ASD TalkNet model pre-loaded into GPU memory ✓")
+        except Exception as e:
+            logger.warning(f"Fast-ASD pre-load failed (will use remote fallback): {e}")
+            self._asd_module = None
+
         logger.info("Container warm and ready.")
 
     @modal.method()
@@ -354,7 +402,13 @@ class ClippedAI:
 
         # Run the pipeline
         try:
-            result = _process_video_pipeline(request.s3_key, request.youtube_url)
+            result = _process_video_pipeline(
+                request.s3_key,
+                request.youtube_url,
+                font_family=request.font_family,
+                font_color=request.font_color,
+                font_size=request.font_size,
+            )
         except Exception as e:
             logger.error(f"Pipeline failed: {e}")
             result = {"status": "failed", "clips": [], "error": str(e)}
