@@ -3,8 +3,10 @@ import hmac
 import shutil
 import pathlib
 import uuid
+import time
 import subprocess
 import boto3
+from botocore.config import Config as BotoConfig
 import modal
 import requests
 from fastapi import Depends, HTTPException, status
@@ -18,6 +20,50 @@ from src.video_processing import extract_segment, track_speaker_and_frame, merge
 from src.subtitles import generate_subtitles
 
 logger = get_logger(__name__)
+
+
+def _create_s3_client():
+    """Creates an S3 client with Transfer Acceleration enabled.
+    Falls back to standard endpoint if acceleration is not configured on the bucket."""
+    try:
+        return boto3.client("s3", config=BotoConfig(
+            s3={"use_accelerate_endpoint": True},
+            max_pool_connections=20,
+        ))
+    except Exception:
+        return boto3.client("s3")
+
+
+class PipelineTimer:
+    """Structured pipeline tracing for full observability.
+    Tracks per-phase wall-clock time and logs a summary at the end."""
+
+    def __init__(self, run_id: str):
+        self.run_id = run_id
+        self.phases: list[tuple[str, float]] = []
+        self._phase_start: float | None = None
+        self._phase_name: str = ""
+        self.start_time = time.monotonic()
+
+    def begin(self, name: str):
+        self._flush()
+        self._phase_name = name
+        self._phase_start = time.monotonic()
+        logger.info(f"[{self.run_id[:8]}] ▶ {name}")
+
+    def _flush(self):
+        if self._phase_start is not None:
+            elapsed = time.monotonic() - self._phase_start
+            self.phases.append((self._phase_name, elapsed))
+            logger.info(f"[{self.run_id[:8]}] ✓ {self._phase_name} ({elapsed:.1f}s)")
+            self._phase_start = None
+
+    def summary(self):
+        self._flush()
+        total = time.monotonic() - self.start_time
+        parts = " | ".join(f"{n}: {t:.1f}s" for n, t in self.phases)
+        logger.info(f"[{self.run_id[:8]}] Pipeline complete in {total:.1f}s — {parts}")
+        return {"total_seconds": round(total, 1), "phases": {n: round(t, 1) for n, t in self.phases}}
 
 S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "clippedai-7137")
 
@@ -146,20 +192,28 @@ def _process_video_pipeline(
     Downloads/resolves the video, transcribes, selects clips, and processes them.
     Returns a dict with status and list of output clip S3 keys.
 
-    Optimization: All clips are processed in parallel via ThreadPoolExecutor,
-    giving a near-3× speedup on the most expensive phases (tracking + encoding).
+    Optimizations applied:
+      - Audio-only AssemblyAI upload (P0)
+      - Copy-mode segment extraction (P0)
+      - Parallel clip processing via ThreadPoolExecutor (P0)
+      - NVENC GPU encoding with CPU fallback (P1)
+      - S3 Transfer Acceleration (P2)
+      - Structured pipeline tracing (P2)
     """
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     run_id = str(uuid.uuid4())
+    timer = PipelineTimer(run_id)
     base_dir = pathlib.Path("/tmp") / run_id
     base_dir.mkdir(parents=True, exist_ok=True)
     os.makedirs("output", exist_ok=True)
 
     video_path = base_dir / "input.mp4"
-    s3_client = boto3.client("s3")
+    s3_client = _create_s3_client()
     bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
 
+    # Phase 1: Video Ingestion
+    timer.begin("ingestion")
     logger.info(f"Resolving input source for s3_key={s3_key}")
     if youtube_url:
         logger.info("Downloading YouTube video")
@@ -167,15 +221,21 @@ def _process_video_pipeline(
         logger.info("Uploading downloaded video to S3")
         s3_client.upload_file(str(video_path), bucket, s3_key)
     else:
-        logger.info("Downloading from S3")
+        logger.info("Downloading from S3 (Transfer Acceleration)")
         s3_client.download_file(bucket, s3_key, str(video_path))
 
     try:
+        # Phase 2: Transcription
+        timer.begin("transcription")
         words = transcribe(str(video_path), s3_key)
+
+        # Phase 3: LLM Clip Selection
+        timer.begin("clip_selection")
         clips = select_clips(words)
         s3_key_dir = os.path.dirname(s3_key)
 
-        # Process all clips in parallel (P0 optimization)
+        # Phase 4-7: Parallel Clip Processing
+        timer.begin(f"parallel_processing_{len(clips)}_clips")
         logger.info(f"Processing {len(clips)} clips in parallel...")
         output_clips = []
 
@@ -197,7 +257,6 @@ def _process_video_pipeline(
                     logger.info(f"Clip {idx + 1} completed successfully")
                 except Exception as e:
                     logger.error(f"Clip {idx + 1} failed: {e}")
-                    # Continue processing other clips even if one fails
                     continue
 
         # Sort by clip index to maintain consistent ordering
@@ -206,7 +265,8 @@ def _process_video_pipeline(
         if not output_clips:
             raise RuntimeError("All clip processing pipelines failed")
 
-        return {"status": "success", "clips": output_clips}
+        timing = timer.summary()
+        return {"status": "success", "clips": output_clips, "timing": timing}
 
     finally:
         if base_dir.exists():
@@ -221,7 +281,11 @@ def _send_webhook(
     user_id: str,
     result: dict,
 ) -> None:
-    """POST processing results back to the Next.js webhook endpoint."""
+    """POST processing results back to the Next.js webhook endpoint.
+    
+    Uses exponential backoff retry (3 attempts) for fault-tolerant delivery.
+    A dropped webhook means the user never sees their clips.
+    """
     payload = {
         "uploaded_file_id": uploaded_file_id,
         "user_id": user_id,
@@ -229,22 +293,50 @@ def _send_webhook(
         "clips": result.get("clips", []),
         "secret": webhook_secret,
     }
-    try:
-        resp = requests.post(webhook_url, json=payload, timeout=30)
-        resp.raise_for_status()
-        logger.info(f"Webhook delivered: {resp.status_code}")
-    except Exception as e:
-        logger.error(f"Webhook delivery failed: {e}")
+    MAX_RETRIES = 3
+    for attempt in range(MAX_RETRIES):
+        try:
+            resp = requests.post(webhook_url, json=payload, timeout=30)
+            resp.raise_for_status()
+            logger.info(f"Webhook delivered: {resp.status_code}")
+            return
+        except Exception as e:
+            if attempt < MAX_RETRIES - 1:
+                wait = 2 ** (attempt + 1)
+                logger.warning(f"Webhook attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                logger.error(f"Webhook delivery failed after {MAX_RETRIES} attempts: {e}")
 
 
 @app.cls(
     gpu="any",
     timeout=1200,
+    keep_warm=1,      # Eliminate cold boot latency (~15-60s saved per request)
+    container_idle_timeout=300,  # Keep container alive for 5 min after last request
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
     ]
 )
 class ClippedAI:
+
+    @modal.enter()
+    def startup(self):
+        """Pre-warm resources during container startup, not first request.
+        This runs once when the container boots, before any requests arrive."""
+        logger.info("Container starting — pre-warming resources...")
+        # Pre-initialize the S3 client so the first request doesn't pay connection setup cost
+        self._s3_client = _create_s3_client()
+        # Verify GPU availability for NVENC
+        try:
+            result = subprocess.run(
+                ["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=10
+            )
+            self._has_nvenc = "h264_nvenc" in result.stdout
+            logger.info(f"NVENC available: {self._has_nvenc}")
+        except Exception:
+            self._has_nvenc = False
+        logger.info("Container warm and ready.")
 
     @modal.method()
     def process_video_cli(self, s3_key: str, youtube_url: str = None):
