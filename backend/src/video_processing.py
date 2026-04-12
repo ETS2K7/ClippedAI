@@ -153,18 +153,12 @@ def get_centered_crop(
     Returns a crop_w × crop_h strip of frame_img centred as close as possible
     to (cx, cy), clamped so the window never exits the frame boundaries.
 
-    Aspect-ratio guarantee (crop-to-fill):
-      The caller must pass crop_w and crop_h that share the same ratio as the
-      output cell.  When both dimensions are correct there is zero stretch.
-        Single-speaker (1080×1920): crop 608×1080  (horiz scale 1.776×, vert 1.777× — <0.1% off)
-        2-speaker half (1080×960):   crop 608×541   (horiz scale 1.776×, vert 1.774× — <0.1% off)
-        Side/quad (540×960):          crop 608×1080  (horiz scale 0.888×, vert 0.888× — exact)
-
-    cy / crop_h default (-1) means “use full frame height”.
+    cy / crop_h default (-1) means "use full frame height".
     """
     h_img, w_img = frame_img.shape[:2]
 
     # ─ Horizontal ───────────────────────────────────────────────────────
+    crop_w = min(crop_w, w_img)
     x1 = int(round(cx - crop_w / 2))
     x1 = max(0, min(w_img - crop_w, x1))
 
@@ -178,6 +172,46 @@ def get_centered_crop(
     y1 = max(0, min(h_img - crop_h, y1))
 
     return frame_img[y1: y1 + crop_h, x1: x1 + crop_w]
+
+
+def _ar_safe_crop(
+    frame: np.ndarray,
+    cx: float,
+    cy: float,
+    cell_w: int,
+    cell_h: int,
+) -> np.ndarray:
+    """
+    Aspect-ratio-safe crop-to-fill.
+
+    Computes the largest crop window that:
+      1. Fits entirely within the source frame
+      2. Has the EXACT same aspect ratio as the target output cell (cell_w × cell_h)
+      3. Is centred on (cx, cy)
+      4. Maximises coverage (up to CROP_W_1 pixels wide)
+
+    This guarantees zero distortion when the crop is resized to (cell_w, cell_h),
+    regardless of the input video resolution (720p, 1080p, 4K, portrait, etc.).
+
+    Math proof:
+      crop_w / crop_h == cell_w / cell_h
+      ⇒ resize(crop, (cell_w, cell_h)) applies the SAME scale factor to both axes
+      ⇒ no stretch or squash in any direction.
+    """
+    h_img, w_img = frame.shape[:2]
+    target_ar = cell_w / cell_h  # target aspect ratio (width/height)
+
+    # Start with the ideal crop width
+    crop_w = min(CROP_W_1, w_img)
+    crop_h = int(round(crop_w / target_ar))
+
+    # If the ideal height exceeds the frame, become height-constrained instead
+    if crop_h > h_img:
+        crop_h = h_img
+        crop_w = int(round(crop_h * target_ar))
+        crop_w = min(crop_w, w_img)
+
+    return get_centered_crop(frame, cx, crop_w, cy=cy, crop_h=crop_h)
 
 
 def _smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
@@ -210,40 +244,47 @@ def _stabilize_bool_state(
 
 
 # ─── Per-layout frame renderers ───────────────────────────────────────────────
+#
+# Every renderer now uses _ar_safe_crop to compute the crop window, guaranteeing
+# that the crop's aspect ratio exactly matches the output cell's aspect ratio.
+# This eliminates stretching/squashing for ALL input resolutions (720p, 1080p,
+# 4K, portrait, non-standard, etc.).
 
-def _cell_full(frame: np.ndarray, cx: float) -> np.ndarray:
-    """Single-speaker: 9:16 crop → 1080×1920."""
-    return cv2.resize(get_centered_crop(frame, cx, CROP_W_1), (OUT_W, OUT_H))
+def _cell_full(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
+    """Single-speaker: AR-safe crop → 1080×1920."""
+    return cv2.resize(_ar_safe_crop(frame, cx, cy, OUT_W, OUT_H), (OUT_W, OUT_H))
 
 
 def _cell_half(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
-    """
-    2-speaker top/bottom cell: 608×541 crop centred on (cx, cy) → 1080×960.
-    Using crop_h=541 instead of full 1080 keeps both scale axes at ~1.776×
-    (vs the 2× mismatch that caused visible stretching with crop_h=1080).
-    """
+    """2-speaker top/bottom cell: AR-safe crop → 1080×960."""
     return cv2.resize(
-        get_centered_crop(frame, cx, CROP_W_1, cy=cy, crop_h=CROP_H_HALF),
+        _ar_safe_crop(frame, cx, cy, OUT_W, OUT_H // 2),
         (OUT_W, OUT_H // 2),
     )
 
 
 def _cell_3_top(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
-    """3-speaker featured top cell: 608×541 → 1080×960 (same AR as 2-speaker half)."""
+    """3-speaker featured top cell: AR-safe crop → 1080×960."""
     return cv2.resize(
-        get_centered_crop(frame, cx, CROP_W_1, cy=cy, crop_h=CROP_H_HALF),
+        _ar_safe_crop(frame, cx, cy, OUT_W, OUT_H // 2),
         (OUT_W, OUT_H // 2),
     )
 
 
-def _cell_3_side(frame: np.ndarray, cx: float) -> np.ndarray:
-    """3-speaker bottom side cell: 608×1080 → 540×960 (scale axes match: 0.888×)."""
-    return cv2.resize(get_centered_crop(frame, cx, CROP_W_1), (OUT_W // 2, OUT_H // 2))
+def _cell_3_side(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
+    """3-speaker bottom side cell: AR-safe crop → 540×960."""
+    return cv2.resize(
+        _ar_safe_crop(frame, cx, cy, OUT_W // 2, OUT_H // 2),
+        (OUT_W // 2, OUT_H // 2),
+    )
 
 
-def _cell_quad(frame: np.ndarray, cx: float) -> np.ndarray:
-    """4-speaker cell: 608×1080 → 540×960 (scale axes match: 0.888×)."""
-    return cv2.resize(get_centered_crop(frame, cx, CROP_W_1), (OUT_W // 2, OUT_H // 2))
+def _cell_quad(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
+    """4-speaker cell: AR-safe crop → 540×960."""
+    return cv2.resize(
+        _ar_safe_crop(frame, cx, cy, OUT_W // 2, OUT_H // 2),
+        (OUT_W // 2, OUT_H // 2),
+    )
 
 
 def _render_split_2(
@@ -260,17 +301,17 @@ def _render_split_2(
 def _render_split_3(
     frame: np.ndarray,
     cx_top: float, cx_bl: float, cx_br: float,
-    cy_top: float,
+    cy_top: float, cy_bl: float, cy_br: float,
 ) -> np.ndarray:
     """
     1 + 2 layout:
-      Top  (full width 1080×960) — most central speaker, face-centred vertical crop.
-      Bottom left  (540×960)     — left speaker,  full-height crop.
-      Bottom right (540×960)     — right speaker, full-height crop.
+      Top  (full width 1080×960) — featured speaker, face-centred vertical crop.
+      Bottom left  (540×960)     — left speaker, face-centred crop.
+      Bottom right (540×960)     — right speaker, face-centred crop.
     """
     top       = _cell_3_top(frame, cx_top, cy_top)
-    bot_left  = _cell_3_side(frame, cx_bl)
-    bot_right = _cell_3_side(frame, cx_br)
+    bot_left  = _cell_3_side(frame, cx_bl, cy_bl)
+    bot_right = _cell_3_side(frame, cx_br, cy_br)
     bottom    = cv2.hconcat([bot_left, bot_right])
     return cv2.vconcat([top, bottom])
 
@@ -279,17 +320,18 @@ def _render_split_4(
     frame: np.ndarray,
     cx_tl: float, cx_tr: float,
     cx_bl: float, cx_br: float,
+    cy_tl: float, cy_tr: float,
+    cy_bl: float, cy_br: float,
 ) -> np.ndarray:
     """
     2 × 2 grid (each cell 540×960, 9:16):
       Top row:    leftmost speaker | second speaker
       Bottom row: third speaker   | rightmost speaker
-    Speakers are assigned left→right in each row maintaining physical order.
     """
-    tl = _cell_quad(frame, cx_tl)
-    tr = _cell_quad(frame, cx_tr)
-    bl = _cell_quad(frame, cx_bl)
-    br = _cell_quad(frame, cx_br)
+    tl = _cell_quad(frame, cx_tl, cy_tl)
+    tr = _cell_quad(frame, cx_tr, cy_tr)
+    bl = _cell_quad(frame, cx_bl, cy_bl)
+    br = _cell_quad(frame, cx_br, cy_br)
     top = cv2.hconcat([tl, tr])
     bot = cv2.hconcat([bl, br])
     return cv2.vconcat([top, bot])
@@ -711,21 +753,27 @@ def track_speaker_and_frame(
             cy = smooth_spk_cy[fidx]   # shape (4,) cy per speaker slot
 
             if n == 4:
-                # 2×2 grid: full-height crops (608×1080), scale axes match for 540×960
-                out_frame = _render_split_4(frame, cx[0], cx[1], cx[2], cx[3])
+                # 2×2 grid: AR-safe crop per speaker → 540×960 cells
+                out_frame = _render_split_4(
+                    frame, cx[0], cx[1], cx[2], cx[3],
+                    cy[0], cy[1], cy[2], cy[3],
+                )
 
             elif n == 3:
-                # 1 + 2: top cell uses face-centred 541px vertical crop; sides are full height
+                # 1 + 2: top cell face-centred, bottom cells face-centred
                 # cx[0]=leftmost, cx[1]=middle (featured top), cx[2]=rightmost
-                out_frame = _render_split_3(frame, cx[1], cx[0], cx[2], cy[1])
+                out_frame = _render_split_3(
+                    frame, cx[1], cx[0], cx[2],
+                    cy[1], cy[0], cy[2],
+                )
 
             elif n == 2:
-                # Vertical stack: each cell is 608×541 face-centred crop → 1080×960
+                # Vertical stack: AR-safe crop per speaker → 1080×960 cells
                 out_frame = _render_split_2(frame, cx[0], cx[1], cy[0], cy[1])
 
             else:
-                # Single speaker: full 9:16 crop (608×1080 → 1080×1920)
-                out_frame = _cell_full(frame, cx[0])
+                # Single speaker: AR-safe 9:16 crop → 1080×1920
+                out_frame = _cell_full(frame, cx[0], cy[0])
 
             writer.write(out_frame)
     finally:
