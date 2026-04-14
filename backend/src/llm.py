@@ -1,3 +1,8 @@
+"""
+Module for interacting with Google's Gemini models for context-aware clip generation.
+"""
+
+import functools
 import json
 from typing import List, Dict, Any
 from pydantic import BaseModel
@@ -6,16 +11,9 @@ from config import get_logger, GEMINI_KEY
 
 logger = get_logger(__name__)
 
-# Lazy-initialised so importing this module doesn't crash when GEMINI_KEY is
-# absent (e.g. during unit tests or static analysis).
-_gemini_client = None
-
-
+@functools.lru_cache(maxsize=1)
 def _get_gemini_client():
-    global _gemini_client
-    if _gemini_client is None:
-        _gemini_client = genai.Client(api_key=GEMINI_KEY())
-    return _gemini_client
+    return genai.Client(api_key=GEMINI_KEY())
 
 
 class ClipSelection(BaseModel):
@@ -70,7 +68,8 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "You are a master TikTok video editor. Review the following transcript. "
         "Find the 3 most viral, engaging clips. Each must be exactly 30 to 60 seconds long. "
         "They must have a strong hook at the start and conclude an interesting point. "
-        "Return ONLY valid JSON wrapping the start and end timestamps natively found in the text.\n\n"
+        "Return ONLY valid JSON wrapping the start and end timestamps natively "
+        "found in the text.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -98,11 +97,16 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             last_error = e
             if attempt < MAX_RETRIES - 1:
                 wait = 2 ** (attempt + 1)
-                logger.warning(f"Gemini API call failed (attempt {attempt + 1}/{MAX_RETRIES}), retrying in {wait}s: {e}")
+                logger.warning(
+                    f"Gemini API call failed (attempt {attempt + 1}/{MAX_RETRIES}), "
+                    f"retrying in {wait}s: {e}"
+                )
                 _time.sleep(wait)
             else:
-                logger.error(f"Gemini API call failed after {MAX_RETRIES} attempts: {e}")
-                raise
+                logger.error(
+                    f"Gemini API call failed after {MAX_RETRIES} attempts: {e}"
+                )
+                raise RuntimeError("Gemini max retries exceeded.") from e
 
     try:
         data = json.loads(response.text)

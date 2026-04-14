@@ -1,12 +1,15 @@
+# pylint: disable=no-member,too-many-locals,too-many-statements,too-many-branches,too-many-arguments,too-many-positional-arguments
+
 import os
 import subprocess
 import json
+from typing import List, Dict, Any, Tuple
+
 import cv2
 import modal
 import numpy as np
-import scipy.ndimage as ndimage
 from scenedetect import detect, ContentDetector
-from typing import List, Dict, Any, Tuple
+
 from config import get_logger
 
 logger = get_logger(__name__)
@@ -74,7 +77,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
         logger.error(f"FFmpeg failed extracting segment {idx}")
-        raise RuntimeError(f"Extraction failed: {e}")
+        raise RuntimeError(f"Extraction failed: {e}") from e
     return out
 
 
@@ -110,17 +113,19 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
             "-c:a", "aac", out_file,
         ]
         try:
-            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+            res = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            if res.returncode != 0:
+                raise subprocess.CalledProcessError(res.returncode, cmd, res.stdout, res.stderr)
             encoder_name = encoder_args[1]
             logger.info(f"Merge successful using {encoder_name}")
             break
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
             encoder_name = encoder_args[1]
             if encoder_name == "h264_nvenc":
                 logger.info(f"NVENC unavailable, falling back to CPU encoder")
                 continue
             logger.error(f"FFmpeg merge failed for clip {idx}")
-            raise RuntimeError(f"Merging failed for clip {idx}")
+            raise RuntimeError(f"Merging failed for clip {idx}. FFmpeg Error: {e.stderr}") from e
 
     for path in [tracked_vid, extract_vid, sub_file]:
         try:
@@ -382,52 +387,22 @@ def track_speaker_and_frame(
     in genuine panel/multi-host footage.
     """
     logger.info(
-        f"==================== PHASE 5: SPEAKER TRACKING & FRAMING (Clip {idx}) ===================="
+        f"==================== PHASE 5: SPEAKER TRACKING & FRAMING (Clip {idx}) "
+        f"====================\n"
     )
 
     # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
-    # P3 optimization: run ASD locally instead of cross-Modal remote call.
-    # Eliminates video serialization + network hop (~5-15s per clip).
-    import sys
-    import tempfile
-
-    tracking_data = None
-
-    # Try local ASD first (runs in-process, no network overhead)
+    logger.info("Calling Modal Fast-ASD tracker...")
+    Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+    tracker = Tracker()
+    with open(clip_file, "rb") as vf:
+        video_bytes = vf.read()
     try:
-        import os as _os
-        _os.chdir("/fast-asd/talknet")
-        if "/fast-asd/talknet" not in sys.path:
-            sys.path.append("/fast-asd/talknet")
-        import demoTalkNet
-
-        logger.info("Running Fast-ASD locally (in-process)...")
-        tracking_data = demoTalkNet.main(
-            s=None,  # Will use global state from setup()
-            DET=None,
-            video_path=clip_file,
-            start_seconds=0,
-            end_seconds=-1,
-            return_visualization=False,
-            in_memory_threshold=0,
-        )
-        logger.info(f"Local ASD complete: {len(tracking_data)} frames tracked")
-    except Exception as local_err:
-        logger.warning(f"Local ASD failed ({local_err}), falling back to remote Modal call...")
-
-    # Fallback: remote Modal call (original path)
-    if tracking_data is None:
-        logger.info("Calling Modal Fast-ASD tracker (remote fallback)...")
-        Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-        tracker = Tracker()
-        with open(clip_file, "rb") as vf:
-            video_bytes = vf.read()
-        try:
-            result_json = tracker.process_video.remote(video_bytes)
-            tracking_data = json.loads(result_json)
-        except Exception as e:
-            logger.error(f"Fast-ASD tracker failed (both local and remote): {e}")
-            raise
+        result_json = tracker.process_video.remote(video_bytes)
+        tracking_data = json.loads(result_json)
+    except Exception as e:
+        logger.error(f"Fast-ASD tracker failed: {e}")
+        raise RuntimeError(f"ASD tracking failed: {e}") from e
 
     # ── 2. Video metadata ─────────────────────────────────────────────────────
     cap = cv2.VideoCapture(clip_file)
@@ -670,7 +645,7 @@ def track_speaker_and_frame(
         (3, MIN_SPLIT_3_ENTRY, MIN_SPLIT_3_GAP),
         (4, MIN_SPLIT_4_ENTRY, MIN_SPLIT_4_GAP),
     ]:
-        raw_mask   = (raw_n_spk >= n_level)
+        raw_mask   = raw_n_spk >= n_level
         stable_mask = _stabilize_bool_state(raw_mask, scene_boundaries, min_entry, min_gap)
         stable_n[stable_mask] = n_level   # higher counts overwrite lower
 
@@ -741,7 +716,9 @@ def track_speaker_and_frame(
         })
 
     # ── 10. Render ─────────────────────────────────────────────────────────────
-    cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+    # Re-open capture to reliably restart from frame 0 (fixes OpenCV seek bug)
+    cap.release()
+    cap = cv2.VideoCapture(clip_file)
     try:
         for fidx in range(frames_count):
             ret, frame = cap.read()

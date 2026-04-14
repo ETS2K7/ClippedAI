@@ -1,3 +1,7 @@
+"""
+Module for generating dynamic ASS subtitles with karaoke animations and layout boundaries.
+"""
+
 from typing import List, Dict, Any, Optional
 from config import get_logger
 
@@ -76,7 +80,10 @@ def generate_subtitles(
     resolved_ass_color = _hex_to_ass_color(font_color) if font_color else DEFAULT_FONT_COLOR
     karaoke_color = _pick_karaoke_color(resolved_ass_color)
 
-    logger.info(f"Subtitle style: {resolved_family} / {resolved_size}pt / color={resolved_ass_color}")
+    logger.info(
+        f"Subtitle style: {resolved_family} / {resolved_size}pt / "
+        f"color={resolved_ass_color}"
+    )
 
     def get_layout_for_time(ms: float) -> str:
         for meta in framing_meta:
@@ -106,8 +113,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     lines = []
     chunks = []
     current_chunk = []
-    MAX_WORDS = 3
-    MAX_PAUSE_MS = 300
+    max_words_per_chunk = 3
+    max_pause_ms = 300
 
     # 1. Group words chunks dynamically based on pause timers + string punctuation max length breaks
     for i, w in enumerate(clip_words):
@@ -118,8 +125,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             next_w = clip_words[i + 1]
             pause_dur = next_w.get("start", 0) - w.get("end", 0)
             ends_with_punct = any(str(w["text"]).endswith(p) for p in [".", "?", "!"])
-            too_long = len(current_chunk) >= MAX_WORDS
-            long_pause = pause_dur > MAX_PAUSE_MS
+            too_long = len(current_chunk) >= max_words_per_chunk
+            long_pause = pause_dur > max_pause_ms
 
             if ends_with_punct or too_long or long_pause:
                 chunks.append(current_chunk)
@@ -178,10 +185,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             line = f"Dialogue: 0,{ass_start},{ass_end},Hormozi,,0,0,0,,{full_text}"
             lines.append(line)
 
-    with open(out, "w") as f:
+    with open(out, "w", encoding="utf-8") as f:
         f.write(header)
         for line in lines:
             f.write(line + "\n")
 
     return out
-

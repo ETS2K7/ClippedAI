@@ -19,9 +19,12 @@ def download_video(url: str) -> str:
     Transcodes to H264 MP4 if necessary.
     """
     logger.info("==================== PHASE 1: DOWNLOAD ====================")
-    
+
     # Security: Strict validation to prevent yt-dlp parameter injection
-    if not isinstance(url, str) or not (url.startswith("https://www.youtube.com/") or url.startswith("https://youtu.be/")):
+    is_valid_url = isinstance(url, str) and (
+        url.startswith("https://www.youtube.com/") or url.startswith("https://youtu.be/")
+    )
+    if not is_valid_url:
         raise ValueError("Invalid URL: Must be a standard YouTube URL.")
 
     logger.info(f"Downloading {url}...")
@@ -41,7 +44,7 @@ def download_video(url: str) -> str:
         )
     except subprocess.CalledProcessError as e:
         logger.error(f"yt-dlp failed to download {url}")
-        raise RuntimeError(f"Download failed: {e}")
+        raise RuntimeError(f"Download failed: {e}") from e
 
     if not os.path.exists(MASTER_VIDEO_FILE):
         # yt-dlp may output a different extension like webm or mkv
@@ -71,7 +74,7 @@ def download_video(url: str) -> str:
                     os.remove(actual)
                 except subprocess.CalledProcessError as e:
                     logger.error(f"FFmpeg transcoding failed for {actual}")
-                    raise RuntimeError(f"Transcoding failed: {e}")
+                    raise RuntimeError(f"Transcoding failed: {e}") from e
         else:
             raise FileNotFoundError("Video downloaded but output file not found.")
 

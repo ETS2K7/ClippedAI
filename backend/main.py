@@ -82,25 +82,6 @@ image = (modal.Image.debian_slim(python_version="3.10")
     .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git"])
     .pip_install_from_requirements("requirements.txt")
     .pip_install("apify-client")
-    # ── Fast-ASD dependencies (consolidated from separate Modal app) ──────
-    # Eliminates cross-container network hop (~5-15s saved per clip)
-    .pip_install(
-        "torch==2.1.2",
-        "torchvision==0.16.2",
-        "torchaudio==2.1.2",
-        "ffmpeg-python",
-        "gdown",
-        "python_speech_features",
-        "tqdm",
-        "pandas",
-    )
-    .run_commands(
-        "git clone https://github.com/sieve-community/fast-asd.git /fast-asd",
-        "mkdir -p /root/.cache/models",
-        "mkdir -p /root/model/faceDetector/s3fd",
-        "gdown 1AbN9fCf9IexMxEKXLQY2KYBlb-IhSEea -O /root/.cache/models/pretrain_TalkSet.model",
-        "wget -O /root/model/faceDetector/s3fd/sfd_face.pth https://storage.googleapis.com/mango-public-models/sfd_face.pth",
-    )
     .add_local_dir("src", remote_path="/root/src", copy=True)
     .add_local_file("config.py", remote_path="/root/config.py", copy=True)
 )
@@ -266,6 +247,7 @@ def _process_video_pipeline(
         timer.begin(f"parallel_processing_{len(clips)}_clips")
         logger.info(f"Processing {len(clips)} clips in parallel...")
         output_clips = []
+        clip_errors = []
 
         with ThreadPoolExecutor(max_workers=len(clips)) as executor:
             future_to_idx = {
@@ -285,14 +267,17 @@ def _process_video_pipeline(
                     output_clips.append(clip_s3_key)
                     logger.info(f"Clip {idx + 1} completed successfully")
                 except Exception as e:
-                    logger.error(f"Clip {idx + 1} failed: {e}")
+                    import traceback
+                    tb = traceback.format_exc()
+                    logger.error(f"Clip {idx + 1} failed: {e}\n{tb}")
+                    clip_errors.append(f"Clip {idx + 1}: {e}")
                     continue
 
         # Sort by clip index to maintain consistent ordering
         output_clips.sort()
 
         if not output_clips:
-            raise RuntimeError("All clip processing pipelines failed")
+            raise RuntimeError(f"All clip processing pipelines failed. Details: {clip_errors}")
 
         timing = timer.summary()
         return {"status": "success", "clips": output_clips, "timing": timing}
@@ -366,21 +351,6 @@ class ClippedAI:
         except Exception:
             self._has_nvenc = False
 
-        # Pre-load Fast-ASD TalkNet model into GPU memory (P3 optimization)
-        # Eliminates ~10s model loading delay on first request
-        import sys
-        import os as _os
-        _os.chdir("/fast-asd/talknet")
-        if "/fast-asd/talknet" not in sys.path:
-            sys.path.append("/fast-asd/talknet")
-        try:
-            import demoTalkNet
-            self._asd_s, self._asd_DET = demoTalkNet.setup()
-            self._asd_module = demoTalkNet
-            logger.info("Fast-ASD TalkNet model pre-loaded into GPU memory ✓")
-        except Exception as e:
-            logger.warning(f"Fast-ASD pre-load failed (will use remote fallback): {e}")
-            self._asd_module = None
 
         logger.info("Container warm and ready.")
 
@@ -428,3 +398,8 @@ class ClippedAI:
 def run_cli_job(s3_key: str, youtube_url: str = None):
     print(f"Submitting job to Modal for s3_key: {s3_key}")
     ClippedAI().process_video_cli.remote(s3_key, youtube_url)
+
+@app.local_entrypoint()
+def main():
+    pass
+

@@ -1,8 +1,13 @@
+"""
+Module responsible for extracting lightweight audio payloads and polling AssemblyAI for high-accuracy transcripts and speaker diarization.
+"""
+
 import os
 import time
 import subprocess
-import requests
 from typing import List, Dict, Any
+
+import requests
 from config import get_logger, ASSEMBLYAI_KEY
 
 logger = get_logger(__name__)
@@ -86,6 +91,8 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
         "speaker_labels": True,
     }
 
+    logger.info(f"Submitting actual payload to AAI: {json_payload}")
+
     res = requests.post(
         "https://api.assemblyai.com/v2/transcript", headers=headers, json=json_payload,
         timeout=60,
@@ -96,7 +103,7 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
     transcript_id = res.json()["id"]
 
     logger.info(f"Polling transcription {transcript_id}...")
-    for attempt in range(MAX_POLL_ATTEMPTS):
+    for _ in range(MAX_POLL_ATTEMPTS):
         try:
             res = requests.get(
                 f"https://api.assemblyai.com/v2/transcript/{transcript_id}", headers=headers,
@@ -117,7 +124,8 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
             words = data["words"]
             logger.info("Transcription complete.")
             return words
-        elif status == "error":
+        
+        if status == "error":
             raise RuntimeError(f"AssemblyAI Error: {data.get('error')}")
 
         time.sleep(3)
