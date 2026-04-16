@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { env } from "~/env";
@@ -77,8 +77,9 @@ export async function POST(req: Request) {
         },
       });
 
-      // Fire-and-forget — Modal will call our webhook when done
-      fireModalJob(
+      // Must run after the response: an un-awaited fetch is often aborted when
+      // the route handler returns (standalone / serverless), so Modal never runs.
+      scheduleModalJob(
         generatedS3Key,
         newFile.id,
         session.user.id,
@@ -124,8 +125,7 @@ export async function POST(req: Request) {
       data: { uploaded: true, status: "processing" },
     });
 
-    // Fire-and-forget — Modal will call our webhook when done
-    fireModalJob(
+    scheduleModalJob(
       existing.s3Key,
       uploadedFileId,
       session.user.id,
@@ -146,10 +146,47 @@ export async function POST(req: Request) {
 }
 
 /**
- * Fire-and-forget POST to Modal. No polling, no waiting.
- * Modal will call POST /api/webhooks/modal when processing completes.
+ * POST to Modal after the HTTP response is sent so the outbound fetch is not
+ * aborted when the route handler finishes. Modal calls /api/webhooks/modal when done.
  */
-function fireModalJob(
+function scheduleModalJob(
+  s3Key: string,
+  uploadedFileId: string,
+  userId: string,
+  youtubeUrl?: string,
+  fontFamily?: string,
+  fontColor?: string,
+  fontSize?: number,
+) {
+  after(async () => {
+    try {
+      await dispatchModalJobToModal(
+        s3Key,
+        uploadedFileId,
+        userId,
+        youtubeUrl,
+        fontFamily,
+        fontColor,
+        fontSize,
+      );
+    } catch (err) {
+      console.error(`[Modal] Failed to fire job for ${uploadedFileId}:`, err);
+      await db.uploadedFile
+        .update({ where: { id: uploadedFileId }, data: { status: "failed" } })
+        .catch(() => null);
+    }
+  });
+}
+
+function modalDispatchAccepted(status: number): boolean {
+  if (status >= 200 && status < 300) return true;
+  // fetch(..., { redirect: "manual" }) — some gateways return redirects without a body
+  if (status === 301 || status === 302 || status === 303 || status === 307 || status === 308)
+    return true;
+  return false;
+}
+
+async function dispatchModalJobToModal(
   s3Key: string,
   uploadedFileId: string,
   userId: string,
@@ -164,7 +201,7 @@ function fireModalJob(
     `[Modal] Firing job for ${uploadedFileId} s3Key=${s3Key}${youtubeUrl ? ` youtubeUrl=${youtubeUrl}` : ""}`,
   );
 
-  fetch(env.PROCESS_VIDEO_ENDPOINT, {
+  const resp = await fetch(env.PROCESS_VIDEO_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -181,18 +218,20 @@ function fireModalJob(
       font_color: fontColor,
       font_size: fontSize,
     }),
-    redirect: "manual", // Modal may return 303 for async — that's fine, we don't need the result
-  })
-    .then((resp) => {
-      console.log(
-        `[Modal] Initial response: ${resp.status} for ${uploadedFileId}`,
-      );
-    })
-    .catch((err) => {
-      console.error(`[Modal] Failed to fire job for ${uploadedFileId}:`, err);
-      // Update status to failed since Modal never received the job
-      db.uploadedFile
-        .update({ where: { id: uploadedFileId }, data: { status: "failed" } })
-        .catch(() => null);
-    });
+    redirect: "manual",
+  });
+
+  if (modalDispatchAccepted(resp.status)) {
+    console.log(`[Modal] Initial response: ${resp.status} for ${uploadedFileId}`);
+    return;
+  }
+
+  const errBody = await resp.text().catch(() => "");
+  console.error(
+    `[Modal] Job rejected for ${uploadedFileId}: HTTP ${resp.status} ${errBody.slice(0, 800)}`,
+  );
+  await db.uploadedFile.update({
+    where: { id: uploadedFileId },
+    data: { status: "failed" },
+  });
 }
