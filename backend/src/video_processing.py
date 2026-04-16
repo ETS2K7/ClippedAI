@@ -53,10 +53,11 @@ SPLIT_MIN_CX_SEP  = CROP_W_1  # 608px
 
 def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
     """FFmpeg segment extraction for a given clip timestamp range.
-    
-    Uses stream copy (-c copy) instead of re-encoding for ~10× faster extraction.
-    The video will be re-encoded during the final merge in Phase 7 anyway,
-    so an intermediate encode here is wasteful.
+
+    Re-encodes to H.264 + AAC (not stream copy). YouTube / Apify often delivers
+    AV1-in-MP4 or WebM; stream-copied segments break OpenCV decoding and
+    scenedetect, producing empty tracked outputs and Phase 7 merge failures
+    (``[0:v]ass=...`` matches no streams).
     """
     logger.info(
         f"==================== PHASE 4: SEGMENT EXTRACTION (Clip {idx}) ===================="
@@ -67,10 +68,17 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
     logger.info(f"Extracting {out} [{start}s to {clip['end_time']}s]...")
     cmd = [
         "ffmpeg", "-y",
-        "-ss", str(start), "-i", input_file,
+        "-ss", str(start),
+        "-i", input_file,
         "-t", str(dur),
-        "-c", "copy",
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-preset", "veryfast",
+        "-crf", "23",
+        "-c:a", "aac",
+        "-b:a", "128k",
         "-avoid_negative_ts", "make_zero",
+        "-movflags", "+faststart",
         out,
     ]
     try:
