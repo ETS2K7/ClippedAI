@@ -431,42 +431,43 @@ export default function TaskPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-6 pb-20">
-              <div className="flex items-center gap-2 font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
+            <div className="pb-20">
+              <div className="mb-6 flex items-center gap-2 font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
                 <Clapperboard className="h-4 w-4 text-white" />
                 <span>
                   {clips.length} clip{clips.length !== 1 ? "s" : ""} generated
                 </span>
               </div>
 
-              {clips.map((clip, index) => (
-                <Card key={clip.id} className="brutal-card overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="flex flex-col lg:flex-row">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {clips.map((clip, index) => (
+                  <Card key={clip.id} className="brutal-card flex flex-col overflow-hidden">
+                    <CardContent className="flex flex-1 flex-col p-0">
                       {/* Video Player */}
-                      <div className="relative m-0 flex-shrink-0 overflow-hidden rounded-md border-r border-white/10 bg-black">
+                      <div className="relative isolate aspect-[9/16] w-full border-b border-white/10 bg-black">
                         <DynamicVideoPlayer
                           src={clip.video_url ?? ""}
                           poster={clip.thumbnail_url ?? undefined}
+                          className="absolute inset-0 h-full w-full"
                         />
                       </div>
 
                       {/* Clip Details */}
-                      <div className="flex-1 bg-black p-6">
-                        <div className="mb-8 flex items-start justify-between">
-                          <h3 className="font-syne mb-1 text-2xl font-black tracking-widest text-white uppercase">
-                            CLIP 0{index + 1}
+                      <div className="flex flex-1 flex-col bg-black p-5">
+                        <div className="mb-4 flex items-start justify-between">
+                          <h3 className="font-syne text-xl font-black tracking-widest text-white uppercase">
+                            CLIP {String(index + 1).padStart(2, "0")}
                           </h3>
                           <p className="font-mono text-[10px] font-bold tracking-widest text-white/30 tabular-nums">
                             {new Date(clip.created_at).toLocaleDateString()}
                           </p>
                         </div>
 
-                        <div className="flex flex-wrap gap-4">
+                        <div className="mt-auto flex gap-3">
                           <Button
                             size="default"
                             variant="outline"
-                            className="rounded-md border-white/20 font-mono text-[10px] font-bold tracking-widest uppercase transition-all hover:border-white hover:bg-white hover:text-black"
+                            className="flex-1 rounded-md border-white/20 font-mono text-[10px] font-bold tracking-widest uppercase transition-all hover:bg-white hover:text-black hover:border-white"
                             asChild
                           >
                             <a
@@ -474,24 +475,24 @@ export default function TaskPage() {
                               download={`clip_${index + 1}.mp4`}
                             >
                               <Download className="mr-2 h-4 w-4" />
-                              DOWNLOAD
+                              DL
                             </a>
                           </Button>
                           <Button
                             size="default"
                             variant="outline"
-                            className="rounded-md border-white/10 font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase transition-all hover:border-red-500 hover:text-red-500"
+                            className="flex-1 rounded-md border-white/10 font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase transition-all hover:text-red-500 hover:border-red-500"
                             onClick={() => setDeletingClipId(clip.id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            REMOVE
+                            DEL
                           </Button>
                         </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
         </div>

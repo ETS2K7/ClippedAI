@@ -20,16 +20,14 @@ const DynamicVideoPlayer: React.FC<DynamicVideoPlayerProps> = ({
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   return (
-    <div
-      className={`relative overflow-hidden rounded-lg ${className}`}
-      style={{ height: "min(70vh, 600px)", aspectRatio: "9 / 16" }}
-    >
+    <div className={`relative overflow-hidden ${className}`}>
       <video
         ref={videoRef}
         controls
         autoPlay={autoPlay}
         muted={muted}
         loop={loop}
+        playsInline
         {...(poster ? { poster } : {})}
         preload="metadata"
         className="absolute inset-0 h-full w-full bg-black object-contain"
