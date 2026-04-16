@@ -120,7 +120,7 @@ export default function Home() {
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
   const [currentStep, setCurrentStep] = useState("");
-  const [sourceType, setSourceType] = useState<"youtube" | "upload">("upload");
+  const [sourceType, setSourceType] = useState<"youtube" | "upload">("youtube");
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
