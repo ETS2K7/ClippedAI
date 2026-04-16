@@ -1,9 +1,14 @@
+import os
 import urllib.request
 import urllib.error
 import json
 import time
 
-url = "https://ebel-p25--clippedai-clippedai-process-video.modal.run"
+# Override with MODAL_PROCESS_VIDEO_URL for a different Modal workspace.
+url = os.getenv(
+    "MODAL_PROCESS_VIDEO_URL",
+    "https://ebelseiko--clippedai-clippedai-process-video.modal.run",
+)
 headers = {
     "Authorization": "Bearer 123123",
     "Content-Type": "application/json"

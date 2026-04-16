@@ -46,7 +46,7 @@ Add all of these in your GitHub repo at:
 
 | Secret Name | Value | Notes |
 |-------------|-------|-------|
-| `PROCESS_VIDEO_ENDPOINT` | `https://ebel-p25--clippedai-...modal.run` | From `modal deploy main.py` output |
+| `PROCESS_VIDEO_ENDPOINT` | `https://<workspace>--clippedai-clippedai-process-video.modal.run` | From `modal deploy main.py` (workspace = active `modal profile`, e.g. `ebelseiko`) |
 | `PROCESS_VIDEO_ENDPOINT_AUTH` | `<your modal auth token>` | |
 
 ---

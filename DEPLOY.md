@@ -189,6 +189,23 @@ sudo certbot renew --dry-run
 
 ---
 
+## Modal backend (GPU)
+
+Use the Modal profile you want (`modal profile list` / `modal profile activate <name>`). Deploy from `backend/`:
+
+```bash
+cd backend
+cp .env.example .env   # if needed — fill keys from .env.example
+
+# One-time per workspace: create the secret Modal injects into the app
+modal secret create clippedai-secret --from-dotenv .env --force
+
+modal deploy modal_fast_asd.py   # Fast-ASD TalkNet (separate app)
+modal deploy main.py             # prints PROCESS_VIDEO_ENDPOINT URL
+```
+
+Copy the `…--clippedai-clippedai-process-video.modal.run` URL into GitHub secret `PROCESS_VIDEO_ENDPOINT` and local `frontend/.env`. `AUTH_TOKEN` in `.env` must match `PROCESS_VIDEO_ENDPOINT_AUTH` on the frontend.
+
 ## YouTube Cookies (for yt-dlp)
 
 ```bash
