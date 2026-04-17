@@ -448,7 +448,7 @@ export default function TaskPage() {
                         <DynamicVideoPlayer
                           src={clip.video_url ?? ""}
                           poster={clip.thumbnail_url ?? undefined}
-                          className="absolute inset-0 h-full w-full"
+                          className="h-full w-full"
                         />
                       </div>
 

@@ -19,10 +19,13 @@ const DynamicVideoPlayer: React.FC<DynamicVideoPlayerProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  // Directly assign src to <video> element instead of <source> tags to
+  // bypass Safari/React hydration conflicts on hot module reloading.
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div className={`relative overflow-hidden w-full h-full ${className}`}>
       <video
         ref={videoRef}
+        src={src}
         controls
         autoPlay={autoPlay}
         muted={muted}
@@ -34,7 +37,6 @@ const DynamicVideoPlayer: React.FC<DynamicVideoPlayerProps> = ({
         tabIndex={0}
         aria-label="Video player"
       >
-        <source src={src} type="video/mp4" />
         Your browser does not support the video tag.
       </video>
     </div>
