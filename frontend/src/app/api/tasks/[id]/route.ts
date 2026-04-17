@@ -45,22 +45,36 @@ function getSourceType(s3Key: string): "youtube" | "upload" {
   return s3Key.startsWith("youtube-downloads/") ? "youtube" : "upload";
 }
 
-async function getPresignedUrl(s3Key: string): Promise<string | null> {
-  try {
-    return await getSignedUrl(
-      s3Client,
-      new GetObjectCommand({ Bucket: env.S3_BUCKET_NAME, Key: s3Key }),
-      { expiresIn: 3600 },
-    );
-  } catch {
-    return null;
-  }
+async function getPresignedUrl(key: string): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: env.S3_BUCKET_NAME,
+    Key: key,
+  });
+
+  return getSignedUrl(s3Client, command, {
+    expiresIn: 3600,
+  });
+}
+
+function shouldUseCloudFront(key: string): boolean {
+  // Use CloudFront for public content (thumbnails, HLS segments)
+  return (
+    !!env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN &&
+    (key.includes("thumb_") || key.includes("hls_"))
+  );
+}
+
+function getCloudFrontUrl(key: string): string {
+  return `https://${env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN}/${key}`;
 }
 
 async function getThumbnailUrl(
   thumbnailKey: string | null,
 ): Promise<string | null> {
   if (!thumbnailKey) return null;
+  if (shouldUseCloudFront(thumbnailKey)) {
+    return getCloudFrontUrl(thumbnailKey);
+  }
   return getPresignedUrl(thumbnailKey);
 }
 
@@ -70,7 +84,11 @@ async function getThumbnailUrls(
   if (!thumbnailKeys) return null;
   const urls: Record<string, string> = {};
   for (const [size, key] of Object.entries(thumbnailKeys)) {
-    urls[size] = await getPresignedUrl(key);
+    if (shouldUseCloudFront(key)) {
+      urls[size] = getCloudFrontUrl(key);
+    } else {
+      urls[size] = await getPresignedUrl(key);
+    }
   }
   return urls;
 }
@@ -79,6 +97,9 @@ async function getHlsUrl(
   hlsKey: string | null,
 ): Promise<string | null> {
   if (!hlsKey) return null;
+  if (shouldUseCloudFront(hlsKey)) {
+    return getCloudFrontUrl(hlsKey);
+  }
   return getPresignedUrl(hlsKey);
 }
 

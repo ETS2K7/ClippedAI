@@ -34,6 +34,8 @@ export const env = createEnv({
     NEXT_PUBLIC_DATAFAST_DOMAIN: z.string().optional(),
     // Set to "false" to enable monetization in self-hosted mode
     NEXT_PUBLIC_SELF_HOST: z.string().optional(),
+    // CloudFront CDN domain (optional — set to enable CDN)
+    NEXT_PUBLIC_CLOUDFRONT_DOMAIN: z.string().optional(),
   },
 
   runtimeEnv: {
@@ -57,6 +59,7 @@ export const env = createEnv({
       process.env.NEXT_PUBLIC_DATAFAST_WEBSITE_ID,
     NEXT_PUBLIC_DATAFAST_DOMAIN: process.env.NEXT_PUBLIC_DATAFAST_DOMAIN,
     NEXT_PUBLIC_SELF_HOST: process.env.NEXT_PUBLIC_SELF_HOST,
+    NEXT_PUBLIC_CLOUDFRONT_DOMAIN: process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
