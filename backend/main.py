@@ -183,7 +183,10 @@ def _process_single_clip(
     output_s3_key = f"{s3_key_dir}/clip_{index}.mp4"
 
     logger.info(f"Uploading clip {index + 1} to S3")
-    s3_client.upload_file(clip_out_path, bucket, output_s3_key)
+    s3_client.upload_file(
+        clip_out_path, bucket, output_s3_key,
+        ExtraArgs={"ContentType": "video/mp4"},
+    )
     os.remove(clip_out_path)
 
     return output_s3_key
