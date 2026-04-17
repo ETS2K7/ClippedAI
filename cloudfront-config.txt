@@ -1,0 +1,29 @@
+CloudFront CDN Configuration
+============================
+
+Distribution ID: E3P8ZFU3ABE014
+Distribution Domain: d1ow9b4wmhldwd.cloudfront.net
+OAI ID: E1FMPIJS726KE9
+OAI S3 Canonical User ID: f46d5ce8b841b621f5b39189fe79b82e8bce6f2ebccec9e7b7c1994a735e4e3862b8c3c527d449c4d9a5dded49bad5e0
+S3 Bucket: clippedai-ap-south-1
+S3 Bucket Region: ap-south-1
+
+Status: Distribution deploying (typically takes 10-15 minutes)
+
+Next Steps:
+1. Add the following to your frontend .env file:
+   NEXT_PUBLIC_CLOUDFRONT_DOMAIN=d1ow9b4wmhldwd.cloudfront.net
+
+2. Monitor deployment status:
+   aws cloudfront get-distribution --id E3P8ZFU3ABE014
+
+3. Once deployed, test the distribution:
+   curl -I https://d1ow9b4wmhldwd.cloudfront.net/path/to/file
+
+4. Check cache hit in response headers:
+   X-Cache: Hit from cloudfront
+
+Expected Results:
+- 50-200ms latency reduction
+- 30-40% bandwidth savings via cache hits
+- Global edge caching for thumbnails and HLS segments
