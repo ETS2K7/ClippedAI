@@ -345,7 +345,7 @@ export default function TaskPage() {
         </div>
 
         {/* Main Content */}
-        <div className="py-8">
+        <div className="mx-auto max-w-6xl px-4 py-8">
           {task?.status === "processing" ||
           task?.status === "queued" ||
           task?.status === "generating_clips" ? (
