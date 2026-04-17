@@ -75,6 +75,13 @@ async function getThumbnailUrls(
   return urls;
 }
 
+async function getHlsUrl(
+  hlsKey: string | null,
+): Promise<string | null> {
+  if (!hlsKey) return null;
+  return getPresignedUrl(hlsKey);
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -95,10 +102,11 @@ export async function GET(
   // Generate presigned URLs directly — avoids re-querying the DB for each clip (N+1)
   const clipsWithUrls = await Promise.all(
     file.clips.map(async (clip) => {
-      const [videoUrl, thumbnailUrl, thumbnailKeys] = await Promise.all([
+      const [videoUrl, thumbnailUrl, thumbnailKeys, hlsUrl] = await Promise.all([
         getPresignedUrl(clip.s3Key),
         getThumbnailUrl(clip.thumbnailKey ?? null),
-        getThumbnailUrls(clip.thumbnailKeys as Record<string, string> | null),
+        getThumbnailUrls((clip as any).thumbnailKeys as Record<string, string> | null),
+        getHlsUrl((clip as any).hlsKey ?? null),
       ]);
       return {
         id: clip.id,
@@ -106,6 +114,7 @@ export async function GET(
         video_url: videoUrl,
         thumbnail_url: thumbnailUrl,
         thumbnail_keys: thumbnailKeys,
+        hls_url: hlsUrl,
         video_path: clip.s3Key,
         created_at: toISO(clip.createdAt),
         task_id: file.id,

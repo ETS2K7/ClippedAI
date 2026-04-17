@@ -215,7 +215,71 @@ def _process_single_clip(
     # Use the largest thumbnail as default for backward compatibility
     output_thumb_key = output_thumb_keys.get("thumb_1280w")
 
-    # 2. Upload video with caching headers
+    # 2. Generate HLS segments with multiple quality renditions
+    logger.info(f"Generating HLS segments for clip {index + 1}")
+    hls_dir = f"output/hls_{index}"
+    os.makedirs(hls_dir, exist_ok=True)
+
+    # Generate multiple quality renditions
+    renditions = [
+        (480, "1000k", "480p"),
+        (720, "2000k", "720p"),
+        (1080, "3000k", "1080p"),
+    ]
+
+    for height, bitrate, name in renditions:
+        rendition_dir = f"{hls_dir}/{name}"
+        os.makedirs(rendition_dir, exist_ok=True)
+        
+        subprocess.run([
+            "ffmpeg", "-y", "-i", clip_out_path,
+            "-c:v", "libx264",
+            "-preset", "veryfast",
+            "-crf", "23",
+            "-maxrate", f"{bitrate}",
+            "-bufsize", f"{int(bitrate[:-1]) * 2}M",
+            "-vf", f"scale=-2:{height}",
+            "-g", "60",  # Keyframe every 2 seconds at 30fps
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-f", "hls",
+            "-hls_time", "2",
+            "-hls_playlist_type", "vod",
+            "-hls_segment_filename", f"{rendition_dir}/segment_%03d.ts",
+            f"{rendition_dir}/playlist.m3u8"
+        ], capture_output=True)
+
+    # Generate master playlist
+    master_playlist_path = f"{hls_dir}/master.m3u8"
+    with open(master_playlist_path, "w") as f:
+        f.write("#EXTM3U\n")
+        f.write("#EXT-X-VERSION:3\n")
+        for height, bitrate, name in renditions:
+            f.write(f"#EXT-X-STREAM-INF:BANDWIDTH={bitrate[:-1]}000,RESOLUTION={-2 if height == 480 else -2 if height == 720 else -2}x{height}\n")
+            f.write(f"{name}/playlist.m3u8\n")
+
+    # Upload HLS files to S3
+    hls_s3_key = f"{s3_key_dir}/hls_{index}"
+    for root, dirs, files in os.walk(hls_dir):
+        for file in files:
+            local_path = os.path.join(root, file)
+            relative_path = os.path.relpath(local_path, hls_dir)
+            s3_key = f"{hls_s3_key}/{relative_path}"
+            
+            content_type = "application/vnd.apple.mpegurl" if file.endswith(".m3u8") else "video/mp2t"
+            
+            s3_client.upload_file(
+                local_path, bucket, s3_key,
+                ExtraArgs={
+                    "ContentType": content_type,
+                    "CacheControl": "public, max-age=31536000, immutable",
+                },
+            )
+
+    # Clean up HLS directory
+    shutil.rmtree(hls_dir, ignore_errors=True)
+
+    # 3. Upload original video with caching headers
     logger.info(f"Uploading clip {index + 1} to S3")
     s3_client.upload_file(
         clip_out_path, bucket, output_s3_key,
@@ -227,7 +291,12 @@ def _process_single_clip(
 
     os.remove(clip_out_path)
 
-    return {"s3Key": output_s3_key, "thumbnailKey": output_thumb_key, "thumbnailKeys": output_thumb_keys}
+    return {
+        "s3Key": output_s3_key,
+        "thumbnailKey": output_thumb_key,
+        "thumbnailKeys": output_thumb_keys,
+        "hlsKey": f"{hls_s3_key}/master.m3u8",
+    }
 
 
 def _process_video_pipeline(
