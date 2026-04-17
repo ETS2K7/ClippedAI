@@ -180,40 +180,54 @@ def _process_single_clip(
     merge_and_cleanup(trk_vid, ext_vid, sub_file, index)
 
     clip_out_path = f"output/clip_{index}.mp4"
-    thumb_out_path = f"output/thumb_{index}.jpg"
+    # Generate multiple thumbnail sizes in WebP format
+    thumb_sizes = [
+        (320, "thumb_320w"),
+        (640, "thumb_640w"),
+        (1280, "thumb_1280w"),
+    ]
     output_s3_key = f"{s3_key_dir}/clip_{index}.mp4"
-    output_thumb_key = f"{s3_key_dir}/thumb_{index}.jpg"
+    output_thumb_keys = {}
 
-    # 1. Extract high-quality thumbnail (1.0s or first frame if shorter)
-    logger.info(f"Generating thumbnail for clip {index + 1}")
-    subprocess.run([
-        "ffmpeg", "-y", "-i", clip_out_path,
-        "-ss", "00:00:01", "-vframes", "1",
-        "-q:v", "2", "-f", "image2", thumb_out_path
-    ], capture_output=True)
+    # 1. Extract and generate thumbnails in multiple WebP sizes
+    logger.info(f"Generating thumbnails for clip {index + 1}")
+    for width, size_name in thumb_sizes:
+        thumb_out_path = f"output/{size_name}_{index}.webp"
+        subprocess.run([
+            "ffmpeg", "-y", "-i", clip_out_path,
+            "-ss", "00:00:01", "-vframes", "1",
+            "-vf", f"scale={width}:-2",
+            "-q:v", "80", "-f", "image2", thumb_out_path
+        ], capture_output=True)
 
-    # 2. Upload video
+        if os.path.exists(thumb_out_path):
+            thumb_key = f"{s3_key_dir}/{size_name}_{index}.webp"
+            output_thumb_keys[size_name] = thumb_key
+            s3_client.upload_file(
+                thumb_out_path, bucket, thumb_key,
+                ExtraArgs={
+                    "ContentType": "image/webp",
+                    "CacheControl": "public, max-age=31536000, immutable",
+                },
+            )
+            os.remove(thumb_out_path)
+
+    # Use the largest thumbnail as default for backward compatibility
+    output_thumb_key = output_thumb_keys.get("thumb_1280w")
+
+    # 2. Upload video with caching headers
     logger.info(f"Uploading clip {index + 1} to S3")
     s3_client.upload_file(
         clip_out_path, bucket, output_s3_key,
-        ExtraArgs={"ContentType": "video/mp4"},
+        ExtraArgs={
+            "ContentType": "video/mp4",
+            "CacheControl": "public, max-age=31536000, immutable",
+        },
     )
-
-    # 3. Upload thumbnail
-    if os.path.exists(thumb_out_path):
-        logger.info(f"Uploading thumbnail {index + 1} to S3")
-        s3_client.upload_file(
-            thumb_out_path, bucket, output_thumb_key,
-            ExtraArgs={"ContentType": "image/jpeg"},
-        )
-        os.remove(thumb_out_path)
-    else:
-        logger.warning(f"Thumbnail generation failed for clip {index + 1}")
-        output_thumb_key = None
 
     os.remove(clip_out_path)
 
-    return {"s3Key": output_s3_key, "thumbnailKey": output_thumb_key}
+    return {"s3Key": output_s3_key, "thumbnailKey": output_thumb_key, "thumbnailKeys": output_thumb_keys}
 
 
 def _process_video_pipeline(

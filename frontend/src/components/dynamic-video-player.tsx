@@ -3,6 +3,7 @@ import React, { forwardRef, useEffect } from "react";
 interface DynamicVideoPlayerProps {
   src: string;
   poster?: string;
+  thumbnailKeys?: Record<string, string>;
   autoPlay?: boolean;
   muted?: boolean;
   loop?: boolean;
@@ -16,6 +17,7 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
     {
       src,
       poster,
+      thumbnailKeys,
       autoPlay = false,
       muted = false,
       loop = false,
@@ -25,6 +27,16 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
     },
     ref,
   ) => {
+    // Generate srcset from thumbnailKeys if available
+    const srcset = thumbnailKeys
+      ? Object.entries(thumbnailKeys)
+          .map(([size, url]) => {
+            const width = size.replace("thumb_", "").replace("w", "");
+            return `${url} ${width}w`;
+          })
+          .join(", ")
+      : undefined;
+
     // Directly assign src to <video> element instead of <source> tags to
     // bypass Safari/React hydration conflicts on hot module reloading.
     return (
@@ -37,7 +49,13 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
           muted={muted}
           loop={loop}
           playsInline
-          {...(poster ? { poster, loading: "lazy" as const } : {})}
+          {...(poster || srcset
+            ? {
+                poster: poster,
+                ...(srcset && { "data-srcset": srcset }),
+                loading: "lazy" as const,
+              }
+            : {})}
           preload="metadata"
           className="absolute inset-0 h-full w-full bg-black object-contain"
           tabIndex={0}

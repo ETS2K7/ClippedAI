@@ -64,6 +64,17 @@ async function getThumbnailUrl(
   return getPresignedUrl(thumbnailKey);
 }
 
+async function getThumbnailUrls(
+  thumbnailKeys: Record<string, string> | null,
+): Promise<Record<string, string> | null> {
+  if (!thumbnailKeys) return null;
+  const urls: Record<string, string> = {};
+  for (const [size, key] of Object.entries(thumbnailKeys)) {
+    urls[size] = await getPresignedUrl(key);
+  }
+  return urls;
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -84,15 +95,17 @@ export async function GET(
   // Generate presigned URLs directly — avoids re-querying the DB for each clip (N+1)
   const clipsWithUrls = await Promise.all(
     file.clips.map(async (clip) => {
-      const [videoUrl, thumbnailUrl] = await Promise.all([
+      const [videoUrl, thumbnailUrl, thumbnailKeys] = await Promise.all([
         getPresignedUrl(clip.s3Key),
         getThumbnailUrl(clip.thumbnailKey ?? null),
+        getThumbnailUrls(clip.thumbnailKeys as Record<string, string> | null),
       ]);
       return {
         id: clip.id,
         // video_url is a full pre-signed S3 URL — do NOT prepend any base URL in the client
         video_url: videoUrl,
         thumbnail_url: thumbnailUrl,
+        thumbnail_keys: thumbnailKeys,
         video_path: clip.s3Key,
         created_at: toISO(clip.createdAt),
         task_id: file.id,

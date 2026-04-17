@@ -45,6 +45,7 @@ interface Clip {
   id: string;
   video_url: string | null;
   thumbnail_url: string | null;
+  thumbnail_keys?: Record<string, string>;
   video_path: string;
   created_at: string;
   task_id: string;
@@ -81,6 +82,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
               ref={videoRef}
               src={clip.video_url ?? ""}
               poster={clip.thumbnail_url ?? undefined}
+              thumbnailKeys={clip.thumbnail_keys}
               className="h-full w-full"
               onPlay={handlePlay}
             />
