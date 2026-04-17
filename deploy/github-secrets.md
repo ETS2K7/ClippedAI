@@ -42,6 +42,14 @@ Add all of these in your GitHub repo at:
 
 ---
 
+## CloudFront CDN (Optional)
+
+| Secret Name | Value | Notes |
+|-------------|-------|-------|
+| `NEXT_PUBLIC_CLOUDFRONT_DOMAIN` | `d1ow9b4wmhldwd.cloudfront.net` | Your CloudFront distribution domain |
+
+---
+
 ## Modal Backend
 
 | Secret Name | Value | Notes |
