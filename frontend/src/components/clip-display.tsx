@@ -2,34 +2,13 @@
 
 import type { Clip } from "@prisma/client";
 import { Download, Loader2, Play } from "lucide-react";
-import { useEffect, useState } from "react";
-import { getClipPlayUrl, getClipDownloadUrl } from "~/actions/generation";
+import { useState } from "react";
+import { getClipDownloadUrl } from "~/actions/generation";
 import { Button } from "./ui/button";
 
-function ClipCard({ clip }: { clip: Clip }) {
-  const [playUrl, setPlayUrl] = useState<string | null>(null);
+function ClipCard({ clip, videoUrl }: { clip: Clip; videoUrl: string | null }) {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [isLoadingUrl, setIsLoadingUrl] = useState(true);
   const [isDownloading, setIsDownloading] = useState(false);
-
-  useEffect(() => {
-    async function fetchPlayUrl() {
-      try {
-        const result = await getClipPlayUrl(clip.id);
-        if (result.success && result.url) {
-          setPlayUrl(result.url);
-        } else if (result.error) {
-          console.error("Failed to get play url: " + result.error);
-        }
-      } catch (error) {
-        console.error("Failed to fetch clip play URL:", error);
-      } finally {
-        setIsLoadingUrl(false);
-      }
-    }
-
-    void fetchPlayUrl();
-  }, [clip.id]);
 
   const handleDownload = async () => {
     if (downloadUrl) {
@@ -65,13 +44,9 @@ function ClipCard({ clip }: { clip: Clip }) {
   return (
     <div className="flex max-w-52 flex-col gap-2">
       <div className="bg-muted">
-        {isLoadingUrl ? (
-          <div className="flex h-full w-full items-center justify-center">
-            <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
-          </div>
-        ) : playUrl ? (
+        {videoUrl ? (
           <video
-            src={playUrl}
+            src={videoUrl}
             controls
             preload="metadata"
             className="h-full w-full rounded-md object-cover"
@@ -101,7 +76,7 @@ function ClipCard({ clip }: { clip: Clip }) {
   );
 }
 
-export function ClipDisplay({ clips }: { clips: Clip[] }) {
+export function ClipDisplay({ clips, videoUrls }: { clips: Clip[]; videoUrls: (string | null)[] }) {
   if (clips.length === 0) {
     return (
       <p className="text-muted-foreground p-4 text-center">
@@ -111,8 +86,8 @@ export function ClipDisplay({ clips }: { clips: Clip[] }) {
   }
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-      {clips.map((clip) => (
-        <ClipCard key={clip.id} clip={clip} />
+      {clips.map((clip, index) => (
+        <ClipCard key={clip.id} clip={clip} videoUrl={videoUrls[index] ?? null} />
       ))}
     </div>
   );

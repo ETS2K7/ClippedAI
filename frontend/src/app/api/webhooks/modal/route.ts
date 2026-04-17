@@ -8,7 +8,6 @@ interface ModalWebhookPayload {
   user_id: string;
   status: "success" | "failed";
   clips: { s3Key: string; thumbnailKey: string | null }[];
-  secret: string;
 }
 
 /**
@@ -24,7 +23,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { uploaded_file_id, user_id, status, clips, secret } = body;
+  const { uploaded_file_id, user_id, status, clips } = body;
+
+  // Read webhook secret from header (moved from body by backend)
+  const secret = req.headers.get("x-webhook-secret");
 
   // Validate required fields
   if (!uploaded_file_id || !user_id || !status || !secret) {

@@ -38,6 +38,7 @@ import {
 import Link from "next/link";
 import DynamicVideoPlayer from "~/components/dynamic-video-player";
 import AppShell from "~/components/app-shell";
+import { useIntersectionObserver } from "~/hooks/use-intersection-observer";
 
 /** Clip as returned by GET /api/tasks/[id] */
 interface Clip {
@@ -47,6 +48,76 @@ interface Clip {
   video_path: string;
   created_at: string;
   task_id: string;
+}
+
+function LazyClipCard({ clip, index, onDelete }: { clip: Clip; index: number; onDelete: (id: string) => void }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [ref, isIntersecting] = useIntersectionObserver();
+
+  useEffect(() => {
+    if (isIntersecting && !isVisible) {
+      setIsVisible(true);
+    }
+  }, [isIntersecting, isVisible]);
+
+  return (
+    <Card ref={ref} className="brutal-card flex flex-col overflow-hidden">
+      <CardContent className="flex flex-1 flex-col p-0">
+        {/* Video Player */}
+        <div className="relative isolate aspect-[9/16] w-full border-b border-white/10 bg-black">
+          {isVisible ? (
+            <DynamicVideoPlayer
+              src={clip.video_url ?? ""}
+              poster={clip.thumbnail_url ?? undefined}
+              className="h-full w-full"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            </div>
+          )}
+        </div>
+
+        {/* Clip Details */}
+        <div className="flex flex-1 flex-col bg-black p-5">
+          <div className="mb-4 flex items-start justify-between">
+            <h3 className="font-syne text-xl font-black tracking-widest text-white uppercase">
+              CLIP {String(index + 1).padStart(2, "0")}
+            </h3>
+            <p className="font-mono text-[10px] font-bold tracking-widest text-white/30 tabular-nums">
+              {new Date(clip.created_at).toLocaleDateString()}
+            </p>
+          </div>
+
+          <div className="mt-auto flex gap-3">
+            <Button
+              size="default"
+              variant="outline"
+              className="flex-1 rounded-md border-white/20 font-mono text-[10px] font-bold tracking-widest uppercase transition-all hover:bg-white hover:text-black hover:border-white"
+              asChild
+            >
+              <a
+                href={clip.video_url ?? "#"}
+                download={`clip_${index + 1}.mp4`}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                DL
+              </a>
+            </Button>
+            <Button
+              size="default"
+              variant="outline"
+              className="flex-1 rounded-md border-white/10 font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase transition-all hover:text-red-500 hover:border-red-500"
+              onClick={() => onDelete(clip.id)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              DEL
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 /** Task as returned by GET /api/tasks/[id] */
@@ -441,56 +512,12 @@ export default function TaskPage() {
 
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {clips.map((clip, index) => (
-                  <Card key={clip.id} className="brutal-card flex flex-col overflow-hidden">
-                    <CardContent className="flex flex-1 flex-col p-0">
-                      {/* Video Player */}
-                      <div className="relative isolate aspect-[9/16] w-full border-b border-white/10 bg-black">
-                        <DynamicVideoPlayer
-                          src={clip.video_url ?? ""}
-                          poster={clip.thumbnail_url ?? undefined}
-                          className="h-full w-full"
-                        />
-                      </div>
-
-                      {/* Clip Details */}
-                      <div className="flex flex-1 flex-col bg-black p-5">
-                        <div className="mb-4 flex items-start justify-between">
-                          <h3 className="font-syne text-xl font-black tracking-widest text-white uppercase">
-                            CLIP {String(index + 1).padStart(2, "0")}
-                          </h3>
-                          <p className="font-mono text-[10px] font-bold tracking-widest text-white/30 tabular-nums">
-                            {new Date(clip.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
-
-                        <div className="mt-auto flex gap-3">
-                          <Button
-                            size="default"
-                            variant="outline"
-                            className="flex-1 rounded-md border-white/20 font-mono text-[10px] font-bold tracking-widest uppercase transition-all hover:bg-white hover:text-black hover:border-white"
-                            asChild
-                          >
-                            <a
-                              href={clip.video_url ?? "#"}
-                              download={`clip_${index + 1}.mp4`}
-                            >
-                              <Download className="mr-2 h-4 w-4" />
-                              DL
-                            </a>
-                          </Button>
-                          <Button
-                            size="default"
-                            variant="outline"
-                            className="flex-1 rounded-md border-white/10 font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase transition-all hover:text-red-500 hover:border-red-500"
-                            onClick={() => setDeletingClipId(clip.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            DEL
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <LazyClipCard
+                    key={clip.id}
+                    clip={clip}
+                    index={index}
+                    onDelete={setDeletingClipId}
+                  />
                 ))}
               </div>
             </div>

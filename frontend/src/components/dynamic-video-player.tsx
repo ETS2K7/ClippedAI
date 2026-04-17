@@ -31,8 +31,8 @@ const DynamicVideoPlayer: React.FC<DynamicVideoPlayerProps> = ({
         muted={muted}
         loop={loop}
         playsInline
-        {...(poster ? { poster } : {})}
-        preload="auto"
+        {...(poster ? { poster, loading: "lazy" as const } : {})}
+        preload="metadata"
         className="absolute inset-0 h-full w-full bg-black object-contain"
         tabIndex={0}
         aria-label="Video player"
