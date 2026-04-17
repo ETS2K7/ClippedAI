@@ -50,15 +50,26 @@ interface Clip {
   task_id: string;
 }
 
-function LazyClipCard({ clip, index, onDelete }: { clip: Clip; index: number; onDelete: (id: string) => void }) {
-  const [isVisible, setIsVisible] = useState(false);
+function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, onVideoRef }: { clip: Clip; index: number; onDelete: (id: string) => void; autoLoad?: boolean; onVideoPlay?: (clipId: string) => void; onVideoRef?: (clipId: string, ref: HTMLVideoElement) => void }) {
+  const [isVisible, setIsVisible] = useState(autoLoad);
   const [ref, isIntersecting] = useIntersectionObserver();
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (isIntersecting && !isVisible) {
       setIsVisible(true);
     }
   }, [isIntersecting, isVisible]);
+
+  useEffect(() => {
+    if (videoRef.current && onVideoRef) {
+      onVideoRef(clip.id, videoRef.current);
+    }
+  }, [videoRef, clip.id, onVideoRef]);
+
+  const handlePlay = () => {
+    onVideoPlay?.(clip.id);
+  };
 
   return (
     <Card ref={ref} className="brutal-card flex flex-col overflow-hidden">
@@ -67,9 +78,11 @@ function LazyClipCard({ clip, index, onDelete }: { clip: Clip; index: number; on
         <div className="relative isolate aspect-[9/16] w-full border-b border-white/10 bg-black">
           {isVisible ? (
             <DynamicVideoPlayer
+              ref={videoRef}
               src={clip.video_url ?? ""}
               poster={clip.thumbnail_url ?? undefined}
               className="h-full w-full"
+              onPlay={handlePlay}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
@@ -142,9 +155,21 @@ export default function TaskPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingClipId, setDeletingClipId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+  const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const hasTriggeredAutoRefresh = useRef(false);
 
   const taskApiUrl = "/api/tasks";
+
+  const handleVideoPlay = useCallback((clipId: string) => {
+    // Pause all other videos
+    videoRefs.current.forEach((video, id) => {
+      if (id !== clipId && video && !video.paused) {
+        video.pause();
+      }
+    });
+    setPlayingVideoId(clipId);
+  }, []);
 
   const buildSupportError = useCallback(
     async (response: Response, fallbackMessage: string) => {
@@ -517,6 +542,11 @@ export default function TaskPage() {
                     clip={clip}
                     index={index}
                     onDelete={setDeletingClipId}
+                    autoLoad={index === 0}
+                    onVideoPlay={handleVideoPlay}
+                    onVideoRef={(clipId, ref) => {
+                      videoRefs.current.set(clipId, ref);
+                    }}
                   />
                 ))}
               </div>
