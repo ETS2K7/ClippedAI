@@ -104,10 +104,10 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
 
     # Try NVENC first (P1 optimization), fallback to CPU
     encoder_configs = [
-        # NVENC: GPU-accelerated, ~5–10× faster
-        ["-c:v", "h264_nvenc", "-pix_fmt", "yuv420p", "-preset", "p4", "-cq", "23"],
-        # CPU fallback: always available
-        ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23"],
+        # NVENC: GPU-accelerated, ~5–10× faster. Force bitrate clamping to prevent S3 buffering lag.
+        ["-c:v", "h264_nvenc", "-pix_fmt", "yuv420p", "-preset", "p4", "-cq", "23", "-maxrate", "3M", "-bufsize", "6M"],
+        # CPU fallback: always available. Force bitrate clamping.
+        ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23", "-maxrate", "3M", "-bufsize", "6M"],
     ]
 
     for encoder_args in encoder_configs:
