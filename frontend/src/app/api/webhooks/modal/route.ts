@@ -7,7 +7,7 @@ interface ModalWebhookPayload {
   uploaded_file_id: string;
   user_id: string;
   status: "success" | "failed";
-  clips: string[];
+  clips: { s3Key: string; thumbnailKey: string | null }[];
   secret: string;
 }
 
@@ -65,8 +65,9 @@ export async function POST(req: Request) {
       // Atomically create clips + mark file as processed
       await db.$transaction([
         db.clip.createMany({
-          data: clips.map((clipKey) => ({
-            s3Key: clipKey,
+          data: clips.map((clip) => ({
+            s3Key: clip.s3Key,
+            thumbnailKey: clip.thumbnailKey,
             uploadedFileId: uploaded_file_id,
             userId: user_id,
           })),

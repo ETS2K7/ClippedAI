@@ -160,11 +160,11 @@ def _process_single_clip(
     font_family: str | None = None,
     font_color: str | None = None,
     font_size: int | None = None,
-) -> str:
+) -> dict:
     """
     Processes a single clip through the full sub-pipeline:
     extract → track → subtitle → merge → S3 upload.
-    Returns the output S3 key.
+    Returns a dict with {"s3Key": ..., "thumbnailKey": ...}.
 
     Designed to run concurrently with other clip pipelines via ThreadPoolExecutor.
     """
@@ -180,16 +180,40 @@ def _process_single_clip(
     merge_and_cleanup(trk_vid, ext_vid, sub_file, index)
 
     clip_out_path = f"output/clip_{index}.mp4"
+    thumb_out_path = f"output/thumb_{index}.jpg"
     output_s3_key = f"{s3_key_dir}/clip_{index}.mp4"
+    output_thumb_key = f"{s3_key_dir}/thumb_{index}.jpg"
 
+    # 1. Extract high-quality thumbnail (1.0s or first frame if shorter)
+    logger.info(f"Generating thumbnail for clip {index + 1}")
+    subprocess.run([
+        "ffmpeg", "-y", "-i", clip_out_path,
+        "-ss", "00:00:01", "-vframes", "1",
+        "-q:v", "2", "-f", "image2", thumb_out_path
+    ], capture_output=True)
+
+    # 2. Upload video
     logger.info(f"Uploading clip {index + 1} to S3")
     s3_client.upload_file(
         clip_out_path, bucket, output_s3_key,
         ExtraArgs={"ContentType": "video/mp4"},
     )
+
+    # 3. Upload thumbnail
+    if os.path.exists(thumb_out_path):
+        logger.info(f"Uploading thumbnail {index + 1} to S3")
+        s3_client.upload_file(
+            thumb_out_path, bucket, output_thumb_key,
+            ExtraArgs={"ContentType": "image/jpeg"},
+        )
+        os.remove(thumb_out_path)
+    else:
+        logger.warning(f"Thumbnail generation failed for clip {index + 1}")
+        output_thumb_key = None
+
     os.remove(clip_out_path)
 
-    return output_s3_key
+    return {"s3Key": output_s3_key, "thumbnailKey": output_thumb_key}
 
 
 def _process_video_pipeline(
@@ -249,7 +273,8 @@ def _process_video_pipeline(
         # Phase 4-7: Parallel Clip Processing
         timer.begin(f"parallel_processing_{len(clips)}_clips")
         logger.info(f"Processing {len(clips)} clips in parallel...")
-        output_clips = []
+        # Initialise with None to maintain order without sorting later
+        output_clips = [None] * len(clips)
         clip_errors = []
 
         with ThreadPoolExecutor(max_workers=len(clips)) as executor:
@@ -266,8 +291,8 @@ def _process_video_pipeline(
             for future in as_completed(future_to_idx):
                 idx = future_to_idx[future]
                 try:
-                    clip_s3_key = future.result()
-                    output_clips.append(clip_s3_key)
+                    clip_data = future.result()
+                    output_clips[idx] = clip_data
                     logger.info(f"Clip {idx + 1} completed successfully")
                 except Exception as e:
                     import traceback
@@ -276,14 +301,14 @@ def _process_video_pipeline(
                     clip_errors.append(f"Clip {idx + 1}: {e}")
                     continue
 
-        # Sort by clip index to maintain consistent ordering
-        output_clips.sort()
+        # Filter out failed clips while maintaining order
+        final_clips = [c for c in output_clips if c is not None]
 
-        if not output_clips:
+        if not final_clips:
             raise RuntimeError(f"All clip processing pipelines failed. Details: {clip_errors}")
 
         timing = timer.summary()
-        return {"status": "success", "clips": output_clips, "timing": timing}
+        return {"status": "success", "clips": final_clips, "timing": timing}
 
     finally:
         if base_dir.exists():
