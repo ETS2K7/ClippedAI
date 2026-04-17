@@ -63,7 +63,7 @@ class PipelineTimer:
         logger.info(f"[{self.run_id[:8]}] Pipeline complete in {total:.1f}s — {parts}")
         return {"total_seconds": round(total, 1), "phases": {n: round(t, 1) for n, t in self.phases}}
 
-S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "clippedai-7137")
+S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "clippedai-ap-south-1")
 
 class ProcessVideoRequest(BaseModel):
     s3_key: str
@@ -106,7 +106,7 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
         "s3Bucket": S3_BUCKET,
         "s3AccessKeyId": os.environ.get("AWS_ACCESS_KEY_ID"),
         "s3SecretAccessKey": os.environ.get("AWS_SECRET_ACCESS_KEY"),
-        "s3Region": "us-east-1",
+        "s3Region": "ap-south-1",
         "preferQuality": "720p",
         "preferFormat": "mp4"
     }
