@@ -326,7 +326,6 @@ def _send_webhook(
 @app.cls(
     gpu="any",
     timeout=1200,
-    scaledown_window=300,  # Keep container alive for 5 min after last request
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
     ]
