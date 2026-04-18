@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { env } from "~/env";
+import { invalidateCache } from "~/lib/cache";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -177,6 +178,8 @@ function scheduleModalJob(
         fontColor,
         fontSize,
       );
+      // Invalidate cache for this user's tasks
+      await invalidateCache(`tasks:${userId}`);
     } catch (err) {
       console.error(`[Modal] Failed to fire job for ${uploadedFileId}:`, err);
       await db.uploadedFile

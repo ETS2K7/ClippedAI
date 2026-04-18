@@ -14,6 +14,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
 from config import get_logger, validate_required_env_vars
+import functools
 from src.transcriber import transcribe
 from src.llm import select_clips
 from src.video_processing import extract_segment, track_speaker_and_frame, merge_and_cleanup
@@ -22,8 +23,9 @@ from src.subtitles import generate_subtitles
 logger = get_logger(__name__)
 
 
+@functools.lru_cache(maxsize=1)
 def _create_s3_client():
-    """Creates a standard S3 client."""
+    """Creates a standard S3 client with caching."""
     try:
         return boto3.client("s3", config=BotoConfig(
             max_pool_connections=20,
@@ -171,7 +173,7 @@ def _process_single_clip(
     Designed to run concurrently with other clip pipelines via ThreadPoolExecutor.
     """
     logger.info(f"--- Processing Clip {index + 1} (parallel) ---")
-    ext_vid = extract_segment(video_path, clip, index, work_dir)
+    ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=self._has_nvenc)
     trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir)
     sub_file = generate_subtitles(
         words, clip, index, chunk_meta,
@@ -180,45 +182,12 @@ def _process_single_clip(
         font_color=font_color,
         work_dir=work_dir,
     )
-    merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir)
+    merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=self._has_nvenc)
 
     clip_out_path = f"{work_dir}/clip_{index}.mp4"
-    # Generate multiple thumbnail sizes in WebP format
-    thumb_sizes = [
-        (320, "thumb_320w"),
-        (640, "thumb_640w"),
-        (1280, "thumb_1280w"),
-    ]
     output_s3_key = f"{s3_key_dir}/clip_{index}.mp4"
-    output_thumb_keys = {}
 
-    # 1. Extract and generate thumbnails in multiple WebP sizes
-    logger.info(f"Generating thumbnails for clip {index + 1}")
-    for width, size_name in thumb_sizes:
-        thumb_out_path = f"{work_dir}/{size_name}_{index}.webp"
-        subprocess.run([
-            "ffmpeg", "-y", "-i", clip_out_path,
-            "-ss", "00:00:01", "-vframes", "1",
-            "-vf", f"scale={width}:-2",
-            "-q:v", "80", "-f", "image2", thumb_out_path
-        ], capture_output=True)
-
-        if os.path.exists(thumb_out_path):
-            thumb_key = f"{s3_key_dir}/{size_name}_{index}.webp"
-            output_thumb_keys[size_name] = thumb_key
-            s3_client.upload_file(
-                thumb_out_path, bucket, thumb_key,
-                ExtraArgs={
-                    "ContentType": "image/webp",
-                    "CacheControl": "public, max-age=31536000, immutable",
-                },
-            )
-            os.remove(thumb_out_path)
-
-    # Use the largest thumbnail as default for backward compatibility
-    output_thumb_key = output_thumb_keys.get("thumb_1280w")
-
-    # 2. Upload original video with caching headers
+    # Upload original video with caching headers
     logger.info(f"Uploading clip {index + 1} to S3")
     s3_client.upload_file(
         clip_out_path, bucket, output_s3_key,
@@ -232,8 +201,8 @@ def _process_single_clip(
 
     return {
         "s3Key": output_s3_key,
-        "thumbnailKey": output_thumb_key,
-        "thumbnailKeys": output_thumb_keys,
+        "thumbnailKey": None,
+        "thumbnailKeys": {},
     }
 
 

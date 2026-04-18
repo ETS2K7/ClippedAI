@@ -70,6 +70,7 @@ model UploadedFile {
   @@index([s3Key])
   @@index([userId, createdAt])
   @@index([status])
+  @@index([userId, status])
 }
 
 model Clip {
@@ -88,6 +89,8 @@ model Clip {
   @@index([userId])
   @@index([uploadedFileId])
   @@index([createdAt])
+  @@index([uploadedFileId, createdAt])
+  @@index([userId, createdAt])
 }
 
 /// Required by NextAuth Prisma adapter for email verification flows

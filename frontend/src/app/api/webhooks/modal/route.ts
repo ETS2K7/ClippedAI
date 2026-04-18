@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { db } from "~/server/db";
 import { env } from "~/env";
+import { invalidateCache } from "~/lib/cache";
 
 interface ModalWebhookPayload {
   uploaded_file_id: string;
@@ -103,6 +104,9 @@ export async function POST(req: Request) {
         `[webhook/modal] ✗ Processing failed for file ${uploaded_file_id}`,
       );
     }
+
+    // Invalidate cache for this user's tasks
+    await invalidateCache(`tasks:${user_id}`);
 
     return NextResponse.json({ received: true });
   } catch (err) {

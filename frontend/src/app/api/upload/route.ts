@@ -5,16 +5,47 @@ import { env } from "~/env";
 import { db } from "~/server/db";
 import { s3Client } from "~/server/s3";
 import crypto from "crypto";
+import { Redis } from "@upstash/redis";
 
-// ── Database-backed rate limiter: max 15 uploads per user per hour ─────────────
+// ── Redis-backed rate limiter: max 15 uploads per user per hour ─────────────
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || "15", 10);
 const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "3600000", 10); // 1 hour default
 
+// Initialize Redis client (if configured)
+let redis: Redis | null = null;
+try {
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+    redis = new Redis({
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
+} catch (e) {
+  console.warn("[upload] Redis initialization failed, falling back to database:", e);
+}
+
 async function isRateLimited(userId: string): Promise<boolean> {
+  // Try Redis first (O(1) performance)
+  if (redis) {
+    try {
+      const key = `rate_limit:upload:${userId}`;
+      const current = await redis.incr(key);
+      
+      if (current === 1) {
+        // First request in window, set expiration
+        await redis.expire(key, RATE_LIMIT_WINDOW_MS / 1000);
+      }
+      
+      return current > RATE_LIMIT_MAX;
+    } catch (e) {
+      console.warn("[upload] Redis rate limit check failed, falling back to database:", e);
+    }
+  }
+
+  // Fallback to database-backed rate limiting
   const now = new Date();
   const windowStart = new Date(now.getTime() - RATE_LIMIT_WINDOW_MS);
 
-  // Count uploads in the time window
   const count = await db.uploadedFile.count({
     where: {
       userId,

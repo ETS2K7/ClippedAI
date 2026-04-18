@@ -25,6 +25,9 @@ export const env = createEnv({
     // Email Integrations
     RESEND_API_KEY: z.string().optional(),
     ADMIN_EMAIL: z.string().optional(),
+    // Redis caching (optional - for performance optimization)
+    UPSTASH_REDIS_REST_URL: z.string().optional(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
   },
 
   client: {
@@ -53,6 +56,8 @@ export const env = createEnv({
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
+    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
       process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     NEXT_PUBLIC_DATAFAST_WEBSITE_ID:

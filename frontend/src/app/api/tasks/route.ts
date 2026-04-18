@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import { withCache } from "~/lib/cache";
 
 function mapStatus(status: string): string {
   switch (status) {
@@ -37,11 +38,19 @@ export async function GET() {
   const session = await auth();
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
 
-  const files = await db.uploadedFile.findMany({
-    where: { userId: session.user.id },
-    orderBy: { createdAt: "desc" },
-    include: { _count: { select: { clips: true } } },
-  });
+  const cacheKey = `tasks:${session.user.id}`;
+  
+  const files = await withCache(
+    cacheKey,
+    async () => {
+      return db.uploadedFile.findMany({
+        where: { userId: session.user.id },
+        include: { _count: { select: { clips: true } } },
+        orderBy: { createdAt: "desc" },
+      });
+    },
+    30 // Cache for 30 seconds
+  );
 
   const tasks = files.map((file) => ({
     id: file.id,
