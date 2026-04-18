@@ -66,11 +66,12 @@ def _get_video_codec_args(use_gpu: bool, is_merge: bool = False) -> List[str]:
     return ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23"]
 
 def _run_ffmpeg(cmd: List[str], error_ctx: str):
-    """Executes FFmpeg with central error boundary mapping."""
+    """Executes FFmpeg with central error boundary mapping. Captures stderr for diagnostics."""
     try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+        result = subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
-        logger.error(f"FFmpeg failed: {error_ctx}")
+        stderr_out = e.stderr.decode("utf-8", errors="replace")[-2000:] if e.stderr else "(no stderr)"
+        logger.error(f"FFmpeg failed [{error_ctx}]:\n{stderr_out}")
         raise RuntimeError(f"{error_ctx} failed: {e}") from e
 
 # ─── Phase 4 ──────────────────────────────────────────────────────────────────
@@ -129,21 +130,20 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
     )
     out_file = f"{work_dir}/clip_{idx}.mp4" if work_dir else f"output/clip_{idx}.mp4"
 
-    # Base command
+    # Always copy video — tracked_vid already has subtitles burned in by Phase 5.
+    # Re-encoding with NVENC here would be redundant and causes failures when
+    # the tracked clip uses a pixel format NVENC doesn't accept.
     cmd = [
         "ffmpeg", "-y",
         "-i", tracked_vid,
         "-i", extract_vid,
-    ]
-    
-    cmd.extend(_get_video_codec_args(use_gpu, is_merge=True))
-    cmd.extend([
+        "-c:v", "copy",
         "-c:a", "aac",
         "-map", "0:v:0",
         "-map", "1:a:0?",
         "-shortest",
         out_file,
-    ])
+    ]
 
     _run_ffmpeg(cmd, f"merge for clip {idx}")
 
