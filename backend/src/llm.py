@@ -68,8 +68,8 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "You are a master TikTok video editor. Review the following transcript. "
         "Find the 3 most viral, engaging clips. Each must be exactly 30 to 60 seconds long. "
         "They must have a strong hook at the start and conclude an interesting point. "
-        "Return ONLY valid JSON wrapping the start and end timestamps natively "
-        "found in the text.\n\n"
+        'Return ONLY this exact JSON format with no extra keys:\n'
+        '{"clips": [{"start_time": 12.3, "end_time": 45.6, "title": "Hook title"}, ...]}\n\n'
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -117,14 +117,29 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     try:
         data = json.loads(response.choices[0].message.content)
-        clips = data.get("clips", [])
 
-        # Post-validate clip timestamps
+        # Normalize response shape — LLM sometimes returns {clips:[...]} or {clip1:{...}, clip2:{...}}
+        if "clips" in data and isinstance(data["clips"], list):
+            raw_clips = data["clips"]
+        else:
+            # Flatten clip1/clip2/clip3 or any dict-of-dicts shape
+            raw_clips = [
+                v for k, v in data.items()
+                if isinstance(v, dict) and ("start" in v or "start_time" in v)
+            ]
+
+        if not raw_clips:
+            raise ValueError(f"LLM returned unrecognized JSON structure: {list(data.keys())}")
+
+        # Post-validate clip timestamps — normalize start/end aliases
         video_end_s = words[-1]["end"] / 1000.0
         validated_clips = []
-        for clip in clips:
-            start = clip.get("start_time", 0)
-            end = clip.get("end_time", 0)
+        for clip in raw_clips:
+            start = float(clip.get("start_time") or clip.get("start") or 0)
+            end   = float(clip.get("end_time")   or clip.get("end")   or 0)
+            # Normalize to start_time/end_time keys for downstream consistency
+            clip["start_time"] = start
+            clip["end_time"]   = end
             duration = end - start
             if start < 0 or end <= start or start > video_end_s:
                 logger.warning(f"Skipping invalid clip: start={start}, end={end}")
