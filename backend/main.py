@@ -386,11 +386,6 @@ class ClippedAI:
         This runs once when the container boots, before any requests arrive."""
         logger.info("Container starting — pre-warming resources...")
         
-        # Validate required environment variables at startup
-        validate_required_env_vars()
-        
-        # Pre-initialize the S3 client so the first request doesn't pay connection setup cost
-        self._s3_client = _create_s3_client()
         # Verify GPU availability for NVENC
         try:
             result = subprocess.run(
@@ -400,7 +395,6 @@ class ClippedAI:
             logger.info(f"NVENC available: {self._has_nvenc}")
         except Exception:
             self._has_nvenc = False
-
 
         logger.info("Container warm and ready.")
 
