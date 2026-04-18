@@ -18,7 +18,7 @@ interface ModalWebhookPayload {
 export async function POST(req: Request) {
   // Validate Content-Type
   const contentType = req.headers.get("content-type");
-  if (!contentType || !contentType.includes("application/json")) {
+  if (!contentType?.includes("application/json")) {
     return NextResponse.json({ error: "Invalid Content-Type" }, { status: 400 });
   }
 

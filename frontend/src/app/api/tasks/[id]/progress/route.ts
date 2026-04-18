@@ -39,7 +39,7 @@ export async function GET(
         polls++;
         try {
           const file = await db.uploadedFile.findUnique({
-            where: { id, userId: session.user!.id },
+            where: { id, userId: session.user.id },
             include: { clips: { select: { id: true } } },
           });
 

@@ -580,7 +580,7 @@ export default function TaskEditPage() {
 
       await conversion.execute();
 
-      const targetBuffer = output.target.buffer as ArrayBuffer;
+      const targetBuffer = output.target.buffer;
       const blob = new Blob([targetBuffer], { type: "video/mp4" });
       const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");

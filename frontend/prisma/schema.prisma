@@ -86,6 +86,7 @@ model Clip {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([s3Key])
+  @@unique([s3Key])
   @@index([userId])
   @@index([uploadedFileId])
   @@index([createdAt])

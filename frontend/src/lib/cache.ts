@@ -33,7 +33,7 @@ export async function getCache<T>(key: string): Promise<T | null> {
 /**
  * Set cache value with TTL
  */
-export async function setCache<T>(key: string, value: T, ttlSeconds: number = 300): Promise<void> {
+export async function setCache<T>(key: string, value: T, ttlSeconds = 300): Promise<void> {
   if (!redis) return;
   
   try {
@@ -78,7 +78,7 @@ export async function invalidateCachePattern(pattern: string): Promise<void> {
 export async function withCache<T>(
   key: string,
   fn: () => Promise<T>,
-  ttlSeconds: number = 300
+  ttlSeconds = 300
 ): Promise<T> {
   // Try cache first
   const cached = await getCache<T>(key);

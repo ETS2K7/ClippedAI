@@ -6,6 +6,7 @@ import { env } from "~/env";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { s3Client } from "~/server/s3";
+import { getCachedUrl, setCachedUrl } from "~/lib/url-cache";
 
 export async function getClipPlayUrl(
   clipId: string,
@@ -13,6 +14,12 @@ export async function getClipPlayUrl(
   const session = await auth();
   if (!session?.user?.id) {
     return { success: false, error: "Unauthorized" };
+  }
+
+  const cacheKey = `play-${clipId}`;
+  const cachedUrl = getCachedUrl(cacheKey);
+  if (cachedUrl) {
+    return { success: true, url: cachedUrl };
   }
 
   try {
@@ -32,6 +39,7 @@ export async function getClipPlayUrl(
       expiresIn: 3600,
     });
 
+    setCachedUrl(cacheKey, signedUrl);
     return { success: true, url: signedUrl };
   } catch {
     return { success: false, error: "Failed to generate play URL." };
@@ -44,6 +52,12 @@ export async function getClipDownloadUrl(
   const session = await auth();
   if (!session?.user?.id) {
     return { success: false, error: "Unauthorized" };
+  }
+
+  const cacheKey = `download-${clipId}`;
+  const cachedUrl = getCachedUrl(cacheKey);
+  if (cachedUrl) {
+    return { success: true, url: cachedUrl };
   }
 
   try {
@@ -64,6 +78,7 @@ export async function getClipDownloadUrl(
       expiresIn: 3600,
     });
 
+    setCachedUrl(cacheKey, signedUrl);
     return { success: true, url: signedUrl };
   } catch {
     return { success: false, error: "Failed to generate download URL." };

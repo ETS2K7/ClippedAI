@@ -299,7 +299,7 @@ def _process_video_pipeline(
         clip_errors = []
 
         # Cap max_workers to prevent resource exhaustion with many clips
-        max_workers = min(len(clips), 4)
+        max_workers = min(len(clips), 2)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_idx = {
                 executor.submit(
@@ -402,23 +402,9 @@ class ClippedAI:
     def process_video_cli(self, s3_key: str, youtube_url: str = None):
         return _process_video_pipeline(s3_key, youtube_url)
 
-    @modal.fastapi_endpoint(method="POST")
-    def process_video(self, request: ProcessVideoRequest, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
-        auth_token = os.environ.get("AUTH_TOKEN")
-        # Validate token format before comparison
-        if not auth_token or not token.credentials or len(token.credentials) < 16:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid bearer token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        if not hmac.compare_digest(token.credentials, auth_token):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect bearer token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
+    @modal.method()
+    def process_clips_gpu(self, request_dict: dict):
+        request = ProcessVideoRequest(**request_dict)
         # Run the pipeline
         try:
             result = _process_video_pipeline(
@@ -441,17 +427,85 @@ class ClippedAI:
             logger.error(f"Pipeline failed (Unexpected): {e}")
             result = {"status": "failed", "clips": [], "error": f"Unexpected error: {str(e)}"}
 
-        # If webhook fields are provided, call back to Next.js
-        if request.webhook_url and request.webhook_secret and request.uploaded_file_id and request.user_id:
-            _send_webhook(
-                request.webhook_url,
-                request.webhook_secret,
-                request.uploaded_file_id,
-                request.user_id,
-                result,
+        return result
+
+    @modal.fastapi_endpoint(method="POST")
+    def process_video(self, request: ProcessVideoRequest, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
+        auth_token = os.environ.get("AUTH_TOKEN")
+        # Validate token format before comparison
+        if not auth_token or not token.credentials or len(token.credentials) < 16:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid bearer token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not hmac.compare_digest(token.credentials, auth_token):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect bearer token",
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
-        return result
+        # Dispatch execution to CPU wrapper to prevent timeout and GPU locking
+        process_video_cpu_wrapper.spawn(request.dict())
+        return {"status": "processing_started"}
+
+
+@app.function(timeout=1200, secrets=[modal.Secret.from_name("clippedai-secret")])
+def process_video_cpu_wrapper(request_dict: dict):
+    """CPU-only ingestion wrapper. Downloads YouTube natively without holding a GPU hostage."""
+    request = ProcessVideoRequest(**request_dict)
+    
+    if request.youtube_url:
+        logger.info("Executing CPU-bound YouTube Apify download...")
+        import uuid
+        import shutil
+        import pathlib
+        
+        run_id = str(uuid.uuid4())
+        base_dir = pathlib.Path("/tmp") / run_id
+        base_dir.mkdir(parents=True, exist_ok=True)
+        video_path = base_dir / "input_ingestion.mp4"
+        
+        try:
+            _download_youtube(request.youtube_url, video_path)
+            
+            s3_client = _create_s3_client()
+            bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
+            logger.info("Uploading ingestion artifact to S3...")
+            s3_client.upload_file(str(video_path), bucket, request.s3_key)
+            
+            # Nullify so GPU just downloads directly from S3 natively
+            request_dict["youtube_url"] = None
+        except Exception as e:
+            logger.error(f"Ingestion wrapper failed: {e}")
+            if request.webhook_url:
+                _send_webhook(
+                    request.webhook_url, request.webhook_secret,
+                    request.uploaded_file_id, request.user_id,
+                    {"status": "failed", "clips": [], "error": f"CPU Ingestion error: {str(e)}"}
+                )
+            return
+        finally:
+            if base_dir.exists():
+                shutil.rmtree(base_dir, ignore_errors=True)
+
+    # Trigger GPU pipeline
+    try:
+        logger.info("Delegating to GPU Pipeline...")
+        result = ClippedAI().process_clips_gpu.remote(request_dict)
+    except Exception as e:
+        logger.error(f"GPU pipeline delegation failed: {e}")
+        result = {"status": "failed", "clips": [], "error": f"GPU Wrapper error: {str(e)}"}
+
+    if request.webhook_url and request.webhook_secret and request.uploaded_file_id and request.user_id:
+        _send_webhook(
+            request.webhook_url,
+            request.webhook_secret,
+            request.uploaded_file_id,
+            request.user_id,
+            result,
+        )
 
 
 @app.local_entrypoint()

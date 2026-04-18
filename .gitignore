@@ -76,3 +76,8 @@ deploy/oci_api_key*.pem
 deploy/*.key
 deploy/oci-state.json
 deploy/oci*.log
+
+# ─── CocoIndex ────────────────────────────────────────────────────────────
+scripts/cocoindex_env/
+.cocoindex_db/
+.cocoindex_metadata.db*
