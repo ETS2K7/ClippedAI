@@ -74,6 +74,7 @@ export async function POST(
           uploaded_file_id: updated.id,
           user_id: updated.userId,
           webhook_url: webhookUrl,
+          webhook_secret: env.PROCESS_VIDEO_ENDPOINT_AUTH,
         }),
       });
 

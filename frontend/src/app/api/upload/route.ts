@@ -102,6 +102,17 @@ export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
 
+  const user = await db.user.findUnique({ where: { id: session.user.id } });
+  if (!user?.isAdmin) {
+    return new NextResponse(
+      JSON.stringify({
+        error:
+          "Access Denied: File uploading is currently restricted to administrators only.",
+      }),
+      { status: 403 },
+    );
+  }
+
   // Rate limiting — prevent S3 storage exhaustion
   if (await isRateLimited(session.user.id)) {
     return NextResponse.json(

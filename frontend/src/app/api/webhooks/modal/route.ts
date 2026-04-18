@@ -22,41 +22,55 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid Content-Type" }, { status: 400 });
   }
 
+  const rawBody = await req.text();
   let body: ModalWebhookPayload;
 
   try {
-    body = await req.json();
+    body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   const { uploaded_file_id, user_id, status, clips } = body;
 
-  // Read webhook secret from header (moved from body by backend)
-  const secret = req.headers.get("x-webhook-secret");
+  const providedSignature = req.headers.get("x-signature");
 
   // Validate required fields
-  if (!uploaded_file_id || !user_id || !status || !secret) {
+  if (!uploaded_file_id || !user_id || !status) {
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 },
     );
   }
 
-  // Support a dedicated WEBHOOK_SECRET env var; fall back to the auth token for
-  // backward compatibility with existing deployments.
   const expectedSecret = env.PROCESS_VIDEO_ENDPOINT_AUTH;
-  const secretBuffer = Buffer.from(secret);
-  const expectedBuffer = Buffer.from(expectedSecret);
 
-  // Constant-time comparison that handles different lengths
-  if (secretBuffer.length !== expectedBuffer.length) {
-    console.error("[webhook/modal] Invalid secret length");
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (!crypto.timingSafeEqual(secretBuffer, expectedBuffer)) {
-    console.error("[webhook/modal] Invalid secret");
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (providedSignature) {
+    // Validate cryptographic HMAC signature
+    const computedSignature = crypto
+      .createHmac("sha256", expectedSecret)
+      .update(rawBody)
+      .digest("hex");
+
+    const providedBuffer = Buffer.from(providedSignature);
+    const computedBuffer = Buffer.from(computedSignature);
+
+    if (providedBuffer.length !== computedBuffer.length || !crypto.timingSafeEqual(providedBuffer, computedBuffer)) {
+      console.error("[webhook/modal] Invalid cryptographic signature");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } else {
+    // Fallback support to static token string
+    const secret = req.headers.get("x-webhook-secret");
+    if (!secret) return NextResponse.json({ error: "Missing signature" }, { status: 401 });
+
+    const secretBuffer = Buffer.from(secret);
+    const expectedBuffer = Buffer.from(expectedSecret);
+
+    if (secretBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(secretBuffer, expectedBuffer)) {
+      console.error("[webhook/modal] Invalid static secret");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   try {

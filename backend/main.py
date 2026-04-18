@@ -138,10 +138,6 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
 
     run_input = {
         "videos": [{"url": youtube_url}],
-        "s3Bucket": S3_BUCKET,
-        "s3AccessKeyId": os.environ.get("AWS_ACCESS_KEY_ID"),
-        "s3SecretAccessKey": os.environ.get("AWS_SECRET_ACCESS_KEY"),
-        "s3Region": S3_REGION,
         "preferQuality": "720p",
         "preferFormat": "mp4"
     }
@@ -156,27 +152,19 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
             raise RuntimeError("Apify actor did not return any dataset items (download failed)")
 
         item = items[0]
-        file_key = item.get("fileKey")
-        if not file_key:
-            raise RuntimeError(f"No fileKey in Apify output: {item}")
-
-        logger.info(f"Downloading video from S3 via Apify fileKey: {file_key}")
-
-        # Download the file from our S3 bucket directly to video_path,
-        # which the rest of the Modal pipeline will use
-        s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-            aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-            region_name=S3_REGION,
-        )
-        s3.download_file(S3_BUCKET, file_key, str(video_path))
+        download_url = item.get("downloadUrl")
         
-        # Clean up the intermediate Apify file in S3 to prevent root-level bucket clutter
-        try:
-            s3.delete_object(Bucket=S3_BUCKET, Key=file_key)
-        except Exception as cleanup_err:
-            logger.warning(f"Failed to cleanup intermediate Apify file {file_key}: {cleanup_err}")
+        if not download_url:
+            raise RuntimeError(f"No downloadUrl in Apify output (Ensure the actor is configured to use KVS natively): {item}")
+
+        logger.info(f"Streaming video directly from Apify KVS to Modal: {download_url}")
+
+        # Download the file directly from Apify KeyValueStore bypassing any AWS transmission
+        with requests.get(download_url, stream=True, timeout=600) as r:
+            r.raise_for_status()
+            with open(str(video_path), 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192*4):
+                    f.write(chunk)
             
         logger.info("Successfully fetched YouTube video via Apify")
         
@@ -196,6 +184,7 @@ def _process_single_clip(
     font_color: str | None = None,
     font_size: int | None = None,
     work_dir: str = "",
+    use_gpu: bool = False,
 ) -> dict:
     """
     Processes a single clip through the full sub-pipeline:
@@ -205,7 +194,7 @@ def _process_single_clip(
     Designed to run concurrently with other clip pipelines via ThreadPoolExecutor.
     """
     logger.info(f"--- Processing Clip {index + 1} (parallel) ---")
-    ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=self._has_nvenc)
+    ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=use_gpu)
     trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir)
     sub_file = generate_subtitles(
         words, clip, index, chunk_meta,
@@ -214,7 +203,7 @@ def _process_single_clip(
         font_color=font_color,
         work_dir=work_dir,
     )
-    merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=self._has_nvenc)
+    merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=use_gpu)
 
     clip_out_path = f"{work_dir}/clip_{index}.mp4"
     output_s3_key = f"{s3_key_dir}/clip_{index}.mp4"
@@ -265,6 +254,16 @@ def _process_video_pipeline(
     base_dir = pathlib.Path("/tmp") / run_id
     base_dir.mkdir(parents=True, exist_ok=True)
 
+    # Detect NVENC at pipeline scope so it's available for clip workers
+    try:
+        nvenc_result = subprocess.run(
+            ["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=10
+        )
+        has_nvenc = "h264_nvenc" in nvenc_result.stdout
+    except Exception:
+        has_nvenc = False
+    logger.info(f"NVENC detection in pipeline: {has_nvenc}")
+
     video_path = base_dir / "input.mp4"
     s3_client = _create_s3_client()
     bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
@@ -307,7 +306,7 @@ def _process_video_pipeline(
                     str(video_path), clip, index, words,
                     s3_client, bucket, s3_key_dir,
                     font_family, font_color, font_size,
-                    str(base_dir),
+                    str(base_dir), has_nvenc,
                 ): index
                 for index, clip in enumerate(clips)
             }
@@ -347,25 +346,35 @@ def _send_webhook(
     user_id: str,
     result: dict,
 ) -> None:
-    """POST processing results back to the Next.js webhook endpoint.
+    """POST processing results back to the Next.js webhook endpoint with HMAC signature."""
+    import hashlib
 
-    Uses pooled HTTP session with connection pooling for better performance.
-    A dropped webhook means the user never sees their clips.
-    """
     payload = {
         "uploaded_file_id": uploaded_file_id,
         "user_id": user_id,
         "status": result.get("status", "failed"),
         "clips": result.get("clips", []),
     }
+    
+    # Serialize tightly so both server and client calculate matching digests
+    payload_str = json.dumps(payload, separators=(',', ':'))
+    
+    signature = hmac.new(
+        webhook_secret.encode('utf-8'),
+        payload_str.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+
     headers = {
+        "Content-Type": "application/json",
         "X-Webhook-Secret": webhook_secret,
+        "X-Signature": signature,
     }
     
     session = get_http_session()
     
     try:
-        resp = session.post(webhook_url, json=payload, headers=headers, timeout=30)
+        resp = session.post(webhook_url, data=payload_str, headers=headers, timeout=30)
         resp.raise_for_status()
         logger.info(f"Webhook delivered: {resp.status_code}")
     except Exception as e:

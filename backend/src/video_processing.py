@@ -55,6 +55,24 @@ MIN_FACE_SEP      = 0.10  # 3/4-speaker: min separation between adjacent faces
 SPLIT_MIN_CX_SEP  = CROP_W_1  # 608px
 
 
+# ─── FFmpeg Core Utilities ───────────────────────────────────────────────────
+
+def _get_video_codec_args(use_gpu: bool, is_merge: bool = False) -> List[str]:
+    """Returns standardized GPU/CPU video codec arguments to maintain pipeline sync."""
+    if use_gpu:
+        return ["-c:v", "h264_nvenc", "-preset", "p4", "-rc", "constqp", "-qp", "28"]
+    if is_merge:
+        return ["-c:v", "copy"]
+    return ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23"]
+
+def _run_ffmpeg(cmd: List[str], error_ctx: str):
+    """Executes FFmpeg with central error boundary mapping."""
+    try:
+        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        logger.error(f"FFmpeg failed: {error_ctx}")
+        raise RuntimeError(f"{error_ctx} failed: {e}") from e
+
 # ─── Phase 4 ──────────────────────────────────────────────────────────────────
 
 def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: str = "", use_gpu: bool = False) -> str:
@@ -73,7 +91,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
     start = clip["start_time"]
     dur = clip["end_time"] - start
     out = f"{work_dir}/temp_extracted_clip_{idx}.mp4" if work_dir else f"temp_extracted_clip_{idx}.mp4"
-    logger.info(f"Extracting {out} [{start}s to {clip['end_time']}s] (GPU: {use})...")
+    logger.info(f"Extracting {out} [{start}s to {clip['end_time']}s] (GPU: {use_gpu})...")
     
     # Base command
     cmd = [
@@ -83,23 +101,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
         "-t", str(dur),
     ]
     
-    # Video codec: NVENC if GPU available, otherwise libx264
-    if use_gpu:
-        cmd.extend([
-            "-c:v", "h264_nvenc",
-            "-preset", "p4",  # Fast preset for NVENC
-            "-rc", "constqp",
-            "-qp", "28",
-        ])
-    else:
-        cmd.extend([
-            "-c:v", "libx264",
-            "-pix_fmt", "yuv420p",
-            "-preset", "veryfast",
-            "-crf", "23",
-        ])
-    
-    # Audio codec (same for both)
+    cmd.extend(_get_video_codec_args(use_gpu, is_merge=False))
     cmd.extend([
         "-c:a", "aac",
         "-b:a", "128k",
@@ -108,11 +110,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
         out,
     ])
     
-    try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"FFmpeg failed extracting segment {idx}")
-        raise RuntimeError(f"Extraction failed: {e}") from e
+    _run_ffmpeg(cmd, f"segment extraction {idx}")
     return out
 
 
@@ -138,20 +136,7 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
         "-i", extract_vid,
     ]
     
-    # Video codec: copy if not GPU, otherwise use NVENC for re-encoding
-    if use_gpu:
-        cmd.extend([
-            "-c:v", "h264_nvenc",
-            "-preset", "p4",
-            "-rc", "constqp",
-            "-qp", "28",
-        ])
-    else:
-        cmd.extend([
-            "-c:v", "copy",
-        ])
-    
-    # Audio codec (same for both)
+    cmd.extend(_get_video_codec_args(use_gpu, is_merge=True))
     cmd.extend([
         "-c:a", "aac",
         "-map", "0:v:0",
@@ -160,11 +145,7 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
         out_file,
     ])
 
-    try:
-        subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
-    except subprocess.CalledProcessError as e:
-        logger.error(f"FFmpeg merge failed for clip {idx}")
-        raise RuntimeError(f"Merging failed for clip {idx}. FFmpeg Error: {e.stderr}") from e
+    _run_ffmpeg(cmd, f"merge for clip {idx}")
 
     # Clean up intermediate files
     try:

@@ -81,3 +81,8 @@ deploy/oci*.log
 scripts/cocoindex_env/
 .cocoindex_db/
 .cocoindex_metadata.db*
+cocoindex.db*
+*_search.json
+
+# ─── Temp repos / debug ──────────────────────────────────────────────────
+.tmp_repos/
