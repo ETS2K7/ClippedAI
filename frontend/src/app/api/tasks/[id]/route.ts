@@ -97,10 +97,7 @@ async function getHlsUrl(
   hlsKey: string | null,
 ): Promise<string | null> {
   if (!hlsKey) return null;
-  // Use CloudFront URL for HLS since S3 bucket now allows public access
-  if (shouldUseCloudFront(hlsKey)) {
-    return getCloudFrontUrl(hlsKey);
-  }
+  // Use presigned URL for HLS to bypass CloudFront CORS
   return getPresignedUrl(hlsKey);
 }
 
