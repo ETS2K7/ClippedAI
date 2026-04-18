@@ -97,6 +97,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 ],
                 response_format={"type": "json_object"},
                 temperature=0.2,
+                timeout=120.0,  # 2 minute timeout
             )
             break
         except Exception as e:

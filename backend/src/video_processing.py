@@ -23,13 +23,20 @@ CROP_W_1 = 608   # universal 9:16 crop width for every layout cell
 
 OUT_W, OUT_H = 1080, 1920
 
-# For 1080×960 output cells (each half of a 2-speaker split, or 3-speaker top),
+# Crop widths for different speaker layouts (AR-safe from 16:9 source)
+CROP_W_1          = 608  # 1-speaker: full-frame 9:16 crop
+CROP_W_2          = 1080 # 2-speaker: vertical split (1080×960 per speaker)
+CROP_W_3T         = 1080 # 3-speaker top featured (1080×960)
+CROP_W_3S         = 540  # 3-speaker side-by-side bottom (540×960 each)
+CROP_W_4          = 540  # 4-speaker grid (540×960 each)
+
 # the source crop must be 608×541 to keep both axes at the same scale factor
 # (1.776× horiz, 1.774× vert — 0.1% difference, imperceptible).
 # Using 608×1080 → 1080×960 gives 1.776× vs 0.888× — 2× scale mismatch → distortion.
 CROP_H_HALF = int(round(CROP_W_1 * (OUT_H // 2) / OUT_W))  # = 541
 
-SIGMA = 25  # Gaussian smoothing frames (~1 s at 25 fps)
+# Gaussian smoothing frames (~1 s at 25 fps)
+SIGMA = 25  
 
 # Stabilisation thresholds (entry = min frames before mode activates,
 # gap = min gap frames before mode drops — prevents rapid re-entry)
@@ -41,17 +48,16 @@ MIN_SPLIT_4_ENTRY = 30   # ~1.2 s
 MIN_SPLIT_4_GAP   = 30
 
 # Detection thresholds
-MIN_FACE_W_RATIO  = 0.04  # face must be ≥ 4 % of frame width to count
-SPLIT_MARGIN      = 0.08  # 2-speaker: each face must be SPLIT_MARGIN past centre
+MIN_FACE_W_RATIO  = 0.04  # Face must be ≥4% of frame width to count
+SPLIT_MARGIN      = 0.08  # 2-speaker: each face must be 8% past centre
 MIN_FACE_SEP      = 0.10  # 3/4-speaker: min separation between adjacent faces
-# Minimum cx distance between two speakers before their 608px crops stop overlapping.
-# Proof: crops overlap iff |cx_r - cx_l| < CROP_W_1.  Guard: require ≥ CROP_W_1.
+# Minimum cx distance before 608px crops stop overlapping (|cx_r - cx_l| < CROP_W_1)
 SPLIT_MIN_CX_SEP  = CROP_W_1  # 608px
 
 
 # ─── Phase 4 ──────────────────────────────────────────────────────────────────
 
-def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
+def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: str = "") -> str:
     """FFmpeg segment extraction for a given clip timestamp range.
 
     Re-encodes to H.264 + AAC (not stream copy). YouTube / Apify often delivers
@@ -64,7 +70,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
     )
     start = clip["start_time"]
     dur = clip["end_time"] - start
-    out = f"temp_extracted_clip_{idx}.mp4"
+    out = f"{work_dir}/temp_extracted_clip_{idx}.mp4" if work_dir else f"temp_extracted_clip_{idx}.mp4"
     logger.info(f"Extracting {out} [{start}s to {clip['end_time']}s]...")
     cmd = [
         "ffmpeg", "-y",
@@ -91,7 +97,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int) -> str:
 
 # ─── Phase 7 ──────────────────────────────────────────────────────────────────
 
-def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: int):
+def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: int, work_dir: str = ""):
     """Burns .ass subtitles into the tracked video and muxes original audio.
     
     Attempts GPU-accelerated NVENC encoding first (5–10× faster than CPU).
@@ -100,7 +106,7 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
     logger.info(
         f"==================== PHASE 7: FINAL MERGE & CLEANUP (Clip {idx}) ===================="
     )
-    out_file = f"output/clip_{idx}.mp4"
+    out_file = f"{work_dir}/clip_{idx}.mp4" if work_dir else f"output/clip_{idx}.mp4"
 
     # Try NVENC first (P1 optimization), fallback to CPU
     encoder_configs = [
@@ -379,7 +385,7 @@ def _prominent_distinct_faces(
 # ─── Phase 5 ──────────────────────────────────────────────────────────────────
 
 def track_speaker_and_frame(
-    clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]]
+    clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]], work_dir: str = ""
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
@@ -403,6 +409,17 @@ def track_speaker_and_frame(
     logger.info("Calling Modal Fast-ASD tracker...")
     Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
     tracker = Tracker()
+    
+    # Check file size before loading into memory to prevent memory exhaustion
+    file_size_mb = os.path.getsize(clip_file) / (1024 * 1024)
+    MAX_VIDEO_SIZE_MB = 500  # 500MB limit for safety
+    
+    if file_size_mb > MAX_VIDEO_SIZE_MB:
+        logger.warning(
+            f"Video file is large ({file_size_mb:.1f}MB). "
+            f"Loading into memory may cause issues. Consider using shorter clips."
+        )
+    
     with open(clip_file, "rb") as vf:
         video_bytes = vf.read()
     try:
@@ -431,8 +448,8 @@ def track_speaker_and_frame(
 
     logger.info(f"Video: {w}x{h} @ {fps}fps, {frames_count} frames")
 
-    fourcc   = cv2.VideoWriter_fourcc(*"mp4v")
-    out_path = f"temp_tracked_{idx}.mp4"
+    fourcc   = cv2.VideoWriter_fourcc(*"avc1")  # H.264 codec for better compatibility
+    out_path = f"{work_dir}/temp_tracked_{idx}.mp4" if work_dir else f"temp_tracked_{idx}.mp4"
     writer   = cv2.VideoWriter(out_path, fourcc, fps, (OUT_W, OUT_H))
 
     frame_faces: Dict[int, List[Dict]] = {
@@ -727,6 +744,9 @@ def track_speaker_and_frame(
     # Re-open capture to reliably restart from frame 0 (fixes OpenCV seek bug)
     cap.release()
     cap = cv2.VideoCapture(clip_file)
+    render_cap = cap  # Keep reference for finally block
+    render_writer = writer  # Keep reference for finally block
+    
     try:
         for fidx in range(frames_count):
             ret, frame = cap.read()
@@ -762,8 +782,11 @@ def track_speaker_and_frame(
 
             writer.write(out_frame)
     finally:
-        writer.release()
-        cap.release()
+        # Ensure resources are released even if an error occurs
+        if render_writer is not None:
+            render_writer.release()
+        if render_cap is not None:
+            render_cap.release()
 
     logger.info(f"Tracking complete. Output: {out_path}")
     return out_path, chunk_meta

@@ -6,21 +6,23 @@ import { db } from "~/server/db";
 import { s3Client } from "~/server/s3";
 import crypto from "crypto";
 
-// ── In-process rate limiter: max 15 uploads per user per hour ─────────────
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_MAX = 15;
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+// ── Database-backed rate limiter: max 15 uploads per user per hour ─────────────
+const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX || "15", 10);
+const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || "3600000", 10); // 1 hour default
 
-function isRateLimited(userId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(userId);
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return false;
-  }
-  if (entry.count >= RATE_LIMIT_MAX) return true;
-  entry.count += 1;
-  return false;
+async function isRateLimited(userId: string): Promise<boolean> {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - RATE_LIMIT_WINDOW_MS);
+
+  // Count uploads in the time window
+  const count = await db.uploadedFile.count({
+    where: {
+      userId,
+      createdAt: { gte: windowStart },
+    },
+  });
+
+  return count >= RATE_LIMIT_MAX;
 }
 
 /** Accepted video MIME types */
@@ -70,7 +72,7 @@ export async function POST(req: Request) {
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
 
   // Rate limiting — prevent S3 storage exhaustion
-  if (isRateLimited(session.user.id)) {
+  if (await isRateLimited(session.user.id)) {
     return NextResponse.json(
       { error: "Too many uploads. Please wait before uploading more videos." },
       { status: 429 },

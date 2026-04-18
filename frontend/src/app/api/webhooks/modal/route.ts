@@ -15,6 +15,12 @@ interface ModalWebhookPayload {
  * Creates clip DB records and updates the uploaded file status atomically.
  */
 export async function POST(req: Request) {
+  // Validate Content-Type
+  const contentType = req.headers.get("content-type");
+  if (!contentType || !contentType.includes("application/json")) {
+    return NextResponse.json({ error: "Invalid Content-Type" }, { status: 400 });
+  }
+
   let body: ModalWebhookPayload;
 
   try {
@@ -42,11 +48,12 @@ export async function POST(req: Request) {
   const secretBuffer = Buffer.from(secret);
   const expectedBuffer = Buffer.from(expectedSecret);
 
-  // Timing-safe comparison (requires same-length buffers)
-  if (
-    secretBuffer.length !== expectedBuffer.length ||
-    !crypto.timingSafeEqual(secretBuffer, expectedBuffer)
-  ) {
+  // Constant-time comparison that handles different lengths
+  if (secretBuffer.length !== expectedBuffer.length) {
+    console.error("[webhook/modal] Invalid secret length");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (!crypto.timingSafeEqual(secretBuffer, expectedBuffer)) {
     console.error("[webhook/modal] Invalid secret");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

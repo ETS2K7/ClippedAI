@@ -12,8 +12,15 @@ from config import get_logger, ASSEMBLYAI_KEY
 
 logger = get_logger(__name__)
 
-# Maximum polls before timeout (~10 minutes at 3s intervals)
-MAX_POLL_ATTEMPTS = 200
+# Base polling configuration
+POLL_INTERVAL_SECONDS = 3
+# Calculate max attempts based on video duration: ~1 minute per 10 minutes of video
+def get_max_poll_attempts(video_duration_seconds: int) -> int:
+    """Returns appropriate max poll attempts based on video duration."""
+    # Minimum 200 attempts (10 minutes), plus additional for longer videos
+    base_attempts = 200
+    additional_attempts = (video_duration_seconds // 600) * 50  # 50 extra attempts per 10 min of video
+    return base_attempts + additional_attempts
 
 
 def _extract_audio(video_path: str) -> str:
@@ -102,8 +109,18 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
 
     transcript_id = res.json()["id"]
 
-    logger.info(f"Polling transcription {transcript_id}...")
-    for _ in range(MAX_POLL_ATTEMPTS):
+    # Get video duration for dynamic timeout calculation
+    import cv2
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    
+    video_duration_seconds = int(frame_count / fps) if fps > 0 else 600  # Default to 10 min if fps unavailable
+    max_attempts = get_max_poll_attempts(video_duration_seconds)
+    
+    logger.info(f"Polling transcription {transcript_id} (max {max_attempts} attempts for {video_duration_seconds}s video)...")
+    for attempt in range(max_attempts):
         try:
             res = requests.get(
                 f"https://api.assemblyai.com/v2/transcript/{transcript_id}", headers=headers,
@@ -111,12 +128,12 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
             )
             if res.status_code != 200:
                 logger.warning(f"Poll returned HTTP {res.status_code}, retrying...")
-                time.sleep(3)
+                time.sleep(POLL_INTERVAL_SECONDS)
                 continue
             data = res.json()
         except requests.exceptions.RequestException as e:
-            logger.warning(f"Network error during poll: {e}. Retrying in 3s...")
-            time.sleep(3)
+            logger.warning(f"Network error during poll: {e}. Retrying in {POLL_INTERVAL_SECONDS}s...")
+            time.sleep(POLL_INTERVAL_SECONDS)
             continue
         status = data["status"]
 
@@ -128,8 +145,8 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
         if status == "error":
             raise RuntimeError(f"AssemblyAI Error: {data.get('error')}")
 
-        time.sleep(3)
+        time.sleep(POLL_INTERVAL_SECONDS)
 
     raise RuntimeError(
-        f"Transcription timed out after {MAX_POLL_ATTEMPTS * 3}s for transcript {transcript_id}"
+        f"Transcription timed out after {max_attempts * POLL_INTERVAL_SECONDS}s for transcript {transcript_id}"
     )

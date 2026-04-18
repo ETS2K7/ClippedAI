@@ -1,6 +1,8 @@
 import os
 import logging
 from dotenv import load_dotenv
+import functools
+from typing import Callable
 
 load_dotenv()
 
@@ -14,6 +16,33 @@ logging.basicConfig(
 def get_logger(name: str) -> logging.Logger:
     return logging.getLogger(name)
 
+
+# Module for loading environment variables and providing lazy accessors for API keys.
+
+def validate_required_env_vars():
+    """
+    Validates that all required environment variables are set at startup.
+    Raises RuntimeError if any required variables are missing.
+    Call this explicitly in main.py startup phase.
+    """
+    required_vars = [
+        "ASSEMBLYAI_KEY",
+        "GROQ_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "S3_BUCKET_NAME",
+    ]
+    
+    missing_vars = [var for var in required_vars if not os.environ.get(var)]
+    
+    if missing_vars:
+        raise RuntimeError(
+            f"Missing required environment variables: {', '.join(missing_vars)}. "
+            "Please set these in your environment or Modal secrets."
+        )
+    
+    logger = get_logger(__name__)
+    logger.info("All required environment variables validated successfully.")
 
 # ─── Lazy API key access ─────────────────────────────────────────────────
 # Defer validation to first use so containerised startup doesn't crash

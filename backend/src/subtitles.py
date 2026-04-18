@@ -57,6 +57,7 @@ def generate_subtitles(
     font_family: Optional[str] = None,
     font_size: Optional[int] = None,
     font_color: Optional[str] = None,
+    work_dir: str = "",
 ) -> str:
     """
     Generates an .ASS subtitle file dynamically mapping words iteratively to
@@ -70,7 +71,7 @@ def generate_subtitles(
     logger.info(
         f"==================== PHASE 6: SUBTITLE GENERATION (Clip {idx}) ===================="
     )
-    out = f"temp_subtitles_{idx}.ass"
+    out = f"{work_dir}/temp_subtitles_{idx}.ass" if work_dir else f"temp_subtitles_{idx}.ass"
     start_ms = clip["start_time"] * 1000
     end_ms = clip["end_time"] * 1000
 

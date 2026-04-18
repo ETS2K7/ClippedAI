@@ -13,7 +13,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
-from config import get_logger
+from config import get_logger, validate_required_env_vars
 from src.transcriber import transcribe
 from src.llm import select_clips
 from src.video_processing import extract_segment, track_speaker_and_frame, merge_and_cleanup
@@ -64,6 +64,7 @@ class PipelineTimer:
         return {"total_seconds": round(total, 1), "phases": {n: round(t, 1) for n, t in self.phases}}
 
 S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "clippedai-ap-south-1")
+S3_REGION = os.environ.get("AWS_REGION", "ap-south-1")
 
 class ProcessVideoRequest(BaseModel):
     s3_key: str
@@ -106,7 +107,7 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
         "s3Bucket": S3_BUCKET,
         "s3AccessKeyId": os.environ.get("AWS_ACCESS_KEY_ID"),
         "s3SecretAccessKey": os.environ.get("AWS_SECRET_ACCESS_KEY"),
-        "s3Region": "ap-south-1",
+        "s3Region": S3_REGION,
         "preferQuality": "720p",
         "preferFormat": "mp4"
     }
@@ -126,14 +127,14 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
             raise RuntimeError(f"No fileKey in Apify output: {item}")
 
         logger.info(f"Downloading video from S3 via Apify fileKey: {file_key}")
-        
+
         # Download the file from our S3 bucket directly to video_path,
         # which the rest of the Modal pipeline will use
         s3 = boto3.client(
             "s3",
             aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
             aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-            region_name="us-east-1",
+            region_name=S3_REGION,
         )
         s3.download_file(S3_BUCKET, file_key, str(video_path))
         
@@ -160,6 +161,7 @@ def _process_single_clip(
     font_family: str | None = None,
     font_color: str | None = None,
     font_size: int | None = None,
+    work_dir: str = "",
 ) -> dict:
     """
     Processes a single clip through the full sub-pipeline:
@@ -169,17 +171,18 @@ def _process_single_clip(
     Designed to run concurrently with other clip pipelines via ThreadPoolExecutor.
     """
     logger.info(f"--- Processing Clip {index + 1} (parallel) ---")
-    ext_vid = extract_segment(video_path, clip, index)
-    trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words)
+    ext_vid = extract_segment(video_path, clip, index, work_dir)
+    trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir)
     sub_file = generate_subtitles(
         words, clip, index, chunk_meta,
         font_family=font_family,
         font_size=font_size,
         font_color=font_color,
+        work_dir=work_dir,
     )
-    merge_and_cleanup(trk_vid, ext_vid, sub_file, index)
+    merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir)
 
-    clip_out_path = f"output/clip_{index}.mp4"
+    clip_out_path = f"{work_dir}/clip_{index}.mp4"
     # Generate multiple thumbnail sizes in WebP format
     thumb_sizes = [
         (320, "thumb_320w"),
@@ -192,7 +195,7 @@ def _process_single_clip(
     # 1. Extract and generate thumbnails in multiple WebP sizes
     logger.info(f"Generating thumbnails for clip {index + 1}")
     for width, size_name in thumb_sizes:
-        thumb_out_path = f"output/{size_name}_{index}.webp"
+        thumb_out_path = f"{work_dir}/{size_name}_{index}.webp"
         subprocess.run([
             "ffmpeg", "-y", "-i", clip_out_path,
             "-ss", "00:00:01", "-vframes", "1",
@@ -260,7 +263,6 @@ def _process_video_pipeline(
     timer = PipelineTimer(run_id)
     base_dir = pathlib.Path("/tmp") / run_id
     base_dir.mkdir(parents=True, exist_ok=True)
-    os.makedirs("output", exist_ok=True)
 
     video_path = base_dir / "input.mp4"
     s3_client = _create_s3_client()
@@ -295,13 +297,16 @@ def _process_video_pipeline(
         output_clips = [None] * len(clips)
         clip_errors = []
 
-        with ThreadPoolExecutor(max_workers=len(clips)) as executor:
+        # Cap max_workers to prevent resource exhaustion with many clips
+        max_workers = min(len(clips), 4)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_idx = {
                 executor.submit(
                     _process_single_clip,
                     str(video_path), clip, index, words,
                     s3_client, bucket, s3_key_dir,
                     font_family, font_color, font_size,
+                    str(base_dir),
                 ): index
                 for index, clip in enumerate(clips)
             }
@@ -385,6 +390,10 @@ class ClippedAI:
         """Pre-warm resources during container startup, not first request.
         This runs once when the container boots, before any requests arrive."""
         logger.info("Container starting — pre-warming resources...")
+        
+        # Validate required environment variables at startup
+        validate_required_env_vars()
+        
         # Pre-initialize the S3 client so the first request doesn't pay connection setup cost
         self._s3_client = _create_s3_client()
         # Verify GPU availability for NVENC
@@ -407,7 +416,14 @@ class ClippedAI:
     @modal.fastapi_endpoint(method="POST")
     def process_video(self, request: ProcessVideoRequest, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
         auth_token = os.environ.get("AUTH_TOKEN")
-        if not auth_token or not hmac.compare_digest(token.credentials, auth_token):
+        # Validate token format before comparison
+        if not auth_token or not token.credentials or len(token.credentials) < 16:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid bearer token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if not hmac.compare_digest(token.credentials, auth_token):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect bearer token",
@@ -423,9 +439,18 @@ class ClippedAI:
                 font_color=request.font_color,
                 font_size=request.font_size,
             )
+        except RuntimeError as e:
+            logger.error(f"Pipeline failed (RuntimeError): {e}")
+            result = {"status": "failed", "clips": [], "error": f"Runtime error: {str(e)}"}
+        except ValueError as e:
+            logger.error(f"Pipeline failed (ValueError): {e}")
+            result = {"status": "failed", "clips": [], "error": f"Invalid input: {str(e)}"}
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Pipeline failed (Network error): {e}")
+            result = {"status": "failed", "clips": [], "error": f"Network error: {str(e)}"}
         except Exception as e:
-            logger.error(f"Pipeline failed: {e}")
-            result = {"status": "failed", "clips": [], "error": str(e)}
+            logger.error(f"Pipeline failed (Unexpected): {e}")
+            result = {"status": "failed", "clips": [], "error": f"Unexpected error: {str(e)}"}
 
         # If webhook fields are provided, call back to Next.js
         if request.webhook_url and request.webhook_secret and request.uploaded_file_id and request.user_id:

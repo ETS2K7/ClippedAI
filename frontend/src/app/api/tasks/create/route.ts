@@ -29,6 +29,14 @@ export async function POST(req: Request) {
     );
   }
 
+  // Validate and sanitize sourceUrl
+  if (typeof sourceUrl !== "string" || sourceUrl.length > 2048) {
+    return new NextResponse(
+      JSON.stringify({ error: "Invalid source URL" }),
+      { status: 400 },
+    );
+  }
+
   // YouTube URL — create a new DB record for it
   const YOUTUBE_HOSTS = new Set([
     "youtube.com",
