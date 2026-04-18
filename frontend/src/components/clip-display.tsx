@@ -7,7 +7,7 @@ import { getClipDownloadUrl } from "~/actions/generation";
 import { Button } from "./ui/button";
 import DynamicVideoPlayer from "./dynamic-video-player";
 
-function ClipCard({ clip, videoUrl, hlsUrl }: { clip: Clip; videoUrl: string | null; hlsUrl: string | null }) {
+function ClipCard({ clip, videoUrl }: { clip: Clip; videoUrl: string | null }) {
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -45,10 +45,9 @@ function ClipCard({ clip, videoUrl, hlsUrl }: { clip: Clip; videoUrl: string | n
   return (
     <div className="flex max-w-52 flex-col gap-2">
       <div className="bg-muted">
-        {videoUrl || hlsUrl ? (
+        {videoUrl ? (
           <DynamicVideoPlayer
-            src={videoUrl ?? ""}
-            hlsUrl={hlsUrl}
+            src={videoUrl}
             className="h-full w-full rounded-md object-cover"
           />
         ) : (
@@ -76,7 +75,7 @@ function ClipCard({ clip, videoUrl, hlsUrl }: { clip: Clip; videoUrl: string | n
   );
 }
 
-export function ClipDisplay({ clips, videoUrls, hlsUrls }: { clips: Clip[]; videoUrls: (string | null)[]; hlsUrls: (string | null)[] }) {
+export function ClipDisplay({ clips, videoUrls }: { clips: Clip[]; videoUrls: (string | null)[] }) {
   if (clips.length === 0) {
     return (
       <p className="text-muted-foreground p-4 text-center">
@@ -87,7 +86,7 @@ export function ClipDisplay({ clips, videoUrls, hlsUrls }: { clips: Clip[]; vide
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
       {clips.map((clip, index) => (
-        <ClipCard key={clip.id} clip={clip} videoUrl={videoUrls[index] ?? null} hlsUrl={hlsUrls[index] ?? null} />
+        <ClipCard key={clip.id} clip={clip} videoUrl={videoUrls[index] ?? null} />
       ))}
     </div>
   );
