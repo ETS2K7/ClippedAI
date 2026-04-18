@@ -130,13 +130,16 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
     )
     out_file = f"{work_dir}/clip_{idx}.mp4" if work_dir else f"output/clip_{idx}.mp4"
 
-    # Re-encode tracked .avi (MJPG) to H.264 and mux audio from the extracted segment.
+    # Re-encode tracked .avi (MJPG) to H.264, burn in ASS subtitles, and mux audio.
     # -c:v libx264 is always available; we intentionally do NOT use NVENC here because
     # MJPG pixel format (yuvj420p) requires colour-range conversion that NVENC rejects.
+    # The ass= filter path must have colons escaped for FFmpeg's filter syntax on Linux.
+    safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
     cmd = [
         "ffmpeg", "-y",
         "-i", tracked_vid,
         "-i", extract_vid,
+        "-vf", f"ass={safe_sub}",
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
         "-preset", "veryfast",
