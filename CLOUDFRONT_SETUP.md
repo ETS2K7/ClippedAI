@@ -240,3 +240,4 @@ Enable CloudFront metrics and alarms:
 - Check Cache-Control headers on S3 objects
 - Verify cache policy configuration
 - Ensure query string forwarding is disabled (if not needed)
+# CloudFront Configuration
