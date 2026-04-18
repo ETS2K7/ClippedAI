@@ -97,9 +97,7 @@ async function getHlsUrl(
   hlsKey: string | null,
 ): Promise<string | null> {
   if (!hlsKey) return null;
-  if (shouldUseCloudFront(hlsKey)) {
-    return getCloudFrontUrl(hlsKey);
-  }
+  // Use presigned URL for HLS to avoid CORS issues with CloudFront
   return getPresignedUrl(hlsKey);
 }
 
