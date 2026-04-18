@@ -47,6 +47,10 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
       const video = videoRef.current;
       if (!video || !hlsUrl) return;
 
+      console.log("HLS URL:", hlsUrl);
+      console.log("HLS supported:", Hls.isSupported());
+      console.log("Native HLS supported:", video.canPlayType("application/vnd.apple.mpegurl"));
+
       if (Hls.isSupported()) {
         const hls = new Hls({
           enableWorker: false,
@@ -55,30 +59,42 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
           maxMaxBufferLength: 60,
         });
         hlsRef.current = hls;
-        hls.loadSource(hlsUrl);
-        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          console.log("HLS manifest parsed successfully");
+        });
 
         hls.on(Hls.Events.ERROR, (event, data) => {
+          console.error("HLS error:", data.type, data.details, data.fatal);
           if (data.fatal) {
             switch (data.type) {
               case Hls.ErrorTypes.NETWORK_ERROR:
+                console.log("Attempting to recover from network error");
                 hls.startLoad();
                 break;
               case Hls.ErrorTypes.MEDIA_ERROR:
+                console.log("Attempting to recover from media error");
                 hls.recoverMediaError();
                 break;
               default:
+                console.log("Fatal error, cannot recover");
                 break;
             }
           }
         });
+
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
 
         return () => {
           hls.destroy();
         };
       } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
         // Native HLS support (Safari)
+        console.log("Using native HLS support");
         video.src = hlsUrl;
+      } else {
+        console.error("HLS not supported on this device");
       }
     }, [hlsUrl]);
 
