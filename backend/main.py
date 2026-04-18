@@ -153,10 +153,10 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
             raise RuntimeError("Apify actor did not return any dataset items (download failed)")
 
         item = items[0]
-        download_url = item.get("downloadUrl")
+        download_url = item.get("downloadedFileUrl") or item.get("downloadUrl")
         
         if not download_url:
-            raise RuntimeError(f"No downloadUrl in Apify output (Ensure the actor is configured to use KVS natively): {item}")
+            raise RuntimeError(f"No download URL found in Apify output (Ensure the actor is configured to use KVS natively): {item}")
 
         logger.info(f"Streaming video directly from Apify KVS to Modal: {download_url}")
 
