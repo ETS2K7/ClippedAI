@@ -17,7 +17,6 @@ async function main() {
     select: {
       id: true,
       s3Key: true,
-      hlsKey: true,
       thumbnailKeys: true,
       createdAt: true,
     },
