@@ -407,7 +407,7 @@ def _send_webhook(
     result: dict,
 ) -> None:
     """POST processing results back to the Next.js webhook endpoint.
-    
+
     Uses exponential backoff retry (3 attempts) for fault-tolerant delivery.
     A dropped webhook means the user never sees their clips.
     """
@@ -416,12 +416,14 @@ def _send_webhook(
         "user_id": user_id,
         "status": result.get("status", "failed"),
         "clips": result.get("clips", []),
-        "secret": webhook_secret,
+    }
+    headers = {
+        "X-Webhook-Secret": webhook_secret,
     }
     MAX_RETRIES = 3
     for attempt in range(MAX_RETRIES):
         try:
-            resp = requests.post(webhook_url, json=payload, timeout=30)
+            resp = requests.post(webhook_url, json=payload, headers=headers, timeout=30)
             resp.raise_for_status()
             logger.info(f"Webhook delivered: {resp.status_code}")
             return
