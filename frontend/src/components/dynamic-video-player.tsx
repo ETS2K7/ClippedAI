@@ -49,12 +49,29 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
 
       if (Hls.isSupported()) {
         const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
+          enableWorker: false,
+          lowLatencyMode: false,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
         });
         hlsRef.current = hls;
         hls.loadSource(hlsUrl);
         hls.attachMedia(video);
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hls.recoverMediaError();
+                break;
+              default:
+                break;
+            }
+          }
+        });
 
         return () => {
           hls.destroy();
