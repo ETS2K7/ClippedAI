@@ -230,8 +230,8 @@ def _process_single_clip(
     for height, bitrate, name in renditions:
         rendition_dir = f"{hls_dir}/{name}"
         os.makedirs(rendition_dir, exist_ok=True)
-        
-        subprocess.run([
+
+        result = subprocess.run([
             "ffmpeg", "-y", "-i", clip_out_path,
             "-c:v", "libx264",
             "-preset", "veryfast",
@@ -247,16 +247,21 @@ def _process_single_clip(
             "-hls_playlist_type", "vod",
             "-hls_segment_filename", f"{rendition_dir}/segment_%03d.ts",
             f"{rendition_dir}/playlist.m3u8"
-        ], capture_output=True)
+        ], capture_output=True, text=True)
 
-    # Generate master playlist
+        if result.returncode != 0:
+            logger.error(f"FFmpeg failed for {name} rendition: {result.stderr}")
+            continue  # Skip failed rendition
+
+    # Generate master playlist with only successfully generated renditions
     master_playlist_path = f"{hls_dir}/master.m3u8"
     with open(master_playlist_path, "w") as f:
         f.write("#EXTM3U\n")
         f.write("#EXT-X-VERSION:3\n")
         for height, bitrate, name in renditions:
-            f.write(f"#EXT-X-STREAM-INF:BANDWIDTH={bitrate[:-1]}000,RESOLUTION={-2 if height == 480 else -2 if height == 720 else -2}x{height}\n")
-            f.write(f"{name}/playlist.m3u8\n")
+            if os.path.exists(f"{rendition_dir}/playlist.m3u8"):
+                f.write(f"#EXT-X-STREAM-INF:BANDWIDTH={bitrate[:-1]}000,RESOLUTION={-2 if height == 480 else -2 if height == 720 else -2}x{height}\n")
+                f.write(f"{name}/playlist.m3u8\n")
 
     # Upload HLS files to S3
     hls_s3_key = f"{s3_key_dir}/hls_{index}"
