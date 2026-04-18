@@ -10,12 +10,12 @@ import { env } from "~/env";
  */
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session?.user?.id) return new NextResponse(null, { status: 401 });
 
-  const taskId = params.id;
+  const { id: taskId } = await params;
 
   try {
     // Check if task exists and belongs to user
