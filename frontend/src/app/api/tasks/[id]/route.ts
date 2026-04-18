@@ -97,7 +97,10 @@ async function getHlsUrl(
   hlsKey: string | null,
 ): Promise<string | null> {
   if (!hlsKey) return null;
-  // Use presigned URL for HLS to bypass CloudFront CORS
+  // Use CloudFront URL for HLS since CORS is now configured
+  if (shouldUseCloudFront(hlsKey)) {
+    return getCloudFrontUrl(hlsKey);
+  }
   return getPresignedUrl(hlsKey);
 }
 
