@@ -158,6 +158,7 @@ export default function TaskPage() {
   const [deletingClipId, setDeletingClipId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const hasTriggeredAutoRefresh = useRef(false);
 
@@ -188,6 +189,24 @@ export default function TaskPage() {
       window.location.reload();
     }, 700);
   }, []);
+
+  const handleRetry = async () => {
+    if (!params.id) return;
+    setIsRetrying(true);
+    try {
+      const response = await fetch(`/api/tasks/${params.id}/retry`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to retry task");
+      }
+      // Refresh the page to show updated status
+      window.location.reload();
+    } catch (error) {
+      setError("Failed to retry task");
+      setIsRetrying(false);
+    }
+  };
 
   const fetchTaskStatus = useCallback(
     async (retryCount = 0, maxRetries = 5): Promise<boolean> => {
@@ -484,12 +503,26 @@ export default function TaskPage() {
                 <p className="mb-8 font-mono text-xs tracking-widest text-white/40 uppercase">
                   There was an error processing your video.
                 </p>
-                <Link href="/dashboard">
-                  <Button className="font-syne rounded-md bg-white font-black tracking-widest text-black uppercase hover:bg-white/90">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    BACK TO HOME
+                <div className="flex gap-4 justify-center">
+                  <Button
+                    onClick={handleRetry}
+                    disabled={isRetrying}
+                    className="font-syne rounded-md bg-white font-black tracking-widest text-black uppercase hover:bg-white/90"
+                  >
+                    {isRetrying ? (
+                      <Clock className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Edit2 className="mr-2 h-4 w-4" />
+                    )}
+                    {isRetrying ? "RETRYING..." : "RETRY"}
                   </Button>
-                </Link>
+                  <Link href="/dashboard">
+                    <Button variant="outline" className="font-syne rounded-md border-white/20 font-black tracking-widest text-white uppercase hover:bg-white/10">
+                      <ArrowLeft className="mr-2 h-4 w-4" />
+                      BACK TO HOME
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           ) : clips.length === 0 ? (

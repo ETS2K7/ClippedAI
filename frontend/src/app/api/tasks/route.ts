@@ -43,6 +43,19 @@ export async function GET() {
   const files = await withCache(
     cacheKey,
     async () => {
+      // First, check for stuck tasks and mark them as failed
+      const timeoutThreshold = new Date(Date.now() - 30 * 60 * 1000); // 30 minutes
+      await db.uploadedFile.updateMany({
+        where: {
+          userId: session.user.id,
+          status: { in: ["queued", "uploading", "processing"] },
+          createdAt: { lt: timeoutThreshold },
+        },
+        data: {
+          status: "failed",
+        },
+      });
+
       return db.uploadedFile.findMany({
         where: { userId: session.user.id },
         include: { _count: { select: { clips: true } } },
