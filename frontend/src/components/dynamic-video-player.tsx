@@ -33,11 +33,6 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
 
-    // Detect mobile device
-    const isMobile = () => {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    };
-
     // Forward ref to video element
     useEffect(() => {
       if (typeof ref === "function") {
@@ -51,12 +46,6 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
     useEffect(() => {
       const video = videoRef.current;
       if (!video || !hlsUrl) return;
-
-      // Use MP4 on mobile instead of HLS for better compatibility
-      if (isMobile()) {
-        video.src = src;
-        return;
-      }
 
       if (Hls.isSupported()) {
         const hls = new Hls({
@@ -91,7 +80,7 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
         // Native HLS support (Safari)
         video.src = hlsUrl;
       }
-    }, [hlsUrl, src]);
+    }, [hlsUrl]);
 
     // Generate srcset from thumbnailKeys if available
     const srcset = thumbnailKeys
