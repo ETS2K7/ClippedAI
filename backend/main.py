@@ -278,8 +278,34 @@ def _process_video_pipeline(
         logger.info("Uploading downloaded video to S3")
         s3_client.upload_file(str(video_path), bucket, s3_key)
     else:
+        # Try downloading from S3; if missing (e.g. prior upload crash), attempt re-ingestion
         logger.info("Downloading from S3 (Transfer Acceleration)")
-        s3_client.download_file(bucket, s3_key, str(video_path))
+        try:
+            s3_client.download_file(bucket, s3_key, str(video_path))
+        except Exception as e:
+            err_str = str(e)
+            if "404" in err_str or "Not Found" in err_str or "NoSuchKey" in err_str:
+                # The S3 object doesn't exist — likely a prior failed upload.
+                # If this is a YouTube key, reconstruct the URL and re-ingest.
+                parts = s3_key.split("/")
+                # youtube-downloads/<userId>-<ts>/<videoId>/original.mp4
+                if parts[0] == "youtube-downloads" and len(parts) >= 3:
+                    video_id = parts[2]
+                    reconstructed_url = f"https://www.youtube.com/watch?v={video_id}"
+                    logger.warning(
+                        f"S3 key {s3_key} returned 404. "
+                        f"Re-ingesting from YouTube: {reconstructed_url}"
+                    )
+                    _download_youtube(reconstructed_url, video_path)
+                    logger.info("Re-uploading re-downloaded video to S3")
+                    s3_client.upload_file(str(video_path), bucket, s3_key)
+                else:
+                    raise RuntimeError(
+                        f"S3 object not found ({s3_key}) and no YouTube URL to recover from. "
+                        "Please re-upload the file."
+                    ) from e
+            else:
+                raise
 
     try:
         # Phase 2: Transcription
