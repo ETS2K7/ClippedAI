@@ -223,8 +223,8 @@ def _process_single_clip(
     # Generate multiple quality renditions
     renditions = [
         (480, "1000k", "480p"),
-        (720, "2000k", "720p"),
-        (1080, "3000k", "1080p"),
+        (720, "1500k", "720p"),
+        (1080, "2000k", "1080p"),
     ]
 
     for height, bitrate, name in renditions:
@@ -237,7 +237,7 @@ def _process_single_clip(
             "-preset", "veryfast",
             "-crf", "23",
             "-maxrate", f"{bitrate}",
-            "-bufsize", f"{int(bitrate[:-1]) * 2}M",
+            "-bufsize", f"{int(bitrate[:-1])}M",
             "-vf", f"scale=-2:{height}",
             "-g", "60",  # Keyframe every 2 seconds at 30fps
             "-c:a", "aac",
