@@ -22,6 +22,38 @@ from src.subtitles import generate_subtitles
 
 logger = get_logger(__name__)
 
+# HTTP session with connection pooling for Modal API calls
+_http_session = None
+
+def get_http_session():
+    """Get or create a requests.Session with connection pooling."""
+    global _http_session
+    if _http_session is None:
+        from requests.adapters import HTTPAdapter
+        from urllib3.util.retry import Retry
+        
+        _http_session = requests.Session()
+        
+        # Configure retry strategy with exponential backoff
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        
+        # Configure connection pooling
+        adapter = HTTPAdapter(
+            max_retries=retry_strategy,
+            pool_connections=10,
+            pool_maxsize=20,
+            pool_block=False,
+        )
+        
+        _http_session.mount("http://", adapter)
+        _http_session.mount("https://", adapter)
+    
+    return _http_session
+
 
 @functools.lru_cache(maxsize=1)
 def _create_s3_client():
@@ -317,7 +349,7 @@ def _send_webhook(
 ) -> None:
     """POST processing results back to the Next.js webhook endpoint.
 
-    Uses exponential backoff retry (3 attempts) for fault-tolerant delivery.
+    Uses pooled HTTP session with connection pooling for better performance.
     A dropped webhook means the user never sees their clips.
     """
     payload = {
@@ -329,20 +361,15 @@ def _send_webhook(
     headers = {
         "X-Webhook-Secret": webhook_secret,
     }
-    MAX_RETRIES = 3
-    for attempt in range(MAX_RETRIES):
-        try:
-            resp = requests.post(webhook_url, json=payload, headers=headers, timeout=30)
-            resp.raise_for_status()
-            logger.info(f"Webhook delivered: {resp.status_code}")
-            return
-        except Exception as e:
-            if attempt < MAX_RETRIES - 1:
-                wait = 2 ** (attempt + 1)
-                logger.warning(f"Webhook attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {wait}s...")
-                time.sleep(wait)
-            else:
-                logger.error(f"Webhook delivery failed after {MAX_RETRIES} attempts: {e}")
+    
+    session = get_http_session()
+    
+    try:
+        resp = session.post(webhook_url, json=payload, headers=headers, timeout=30)
+        resp.raise_for_status()
+        logger.info(f"Webhook delivered: {resp.status_code}")
+    except Exception as e:
+        logger.error(f"Webhook delivery failed: {e}")
 
 
 @app.cls(

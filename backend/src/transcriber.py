@@ -120,6 +120,11 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
     max_attempts = get_max_poll_attempts(video_duration_seconds)
     
     logger.info(f"Polling transcription {transcript_id} (max {max_attempts} attempts for {video_duration_seconds}s video)...")
+    
+    # Adaptive polling: start with 1s, exponentially increase to max 10s
+    current_poll_interval = 1
+    max_poll_interval = 10
+    
     for attempt in range(max_attempts):
         try:
             res = requests.get(
@@ -128,24 +133,26 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
             )
             if res.status_code != 200:
                 logger.warning(f"Poll returned HTTP {res.status_code}, retrying...")
-                time.sleep(POLL_INTERVAL_SECONDS)
+                time.sleep(current_poll_interval)
                 continue
             data = res.json()
         except requests.exceptions.RequestException as e:
-            logger.warning(f"Network error during poll: {e}. Retrying in {POLL_INTERVAL_SECONDS}s...")
-            time.sleep(POLL_INTERVAL_SECONDS)
+            logger.warning(f"Network error during poll: {e}. Retrying in {current_poll_interval}s...")
+            time.sleep(current_poll_interval)
             continue
         status = data["status"]
 
         if status == "completed":
             words = data["words"]
-            logger.info("Transcription complete.")
+            logger.info(f"Transcription complete after {attempt + 1} polls.")
             return words
         
         if status == "error":
             raise RuntimeError(f"AssemblyAI Error: {data.get('error')}")
 
-        time.sleep(POLL_INTERVAL_SECONDS)
+        # Exponentially increase poll interval (capped at max_poll_interval)
+        time.sleep(current_poll_interval)
+        current_poll_interval = min(current_poll_interval * 2, max_poll_interval)
 
     raise RuntimeError(
         f"Transcription timed out after {max_attempts * POLL_INTERVAL_SECONDS}s for transcript {transcript_id}"
