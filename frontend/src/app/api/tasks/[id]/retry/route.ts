@@ -55,6 +55,13 @@ export async function POST(
 
     // Dispatch Modal job
     const webhookUrl = `${env.BASE_URL}/api/webhooks/modal`;
+    console.log("[retry] Dispatching to Modal:", {
+      endpoint: env.PROCESS_VIDEO_ENDPOINT,
+      s3Key: updated.s3Key,
+      taskId: updated.id,
+      webhookUrl,
+    });
+
     const response = await fetch(env.PROCESS_VIDEO_ENDPOINT, {
       method: "POST",
       headers: {
@@ -69,8 +76,15 @@ export async function POST(
       }),
     });
 
+    console.log("[retry] Modal response:", {
+      status: response.status,
+      ok: response.ok,
+    });
+
     if (!response.ok) {
-      throw new Error(`Modal dispatch failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error("[retry] Modal dispatch error:", errorText);
+      throw new Error(`Modal dispatch failed: ${response.status} - ${errorText}`);
     }
 
     return NextResponse.json({
