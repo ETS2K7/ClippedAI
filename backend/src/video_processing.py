@@ -130,14 +130,17 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
     )
     out_file = f"{work_dir}/clip_{idx}.mp4" if work_dir else f"output/clip_{idx}.mp4"
 
-    # Always copy video — tracked_vid already has subtitles burned in by Phase 5.
-    # Re-encoding with NVENC here would be redundant and causes failures when
-    # the tracked clip uses a pixel format NVENC doesn't accept.
+    # Re-encode tracked .avi (MJPG) to H.264 and mux audio from the extracted segment.
+    # -c:v libx264 is always available; we intentionally do NOT use NVENC here because
+    # MJPG pixel format (yuvj420p) requires colour-range conversion that NVENC rejects.
     cmd = [
         "ffmpeg", "-y",
         "-i", tracked_vid,
         "-i", extract_vid,
-        "-c:v", "copy",
+        "-c:v", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-preset", "veryfast",
+        "-crf", "23",
         "-c:a", "aac",
         "-map", "0:v:0",
         "-map", "1:a:0?",
@@ -455,9 +458,13 @@ def track_speaker_and_frame(
 
     logger.info(f"Video: {w}x{h} @ {fps}fps, {frames_count} frames")
 
-    fourcc   = cv2.VideoWriter_fourcc(*"avc1")  # H.264 codec for better compatibility
-    out_path = f"{work_dir}/temp_tracked_{idx}.mp4" if work_dir else f"temp_tracked_{idx}.mp4"
+    # Use MJPG codec into a .avi container — always available in OpenCV builds.
+    # The merge step will re-encode this to H.264 via FFmpeg.
+    fourcc   = cv2.VideoWriter_fourcc(*"MJPG")
+    out_path = f"{work_dir}/temp_tracked_{idx}.avi" if work_dir else f"temp_tracked_{idx}.avi"
     writer   = cv2.VideoWriter(out_path, fourcc, fps, (OUT_W, OUT_H))
+    if not writer.isOpened():
+        raise RuntimeError(f"cv2.VideoWriter failed to open for clip {idx} (codec: MJPG)")
 
     frame_faces: Dict[int, List[Dict]] = {
         item["frame_number"]: item["faces"] for item in tracking_data
