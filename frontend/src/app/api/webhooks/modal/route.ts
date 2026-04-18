@@ -7,7 +7,7 @@ interface ModalWebhookPayload {
   uploaded_file_id: string;
   user_id: string;
   status: "success" | "failed";
-  clips: { s3Key: string; thumbnailKey: string | null; thumbnailKeys?: Record<string, string>; hlsKey?: string }[];
+  clips: { s3Key: string; thumbnailKey: string | null; thumbnailKeys?: Record<string, string> }[];
 }
 
 /**
@@ -71,7 +71,6 @@ export async function POST(req: Request) {
             s3Key: clip.s3Key,
             thumbnailKey: clip.thumbnailKey,
             thumbnailKeys: clip.thumbnailKeys || null,
-            hlsKey: clip.hlsKey || null,
             uploadedFileId: uploaded_file_id,
             userId: user_id,
           })),
