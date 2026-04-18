@@ -49,6 +49,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "hls.js": "^1.6.16",
+    "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.509.0",
     "mediabunny": "^1.40.1",
     "next": "^15.2.3",

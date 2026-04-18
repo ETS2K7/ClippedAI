@@ -380,7 +380,6 @@ def _send_webhook(
     ]
 )
 class ClippedAI:
-
     @modal.enter()
     def startup(self):
         """Pre-warm resources during container startup, not first request.

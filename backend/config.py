@@ -2,19 +2,24 @@ import os
 import logging
 from dotenv import load_dotenv
 import functools
-from typing import Callable
+from typing import Callable, Any
+
+# Configure logging level based on environment
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO" if os.environ.get("NODE_ENV") == "production" else "DEBUG").upper()
 
 load_dotenv()
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=LOG_LEVEL,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[logging.StreamHandler()],
 )
 
 def get_logger(name: str) -> logging.Logger:
-    return logging.getLogger(name)
+    logger = logging.getLogger(name)
+    logger.setLevel(LOG_LEVEL)
+    return logger
 
 
 # Module for loading environment variables and providing lazy accessors for API keys.
