@@ -53,7 +53,7 @@ export async function POST(
     // Invalidate cache for this user
     await invalidateCache(`tasks:${session.user.id}`);
 
-    // Dispatch Modal job
+    // Dispatch Modal job (non-blocking - allow retry even if Modal fails)
     const webhookUrl = `${env.BASE_URL}/api/webhooks/modal`;
     console.log("[retry] Dispatching to Modal:", {
       endpoint: env.PROCESS_VIDEO_ENDPOINT,
@@ -62,29 +62,46 @@ export async function POST(
       webhookUrl,
     });
 
-    const response = await fetch(env.PROCESS_VIDEO_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.PROCESS_VIDEO_ENDPOINT_AUTH}`,
-      },
-      body: JSON.stringify({
-        s3_key: updated.s3Key,
-        uploaded_file_id: updated.id,
-        user_id: updated.userId,
-        webhook_url: webhookUrl,
-      }),
-    });
+    try {
+      const response = await fetch(env.PROCESS_VIDEO_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.PROCESS_VIDEO_ENDPOINT_AUTH}`,
+        },
+        body: JSON.stringify({
+          s3_key: updated.s3Key,
+          uploaded_file_id: updated.id,
+          user_id: updated.userId,
+          webhook_url: webhookUrl,
+        }),
+      });
 
-    console.log("[retry] Modal response:", {
-      status: response.status,
-      ok: response.ok,
-    });
+      console.log("[retry] Modal response:", {
+        status: response.status,
+        ok: response.ok,
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[retry] Modal dispatch error:", errorText);
-      throw new Error(`Modal dispatch failed: ${response.status} - ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[retry] Modal dispatch error:", errorText);
+        // Don't fail the retry - task is now queued, Modal dispatch can be retried manually
+        return NextResponse.json({
+          message: "Task queued for retry, but Modal dispatch failed. Please try again or contact support.",
+          taskId: updated.id,
+          status: updated.status,
+          modalError: errorText,
+        });
+      }
+    } catch (error) {
+      console.error("[retry] Modal dispatch exception:", error);
+      // Don't fail the retry - task is now queued, Modal dispatch can be retried manually
+      return NextResponse.json({
+        message: "Task queued for retry, but Modal dispatch failed. Please try again or contact support.",
+        taskId: updated.id,
+        status: updated.status,
+        modalError: error instanceof Error ? error.message : "Unknown error",
+      });
     }
 
     return NextResponse.json({
