@@ -51,7 +51,7 @@ graph TB
 | Storage | AWS S3 |
 | Backend | Python 3.10 on Modal (serverless GPU) |
 | Transcription | AssemblyAI |
-| AI Clip Selection | Google Gemini 2.5 Flash |
+| AI Clip Selection | Groq (Llama 3.3 70B) |
 | Video Processing | OpenCV, FFmpeg, scipy, scenedetect |
 | Deployment | Docker Compose on Oracle Cloud, Nginx, Let's Encrypt |
 

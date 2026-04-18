@@ -19,7 +19,7 @@ def get_logger(name: str) -> logging.Logger:
 # Defer validation to first use so containerised startup doesn't crash
 # before the app has a chance to log diagnostic information.
 _assemblyai_key: str | None = None
-_gemini_key: str | None = None
+_groq_key: str | None = None
 
 
 def _get_assemblyai_key() -> str:
@@ -31,18 +31,18 @@ def _get_assemblyai_key() -> str:
     return _assemblyai_key
 
 
-def _get_gemini_key() -> str:
-    global _gemini_key
-    if _gemini_key is None:
-        _gemini_key = os.getenv("GEMINI_KEY")
-        if not _gemini_key:
-            raise ValueError("GEMINI_KEY must be set in the environment.")
-    return _gemini_key
+def _get_groq_key() -> str:
+    global _groq_key
+    if _groq_key is None:
+        _groq_key = os.getenv("GROQ_KEY")
+        if not _groq_key:
+            raise ValueError("GROQ_KEY must be set in the environment.")
+    return _groq_key
 
 
 # Public accessors used by other modules — lazy-validated on first call
 ASSEMBLYAI_KEY = _get_assemblyai_key  # Call as ASSEMBLYAI_KEY()
-GEMINI_KEY = _get_gemini_key          # Call as GEMINI_KEY()
+GROQ_KEY = _get_groq_key              # Call as GROQ_KEY()
 
 
 # Local pipeline video paths (used by downloader.py and run_local.py)

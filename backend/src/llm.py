@@ -1,19 +1,19 @@
 """
-Module for interacting with Google's Gemini models for context-aware clip generation.
+Module for interacting with Groq models for context-aware clip generation.
 """
 
 import functools
 import json
 from typing import List, Dict, Any
 from pydantic import BaseModel
-from google import genai
-from config import get_logger, GEMINI_KEY
+from groq import Groq
+from config import get_logger, GROQ_KEY
 
 logger = get_logger(__name__)
 
 @functools.lru_cache(maxsize=1)
-def _get_gemini_client():
-    return genai.Client(api_key=GEMINI_KEY())
+def _get_groq_client():
+    return Groq(api_key=GROQ_KEY())
 
 
 class ClipSelection(BaseModel):
@@ -28,7 +28,7 @@ class ClipList(BaseModel):
 
 def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Groups words into sentences and feeds them into Gemini 2.5 Flash to automatically
+    Groups words into sentences and feeds them into Groq to automatically
     select 3 high-retention viral segments between 30-60 seconds using Pydantic schemas.
     """
     logger.info(
@@ -73,7 +73,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         f"TRANSCRIPT:\n{transcript}"
     )
 
-    logger.info("Calling Gemini 2.5 Flash for clip selection...")
+    logger.info("Calling Groq for clip selection...")
 
     # Retry with exponential backoff for transient API failures
     import time as _time
@@ -83,14 +83,20 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     for attempt in range(MAX_RETRIES):
         try:
-            response = _get_gemini_client().models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config={
-                    "response_mime_type": "application/json",
-                    "response_schema": ClipList,
-                    "temperature": 0.2,
-                },
+            response = _get_groq_client().chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a master TikTok video editor. Return only valid JSON."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                response_format={"type": "json_object"},
+                temperature=0.2,
             )
             break
         except Exception as e:
@@ -98,18 +104,18 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             if attempt < MAX_RETRIES - 1:
                 wait = 2 ** (attempt + 1)
                 logger.warning(
-                    f"Gemini API call failed (attempt {attempt + 1}/{MAX_RETRIES}), "
+                    f"Groq API call failed (attempt {attempt + 1}/{MAX_RETRIES}), "
                     f"retrying in {wait}s: {e}"
                 )
                 _time.sleep(wait)
             else:
                 logger.error(
-                    f"Gemini API call failed after {MAX_RETRIES} attempts: {e}"
+                    f"Groq API call failed after {MAX_RETRIES} attempts: {e}"
                 )
-                raise RuntimeError("Gemini max retries exceeded.") from e
+                raise RuntimeError("Groq max retries exceeded.") from e
 
     try:
-        data = json.loads(response.text)
+        data = json.loads(response.choices[0].message.content)
         clips = data.get("clips", [])
 
         # Post-validate clip timestamps
@@ -134,7 +140,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         logger.info(f"Selected {len(validated_clips)} clips (validated).")
         return validated_clips
     except Exception as e:
-        logger.error(f"Failed to parse or receive output from Gemini: {e}")
-        logger.error(f"Raw Output: {response.text}")
+        logger.error(f"Failed to parse or receive output from Groq: {e}")
+        logger.error(f"Raw Output: {response.choices[0].message.content if response else 'No response'}")
         raise
 
