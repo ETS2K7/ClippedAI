@@ -1218,25 +1218,23 @@ export default function Home() {
 
                             {/* Subtitle area */}
                             <div
-                              className="absolute right-0 left-0 z-20"
-                              style={{ bottom: "185px" }}
+                              className="absolute right-0 left-0 z-20 flex flex-col items-center justify-center gap-1"
+                              style={{ bottom: "165px" }}
                             >
-                              <div className="mx-4">
                                 <p
                                   style={{
-                                    color: fontColor,
-                                    fontSize: `${Math.max(Math.min(fontSize * 0.6, 24), 12)}px`,
-                                    fontFamily: `'${fontFamily}', system-ui, -apple-system, sans-serif`,
-                                    textAlign: "center",
-                                    lineHeight: "1.4",
-                                    textShadow:
-                                      "0 2px 10px rgba(0,0,0,0.8), 0 0px 4px rgba(0,0,0,1)",
+                                    fontFamily: `Komika Axis, system-ui, sans-serif`,
+                                    fontSize: "24px",
+                                    lineHeight: "1.2",
+                                    WebkitTextStroke: "2.5px black",
+                                    textShadow: "0 0 10px rgba(0,0,0,0.8), 0 4px 6px rgba(0,0,0,0.9)",
+                                    letterSpacing: "1px",
                                   }}
-                                  className="font-bold tracking-tight"
+                                  className="font-bold uppercase"
                                 >
-                                  Your subtitle will look like this
+                                  <span style={{ color: "white" }}>YOUR </span>
+                                  <span style={{ color: "#00FF00" }}>SUBTITLE</span>
                                 </p>
-                              </div>
                             </div>
 
                             {/* Bottom left — creator info */}
@@ -1329,45 +1327,7 @@ export default function Home() {
                           </div>
                         </div>
 
-                        {/* Caption info below phone */}
-                        <div className="mt-6 space-y-3 px-2">
-                          <div className="flex items-center justify-between text-xs text-white/30">
-                            <span>Font</span>
-                            <span className="font-medium text-white/50">
-                              {availableFonts.find((f) => f.name === fontFamily)
-                                ?.display_name || fontFamily}
-                            </span>
-                          </div>
-                          <Separator className="bg-white/[0.06]" />
-                          <div className="flex items-center justify-between text-xs text-white/30">
-                            <span>Size</span>
-                            <span className="font-medium text-white/50">
-                              {fontSize}px
-                            </span>
-                          </div>
-                          <Separator className="bg-white/[0.06]" />
-                          <div className="flex items-center justify-between text-xs text-white/30">
-                            <span>Color</span>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-3 w-3 rounded-full border border-white/10"
-                                style={{ backgroundColor: fontColor }}
-                              />
-                              <span className="font-medium text-white/50">
-                                {fontColor}
-                              </span>
-                            </div>
-                          </div>
-                          <Separator className="bg-white/[0.06]" />
-                          <div className="flex items-center justify-between text-xs text-white/30">
-                            <span>Template</span>
-                            <span className="font-medium text-white/50">
-                              {availableTemplates.find(
-                                (t) => t.id === captionTemplate,
-                              )?.name || "Default"}
-                            </span>
-                          </div>
-                        </div>
+
                       </div>
                     </div>
                   </div>
