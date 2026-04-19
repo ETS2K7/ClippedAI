@@ -777,20 +777,24 @@ export default function Home() {
                     <Sparkles className="h-4 w-4 text-white" />
                     STYLE & CAPTIONS
                   </div>
-                  <div className="space-y-3 px-3 py-3 rounded-lg border border-white/20 bg-white/5 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent shimmer-effect" />
-                    <div className="relative flex items-center justify-between text-xs text-white/50">
-                      <span>Font Family</span>
-                      <span className="font-bold text-white tracking-wide drop-shadow-sm">
-                        Komika Axis
-                      </span>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-white/[0.04]">
+                      <span className="font-mono text-[10px] tracking-widest text-white/35 uppercase">Font Family</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold tracking-wider text-white">Komika Axis</span>
+                        <div className="flex h-5 w-5 items-center justify-center rounded-md border border-white/10 bg-white/5">
+                          <Lock className="h-2.5 w-2.5 text-white/40" />
+                        </div>
+                      </div>
                     </div>
-                    <Separator className="bg-white/10 relative" />
-                    <div className="relative flex items-center justify-between text-xs text-white/50">
-                      <span>Caption Template</span>
-                      <span className="font-bold text-white tracking-wide drop-shadow-sm">
-                        MrBeast Style Default
-                      </span>
+                    <div className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-white/[0.04]">
+                      <span className="font-mono text-[10px] tracking-widest text-white/35 uppercase">Caption Style</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold tracking-wider text-white">MrBeast</span>
+                        <div className="flex h-5 w-5 items-center justify-center rounded-md border border-white/10 bg-white/5">
+                          <Lock className="h-2.5 w-2.5 text-white/40" />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
