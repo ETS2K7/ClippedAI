@@ -1146,17 +1146,16 @@ export default function Home() {
                             </div>
 
                             {/* Video display */}
-                            <div 
+                            <div
                               className="absolute inset-0 bg-black cursor-pointer"
                               onMouseEnter={() => {
                                 if (videoPreviewRef.current) {
-                                  videoPreviewRef.current.currentTime = 0;
                                   videoPreviewRef.current.play().catch(() => {});
                                 }
                               }}
                               onMouseLeave={() => {
                                 if (videoPreviewRef.current) {
-                                  videoPreviewRef.current.play().catch(() => {});
+                                  videoPreviewRef.current.pause();
                                 }
                               }}
                             >
@@ -1164,7 +1163,6 @@ export default function Home() {
                                 ref={videoPreviewRef}
                                 src="/14.mp4"
                                 autoPlay
-                                loop
                                 muted
                                 playsInline
                                 className="h-full w-full object-cover transition-opacity duration-300"
