@@ -34,7 +34,14 @@ fast_asd_image = (
 )
 
 
-@app.cls(image=fast_asd_image, gpu="any", timeout=1200)
+@app.cls(
+    image=fast_asd_image, 
+    gpu="any", 
+    timeout=1200,
+    scaledown_window=15,
+    max_containers=10,
+    retries=0
+)
 class FastASDTracker:
     @modal.enter()
     def setup(self):

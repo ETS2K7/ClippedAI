@@ -411,6 +411,9 @@ def _send_webhook(
 @app.cls(
     gpu="any",
     timeout=1200,
+    scaledown_window=15,          # Aggressive idle shutdown to prevent credit leakage
+    max_containers=10,            # Absolute upper bound on simultaneous tasks
+    retries=0,                    # Nullify automatic retries on failure (zero wastage)
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
     ]
@@ -487,7 +490,12 @@ class ClippedAI:
         return {"status": "processing_started"}
 
 
-@app.function(timeout=1200, secrets=[modal.Secret.from_name("clippedai-secret")])
+@app.function(
+    timeout=1200, 
+    max_containers=20, 
+    retries=0, 
+    secrets=[modal.Secret.from_name("clippedai-secret")]
+)
 def process_video_cpu_wrapper(request_dict: dict):
     """CPU-only ingestion wrapper. Downloads YouTube natively without holding a GPU hostage."""
     request = ProcessVideoRequest(**request_dict)
