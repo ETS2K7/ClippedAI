@@ -135,6 +135,7 @@ export default function Home() {
   const [fontSearch, setFontSearch] = useState("");
   const [isUploadingFont, setIsUploadingFont] = useState(false);
   const fontUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
 
   // SWR: Global Data Fetching (only enabled if signed in)
   const swrOptions = { revalidateOnFocus: false };
@@ -777,17 +778,17 @@ export default function Home() {
                     STYLE & CAPTIONS
                   </div>
 
-                  <div className="space-y-3 px-2 py-2">
-                    <div className="flex items-center justify-between text-xs text-white/30">
+                  <div className="space-y-3 px-2 py-3 rounded-lg border border-[#00FF00]/20 bg-[#00FF00]/5">
+                    <div className="flex items-center justify-between text-xs text-[#00FF00]/70">
                       <span>Font Family</span>
-                      <span className="font-medium text-white/80">
+                      <span className="font-bold text-[#00FF00]">
                         Komika Axis
                       </span>
                     </div>
-                    <Separator className="bg-white/[0.06]" />
-                    <div className="flex items-center justify-between text-xs text-white/30">
+                    <Separator className="bg-[#00FF00]/10" />
+                    <div className="flex items-center justify-between text-xs text-[#00FF00]/70">
                       <span>Caption Template</span>
-                      <span className="font-medium text-white/80">
+                      <span className="font-bold text-[#00FF00]">
                         MrBeast Style Default
                       </span>
                     </div>
@@ -1145,14 +1146,28 @@ export default function Home() {
                             </div>
 
                             {/* Video display */}
-                            <div className="absolute inset-0 bg-black">
+                            <div 
+                              className="absolute inset-0 bg-black cursor-pointer"
+                              onMouseEnter={() => {
+                                if (videoPreviewRef.current) {
+                                  videoPreviewRef.current.currentTime = 0;
+                                  videoPreviewRef.current.play().catch(() => {});
+                                }
+                              }}
+                              onMouseLeave={() => {
+                                if (videoPreviewRef.current) {
+                                  videoPreviewRef.current.play().catch(() => {});
+                                }
+                              }}
+                            >
                               <video
+                                ref={videoPreviewRef}
                                 src="/14.mp4"
                                 autoPlay
                                 loop
                                 muted
                                 playsInline
-                                className="h-full w-full object-cover"
+                                className="h-full w-full object-cover transition-opacity duration-300"
                               />
                             </div>
 
