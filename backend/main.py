@@ -115,10 +115,12 @@ class ProcessVideoRequest(BaseModel):
     font_size: int | None = None
 
 image = (modal.Image.debian_slim(python_version="3.10")
-    .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git"])
+    .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig"])
     .pip_install_from_requirements("requirements.txt")
     .pip_install("apify-client")
     .add_local_dir("src", remote_path="/root/src", copy=True)
+    .add_local_dir("fonts", remote_path="/usr/share/fonts/truetype/custom", copy=True)
+    .run_commands(["fc-cache -fv"])
     .add_local_file("config.py", remote_path="/root/config.py", copy=True)
 )
 

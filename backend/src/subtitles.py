@@ -8,36 +8,9 @@ from config import get_logger
 logger = get_logger(__name__)
 
 # ─── Default subtitle styling ─────────────────────────────────────────────────
-DEFAULT_FONT_FAMILY = "Arial Black"
-DEFAULT_FONT_SIZE = 50
+DEFAULT_FONT_FAMILY = "Komika Axis"
+DEFAULT_FONT_SIZE = 75
 DEFAULT_FONT_COLOR = "&H00FFFFFF"   # ASS format: white
-DEFAULT_KARAOKE_COLOR = "&H0000FF00"  # ASS format: green
-
-
-def _hex_to_ass_color(hex_color: str) -> str:
-    """Converts a hex color string (#RRGGBB or RRGGBB) to ASS format (&H00BBGGRR).
-    Returns the default white if parsing fails."""
-    try:
-        hex_color = hex_color.lstrip("#")
-        if len(hex_color) != 6:
-            return DEFAULT_FONT_COLOR
-        r, g, b = int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
-        return f"&H00{b:02X}{g:02X}{r:02X}"
-    except (ValueError, TypeError):
-        return DEFAULT_FONT_COLOR
-
-
-def _pick_karaoke_color(primary_ass_color: str) -> str:
-    """Picks a contrasting karaoke highlight color based on the primary font color.
-    Green for white/light text, yellow for dark text."""
-    # If the primary color is white or near-white, use green highlight
-    if primary_ass_color.upper() in ("&H00FFFFFF", "&HFFFFFFFF"):
-        return "&H0000FF00"  # green
-    # If the primary color is green, use yellow to avoid collision
-    if "00FF00" in primary_ass_color.upper():
-        return "&H0000FFFF"  # yellow
-    # Default: green contrasts well with most colors
-    return "&H0000FF00"
 
 
 def ms_to_ass_time(ms: float) -> str:
@@ -76,13 +49,12 @@ def generate_subtitles(
     end_ms = clip["end_time"] * 1000
 
     # Resolve font configuration (frontend overrides → defaults)
-    resolved_family = font_family or DEFAULT_FONT_FAMILY
-    resolved_size = font_size or DEFAULT_FONT_SIZE
-    resolved_ass_color = _hex_to_ass_color(font_color) if font_color else DEFAULT_FONT_COLOR
-    karaoke_color = _pick_karaoke_color(resolved_ass_color)
+    resolved_family = DEFAULT_FONT_FAMILY
+    resolved_size = DEFAULT_FONT_SIZE
+    resolved_ass_color = DEFAULT_FONT_COLOR
 
     logger.info(
-        f"Subtitle style: {resolved_family} / {resolved_size}pt / "
+        f"Subtitle style locked: {resolved_family} / {resolved_size}pt / "
         f"color={resolved_ass_color}"
     )
 
@@ -105,7 +77,7 @@ WrapStyle: 1
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,3,2,10,10,350,1
+Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,8,4,2,10,10,875,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -176,9 +148,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 raw_txt = str(cw.get("text", "")).upper()
                 clean_txt = raw_txt.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
                 if j == w_idx:
+                    # Alternate highlight color between green and yellow based on word index
+                    hl_color = "&H0000FFFF" if w_idx % 2 == 0 else "&H0000FF00"
                     text_parts.append(
-                        f"{{\\c{karaoke_color}&}}{clean_txt}{{\\c{resolved_ass_color}&}}"
-                    )  # Karaoke highlight
+                        f"{{\\c{hl_color}&}}{clean_txt}{{\\c{resolved_ass_color}&}}"
+                    )  # Karaoke highlight with exact MrBeast colors
                 else:
                     text_parts.append(clean_txt)
 
