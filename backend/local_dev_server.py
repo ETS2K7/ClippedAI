@@ -31,6 +31,8 @@ from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 
+from fast_asd_local import LocalFastASDTracker
+
 # ─── Bootstrap ────────────────────────────────────────────────────────────────
 load_dotenv(dotenv_path=pathlib.Path(__file__).parent / "local.env")
 
@@ -62,6 +64,18 @@ FONT_PATH = str(pathlib.Path(__file__).parent / "fonts" / "Komika_Axis.ttf")
 # ─── FastAPI App ───────────────────────────────────────────────────────────────
 app = FastAPI(title="ClippedAI Local Dev Server")
 auth_scheme = HTTPBearer()
+
+# ─── Fast-ASD Tracker (loaded once at startup) ────────────────────────────────
+_tracker: LocalFastASDTracker | None = None
+
+
+@app.on_event("startup")
+def _load_tracker():
+    global _tracker
+    logger.info("[startup] Loading Fast-ASD TalkNet + S3FD models (first run only)…")
+    _tracker = LocalFastASDTracker()
+    _tracker.setup()
+    logger.info("[startup] Fast-ASD tracker ready")
 
 
 class ProcessVideoRequest(BaseModel):
@@ -196,7 +210,9 @@ def _run_pipeline(request: ProcessVideoRequest) -> None:
 
         def _process_one(index: int, clip: dict) -> dict:
             ext_vid = extract_segment(str(video_path), clip, index, str(base_dir), use_gpu=False)
-            trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, str(base_dir))
+            trk_vid, chunk_meta = track_speaker_and_frame(
+                ext_vid, index, clip, words, str(base_dir), tracker=_tracker
+            )
             sub_file = generate_subtitles(
                 words, clip, index, chunk_meta,
                 font_family=request.font_family,

@@ -398,7 +398,8 @@ def _prominent_distinct_faces(
 # ─── Phase 5 ──────────────────────────────────────────────────────────────────
 
 def track_speaker_and_frame(
-    clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]], work_dir: str = ""
+    clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]], work_dir: str = "",
+    tracker=None,
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
@@ -412,31 +413,40 @@ def track_speaker_and_frame(
     The 2-speaker path is pixel-identical to the previous implementation.
     3/4-speaker modes use higher stabilisation thresholds so they only activate
     in genuine panel/multi-host footage.
+
+    Args:
+        tracker: Optional pre-initialised LocalFastASDTracker. When None (default),
+                 the production Modal remote is used. Pass a LocalFastASDTracker
+                 instance for fully local processing without Modal.
     """
     logger.info(
         f"==================== PHASE 5: SPEAKER TRACKING & FRAMING (Clip {idx}) "
-        f"====================\n"
+        f"===================="
     )
 
     # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
-    logger.info("Calling Modal Fast-ASD tracker...")
-    Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-    tracker = Tracker()
-    
     # Check file size before loading into memory to prevent memory exhaustion
     file_size_mb = os.path.getsize(clip_file) / (1024 * 1024)
-    MAX_VIDEO_SIZE_MB = 500  # 500MB limit for safety
-    
+    MAX_VIDEO_SIZE_MB = 500
     if file_size_mb > MAX_VIDEO_SIZE_MB:
         logger.warning(
             f"Video file is large ({file_size_mb:.1f}MB). "
             f"Loading into memory may cause issues. Consider using shorter clips."
         )
-    
+
     with open(clip_file, "rb") as vf:
         video_bytes = vf.read()
+
     try:
-        result_json = tracker.process_video.remote(video_bytes)
+        if tracker is not None:
+            # Local dev path — call TalkNet directly, no Modal
+            logger.info("[local] Calling LocalFastASDTracker…")
+            result_json = tracker.process_video(video_bytes)
+        else:
+            # Production path — call Modal remote
+            logger.info("Calling Modal Fast-ASD tracker...")
+            Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+            result_json = Tracker().process_video.remote(video_bytes)
         tracking_data = json.loads(result_json)
     except Exception as e:
         logger.error(f"Fast-ASD tracker failed: {e}")

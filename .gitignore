@@ -57,6 +57,10 @@ tsconfig.tsbuildinfo
 backend/local.env
 backend/local_venv/
 frontend/public/local-clips/
+# TalkNet / S3FD model weights — downloaded at setup time, not committed
+backend/fast-asd/talknet/pretrain_TalkSet.model
+backend/fast-asd/talknet/model/faceDetector/s3fd/sfd_face.pth
+backend/fast-asd/talknet/save/
 
 # ─── Frontend debug / test artifacts ──────────────────────────────────────
 frontend/lh-report.json
