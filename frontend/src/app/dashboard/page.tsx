@@ -1128,21 +1128,17 @@ export default function Home() {
                               </div>
                             </div>
 
-                            {/* Video background */}
-                            {youtubeThumbnailUrl ? (
-                              <div
-                                className="pointer-events-none absolute inset-0 scale-105 bg-cover bg-center"
-                                style={{
-                                  backgroundImage: `url(${youtubeThumbnailUrl})`,
-                                }}
+                            {/* Video display */}
+                            <div className="absolute inset-0 bg-black">
+                              <video
+                                src="/14.mp4"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="h-full w-full object-cover"
                               />
-                            ) : (
-                              <div className="absolute inset-0 bg-transparent">
-                                {/* Add a subtle aesthetic metallic gradient to empty preview */}
-                                <div className="absolute top-0 left-0 h-[150%] w-[150%] bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.06)_0%,transparent_40%)]" />
-                                <div className="absolute right-0 bottom-0 h-[100%] w-[100%] bg-[radial-gradient(circle_at_100%_100%,rgba(255,255,255,0.02)_0%,transparent_50%)]" />
-                              </div>
-                            )}
+                            </div>
 
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
 
@@ -1216,26 +1212,7 @@ export default function Home() {
                               </div>
                             </div>
 
-                            {/* Subtitle area */}
-                            <div
-                              className="absolute right-0 left-0 z-20 flex flex-col items-center justify-center gap-1"
-                              style={{ bottom: "165px" }}
-                            >
-                                <p
-                                  style={{
-                                    fontFamily: `Komika Axis, system-ui, sans-serif`,
-                                    fontSize: "24px",
-                                    lineHeight: "1.2",
-                                    WebkitTextStroke: "2.5px black",
-                                    textShadow: "0 0 10px rgba(0,0,0,0.8), 0 4px 6px rgba(0,0,0,0.9)",
-                                    letterSpacing: "1px",
-                                  }}
-                                  className="font-bold uppercase"
-                                >
-                                  <span style={{ color: "white" }}>YOUR </span>
-                                  <span style={{ color: "#00FF00" }}>SUBTITLE</span>
-                                </p>
-                            </div>
+                            {/* Subtitle area previously here -> Now handled intrinsically by the video embed rendering */}
 
                             {/* Bottom left — creator info */}
                             <div
