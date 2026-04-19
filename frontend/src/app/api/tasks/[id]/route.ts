@@ -13,6 +13,10 @@ function toISO(val: Date | number | string): string {
 
 
 async function getPresignedUrl(key: string): Promise<string> {
+  // Local dev: clips stored in frontend/public/local-clips/ — serve as static URL
+  if (key.startsWith("local-clips/")) {
+    return `/${key}`;
+  }
   const command = new GetObjectCommand({
     Bucket: env.S3_BUCKET_NAME,
     Key: key,

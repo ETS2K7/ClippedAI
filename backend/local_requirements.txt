@@ -1,0 +1,10 @@
+fastapi==0.115.12
+uvicorn[standard]
+numpy==1.26.4
+requests==2.31.0
+opencv-python==4.9.0.80
+scipy==1.13.0
+scenedetect==0.6.3
+python-dotenv==1.0.1
+groq>=0.11.0
+assemblyai>=0.37.0
