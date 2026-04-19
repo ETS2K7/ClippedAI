@@ -777,6 +777,22 @@ export default function Home() {
                     STYLE & CAPTIONS
                   </div>
 
+                  <div className="space-y-3 px-2 py-2">
+                    <div className="flex items-center justify-between text-xs text-white/30">
+                      <span>Font Family</span>
+                      <span className="font-medium text-white/80">
+                        Komika Axis
+                      </span>
+                    </div>
+                    <Separator className="bg-white/[0.06]" />
+                    <div className="flex items-center justify-between text-xs text-white/30">
+                      <span>Caption Template</span>
+                      <span className="font-medium text-white/80">
+                        MrBeast Style Default
+                      </span>
+                    </div>
+                  </div>
+
 
                   {/* B-Roll Toggle */}
                   {brollAvailable && (
@@ -1304,22 +1320,6 @@ export default function Home() {
                           </div>
                         </div>
 
-                        {/* Caption info below phone */}
-                        <div className="mt-6 space-y-3 px-2 brutal-card p-4 mx-4">
-                          <div className="flex items-center justify-between text-xs text-white/30">
-                            <span>Font Family</span>
-                            <span className="font-medium text-white/50">
-                              Komika Axis
-                            </span>
-                          </div>
-                          <Separator className="bg-white/[0.06]" />
-                          <div className="flex items-center justify-between text-xs text-white/30">
-                            <span>Caption Template</span>
-                            <span className="font-medium text-white/50">
-                              MrBeast Style Default
-                            </span>
-                          </div>
-                        </div>
 
                       </div>
                     </div>
