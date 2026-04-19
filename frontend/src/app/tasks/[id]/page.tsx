@@ -75,10 +75,10 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
   };
 
   return (
-    <Card ref={ref} className="brutal-card flex flex-col overflow-hidden">
-      <CardContent className="flex flex-1 flex-col p-0">
+    <Card ref={ref} className="brutal-card flex overflow-hidden">
+      <CardContent className="flex flex-1 flex-col md:flex-row p-0">
         {/* Video Player — tall 9:16 aspect */}
-        <div className="relative isolate aspect-[9/16] w-full border-b border-white/10 bg-black">
+        <div className="relative isolate aspect-[9/16] w-full shrink-0 md:w-72 border-b md:border-b-0 md:border-r border-white/10 bg-black">
           {isVisible ? (
             <DynamicVideoPlayer
               ref={videoRef}
@@ -133,7 +133,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
           )}
 
           {/* Action buttons */}
-          <div className="mt-auto flex gap-3">
+          <div className="mt-8 flex gap-3">
             <Button
               size="default"
               variant="outline"
@@ -599,8 +599,8 @@ export default function TaskPage() {
                 </span>
               </div>
 
-              {/* Vertical single-column layout for focused viewing */}
-              <div className="mx-auto flex max-w-sm flex-col gap-8">
+              {/* Horizontal layout mode for specific clips */}
+              <div className="mx-auto flex max-w-5xl flex-col gap-6">
                 {clips.map((clip, index) => (
                   <LazyClipCard
                     key={clip.id}
