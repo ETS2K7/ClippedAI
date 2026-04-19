@@ -777,24 +777,14 @@ export default function Home() {
                     <Sparkles className="h-4 w-4 text-white" />
                     STYLE & CAPTIONS
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-white/[0.04]">
-                      <span className="font-mono text-[10px] tracking-widest text-white/35 uppercase">Font Family</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold tracking-wider text-white">Komika Axis</span>
-                        <div className="flex h-5 w-5 items-center justify-center rounded-md border border-white/10 bg-white/5">
-                          <Lock className="h-2.5 w-2.5 text-white/40" />
-                        </div>
-                      </div>
+                  <div className="border-l-2 border-white/20 pl-3 space-y-3">
+                    <div>
+                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Font Family</p>
+                      <p className="font-mono text-sm font-bold text-white tracking-wide">Komika Axis</p>
                     </div>
-                    <div className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-white/[0.04]">
-                      <span className="font-mono text-[10px] tracking-widest text-white/35 uppercase">Caption Style</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold tracking-wider text-white">MrBeast</span>
-                        <div className="flex h-5 w-5 items-center justify-center rounded-md border border-white/10 bg-white/5">
-                          <Lock className="h-2.5 w-2.5 text-white/40" />
-                        </div>
-                      </div>
+                    <div>
+                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Caption Style</p>
+                      <p className="font-mono text-sm font-bold text-white tracking-wide">MrBeast</p>
                     </div>
                   </div>
 
