@@ -562,7 +562,7 @@ export default function ListPage() {
                         "group brutal-card relative flex items-start gap-3 p-3 transition-all duration-150 sm:gap-4 sm:p-4",
                         isSelected
                           ? "border-bg-white/5 border-white ring-1 ring-white/10"
-                          : "border-white/[0.1] bg-black hover:border-white/[0.3] hover:bg-white/[0.02]",
+                          : "border-white/[0.1] bg-transparent hover:border-white/[0.3] hover:bg-white/[0.04]",
                       )}
                     >
                       {/* Selection indicator bar */}
@@ -643,7 +643,7 @@ export default function ListPage() {
                 "command-bar-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both",
             }}
           >
-            <div className="pointer-events-auto flex items-center gap-1 border border-white/[0.2] bg-black px-2 py-2">
+            <div className="pointer-events-auto flex items-center gap-1 border border-white/[0.2] bg-black/60 backdrop-blur-xl px-2 py-2">
               {/* Select all checkbox */}
               <div className="flex items-center gap-2.5 pr-3 pl-2">
                 <Checkbox

@@ -258,32 +258,36 @@
 
 /* ===== Premium Dark UI System ===== */
 .brutal-card {
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.03) inset;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 1px 1px 0 rgba(255,255,255,0.05) inset;
   border-radius: 1rem;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   transition: all 0.25s ease-out;
 }
 .brutal-card:hover {
-  border-color: rgba(255,255,255,0.12);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+  border-color: rgba(255,255,255,0.15);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 1px 1px 0 rgba(255,255,255,0.1) inset;
+  background: rgba(255,255,255,0.04);
 }
 .brutal-input {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 0.75rem;
   color: #FFFFFF;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   transition: all 0.2s ease-out;
 }
 .brutal-input:focus {
-  border-color: rgba(255,255,255,0.2);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.25);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.05);
   outline: none;
 }
-.glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 1rem; backdrop-filter: blur(12px); }
-.glass-card-hover { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 1rem; transition: all 0.2s; }
-.glass-card-hover:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
-.glass-input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.75rem; }
+.glass-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 1px 1px 0 rgba(255,255,255,0.05) inset; border-radius: 1rem; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.glass-card-hover { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 1px 1px 0 rgba(255,255,255,0.05) inset; border-radius: 1rem; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); transition: all 0.25s; }
+.glass-card-hover:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.15); box-shadow: 0 12px 48px rgba(0,0,0,0.8), 0 1px 1px 0 rgba(255,255,255,0.1) inset; }
+.glass-input { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 

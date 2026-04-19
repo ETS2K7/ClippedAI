@@ -78,7 +78,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
     <Card ref={ref} className="brutal-card flex overflow-hidden">
       <CardContent className="flex flex-1 flex-col md:flex-row p-0">
         {/* Video Player — tall 9:16 aspect */}
-        <div className="relative isolate aspect-[9/16] w-full shrink-0 md:w-72 border-b md:border-b-0 md:border-r border-white/10 bg-black">
+        <div className="relative isolate aspect-[9/16] w-full shrink-0 md:w-72 border-b md:border-b-0 md:border-r border-white/10 bg-transparent">
           {isVisible ? (
             <DynamicVideoPlayer
               ref={videoRef}
@@ -96,7 +96,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
         </div>
 
         {/* Clip Info & Actions */}
-        <div className="flex flex-1 flex-col bg-black p-5">
+        <div className="flex flex-1 flex-col bg-transparent p-5">
           {/* Header row: clip number + date */}
           <div className="mb-3 flex items-start justify-between">
             <h3 className="font-syne text-xl font-black tracking-widest text-white uppercase">
@@ -501,7 +501,7 @@ export default function TaskPage() {
                 <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_infinite] rounded-full bg-white" />
                 <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_0.2s_infinite] rounded-full bg-white" />
                 <span className="h-2 w-2 animate-[pulse_1.4s_ease-in-out_0.4s_infinite] rounded-full bg-white" />
-                <div className="pointer-events-none absolute top-full left-1/2 mt-3 -translate-x-1/2 scale-95 rounded-md border border-white/10 bg-black px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest whitespace-nowrap text-white uppercase opacity-0 shadow-md transition-all group-hover:scale-100 group-hover:opacity-100">
+                <div className="pointer-events-none absolute top-full left-1/2 mt-3 -translate-x-1/2 scale-95 rounded-md border border-white/10 bg-black/60 backdrop-blur-md px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest whitespace-nowrap text-white uppercase opacity-0 shadow-md transition-all group-hover:scale-100 group-hover:opacity-100">
                   WAITING ON SONY CLOUD.
                 </div>
               </div>

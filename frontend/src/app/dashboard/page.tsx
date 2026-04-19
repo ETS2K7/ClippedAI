@@ -491,7 +491,7 @@ export default function Home() {
               exit={{ scale: 0.96, y: 18 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
               style={{ willChange: "transform" }}
-              className="brutal-card relative w-full max-w-lg overflow-hidden border border-white/10 bg-[#0a0a0c]/95 p-6 shadow-2xl sm:p-10"
+              className="brutal-card relative w-full max-w-lg overflow-hidden border border-white/10 bg-black/20 p-6 shadow-2xl sm:p-10"
             >
               <button
                 onClick={() => setShowBetaModal(false)}
@@ -1090,7 +1090,7 @@ export default function Home() {
                     </div>
 
                     {currentStep && statusMessage && (
-                      <div className="brutal-card space-y-3 bg-transparent p-4">
+                      <div className="brutal-card space-y-3 bg-white/[0.02] p-4 text-white">
                         <div className="flex items-center gap-3">
                           {getStepIcon(currentStep)}
                           <div className="flex-1">
@@ -1220,7 +1220,7 @@ export default function Home() {
                         <div className="absolute inset-0 rounded-[3rem] bg-white/[0.02] blur-3xl transition-all duration-700 group-hover:bg-white/[0.04]" />
 
                         <div
-                          className="relative bg-[#0c0c0e] shadow-[0_0_0_1px_rgba(255,255,255,0.08),_0_40px_80px_-20px_rgba(0,0,0,1)] ring-1 ring-white/5 ring-inset"
+                          className="relative bg-white/[0.02] shadow-[0_0_0_1px_rgba(255,255,255,0.08),_0_40px_80px_-20px_rgba(0,0,0,1)] ring-1 ring-white/5 ring-inset"
                           style={{ borderRadius: "3.5rem", padding: "12px" }}
                         >
                           {/* Hardware Buttons */}
@@ -1231,7 +1231,7 @@ export default function Home() {
 
                           {/* Inner Screen */}
                           <div
-                            className="relative overflow-hidden bg-black ring-1 ring-white/[0.08]"
+                            className="relative overflow-hidden bg-transparent ring-1 ring-white/[0.08]"
                             style={{ borderRadius: "2.75rem", height: "620px" }}
                           >
                             {/* Status bar */}
@@ -1244,7 +1244,7 @@ export default function Home() {
                               </div>
 
                               {/* Dynamic Island */}
-                              <div className="flex h-[32px] w-[110px] flex-shrink-0 items-center justify-between overflow-hidden rounded-[24px] bg-black px-2 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
+                              <div className="flex h-[32px] w-[110px] flex-shrink-0 items-center justify-between overflow-hidden rounded-[24px] bg-white/[0.05] px-2 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] text-white">
                                 {/* Inner camera sensors */}
                                 <div className="ml-1 h-[10px] w-[10px] rounded-full border border-white/[0.02] bg-[#080808] shadow-[inset_0_0_2px_rgba(0,0,0,0.5)]" />
                                 <div className="mr-1 flex h-[10px] w-[30px] items-center justify-center rounded-full border border-white/[0.02] bg-[#080808] shadow-[inset_0_0_2px_rgba(0,0,0,0.5)]">
@@ -1366,7 +1366,7 @@ export default function Home() {
                                 }}
                               />
                             ) : (
-                              <div className="absolute inset-0 bg-[#0a0a0c]">
+                              <div className="absolute inset-0 bg-transparent">
                                 {/* Add a subtle aesthetic metallic gradient to empty preview */}
                                 <div className="absolute top-0 left-0 h-[150%] w-[150%] bg-[radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.06)_0%,transparent_40%)]" />
                                 <div className="absolute right-0 bottom-0 h-[100%] w-[100%] bg-[radial-gradient(circle_at_100%_100%,rgba(255,255,255,0.02)_0%,transparent_50%)]" />

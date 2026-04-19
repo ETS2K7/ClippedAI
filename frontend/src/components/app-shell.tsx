@@ -24,7 +24,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       {/* ── Ambient depth layers (matching landing page) ── */}
-      <div className="pointer-events-none fixed inset-0 z-0">
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        {/* Soft background orbs for glass refraction */}
+        <div className="absolute top-[-10%] left-[-10%] h-[50vh] w-[50vw] rounded-full bg-white/[0.04] blur-[120px]" />
+        <div className="absolute right-[-10%] bottom-[-10%] h-[60vh] w-[60vw] rounded-full bg-white/[0.03] blur-[150px]" />
+        
         {/* Dot grid texture */}
         <div className="absolute inset-0 bg-[radial-gradient(#222_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_20%,transparent_100%)] [background-size:24px_24px] opacity-40" />
       </div>
