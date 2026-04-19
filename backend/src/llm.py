@@ -20,6 +20,7 @@ class ClipSelection(BaseModel):
     start_time: float
     end_time: float
     title: str
+    virality_score: float  # 0.0–10.0 viral potential score
 
 
 class ClipList(BaseModel):
@@ -69,7 +70,8 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "Find the 3 most viral, engaging clips. Each must be exactly 30 to 60 seconds long. "
         "They must have a strong hook at the start and conclude an interesting point. "
         'Return ONLY this exact JSON format with no extra keys:\n'
-        '{"clips": [{"start_time": 12.3, "end_time": 45.6, "title": "Hook title"}, ...]}\n\n'
+        '{"clips": [{"start_time": 12.3, "end_time": 45.6, "title": "Short punchy hook title", "virality_score": 8.5}, ...]}\n'
+        'virality_score is a float from 0.0 to 10.0 representing viral potential.\n\n'
         f"TRANSCRIPT:\n{transcript}"
     )
 

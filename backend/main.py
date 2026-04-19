@@ -225,6 +225,8 @@ def _process_single_clip(
         "s3Key": output_s3_key,
         "thumbnailKey": None,
         "thumbnailKeys": {},
+        "clipTitle": clip.get("title", f"Clip {index + 1}"),
+        "viralityScore": float(clip.get("virality_score") or 0.0),
     }
 
 

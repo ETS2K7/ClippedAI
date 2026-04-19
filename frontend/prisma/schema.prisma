@@ -82,6 +82,8 @@ model Clip {
   uploadedFileId String?
   userId         String
   thumbnailKeys  Json?
+  clipTitle      String?       // LLM-generated hook title
+  viralityScore  Float?        // 0.0–10.0 viral potential rating
   uploadedFile   UploadedFile? @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 

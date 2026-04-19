@@ -94,6 +94,8 @@ export async function GET(
         video_path: clip.s3Key,
         created_at: toISO(clip.createdAt),
         task_id: file.id,
+        clip_title: clip.clipTitle ?? null,
+        virality_score: clip.viralityScore ?? null,
       };
     }),
   );

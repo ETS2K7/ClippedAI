@@ -49,6 +49,8 @@ interface Clip {
   video_path: string;
   created_at: string;
   task_id: string;
+  clip_title: string | null;
+  virality_score: number | null;
 }
 
 function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, onVideoRef }: { clip: Clip; index: number; onDelete: (id: string) => void; autoLoad?: boolean; onVideoPlay?: (clipId: string) => void; onVideoRef?: (clipId: string, ref: HTMLVideoElement) => void }) {
@@ -75,7 +77,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
   return (
     <Card ref={ref} className="brutal-card flex flex-col overflow-hidden">
       <CardContent className="flex flex-1 flex-col p-0">
-        {/* Video Player */}
+        {/* Video Player — tall 9:16 aspect */}
         <div className="relative isolate aspect-[9/16] w-full border-b border-white/10 bg-black">
           {isVisible ? (
             <DynamicVideoPlayer
@@ -93,9 +95,10 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
           )}
         </div>
 
-        {/* Clip Details */}
+        {/* Clip Info & Actions */}
         <div className="flex flex-1 flex-col bg-black p-5">
-          <div className="mb-4 flex items-start justify-between">
+          {/* Header row: clip number + date */}
+          <div className="mb-3 flex items-start justify-between">
             <h3 className="font-syne text-xl font-black tracking-widest text-white uppercase">
               CLIP {String(index + 1).padStart(2, "0")}
             </h3>
@@ -104,6 +107,32 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
             </p>
           </div>
 
+          {/* LLM-generated title */}
+          {clip.clip_title && (
+            <p className="mb-3 font-mono text-sm leading-snug text-white/80">
+              {clip.clip_title}
+            </p>
+          )}
+
+          {/* Virality score */}
+          {clip.virality_score !== null && clip.virality_score !== undefined && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase">Virality</span>
+              <div className="flex flex-1 items-center gap-1.5">
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-white transition-all"
+                    style={{ width: `${(clip.virality_score / 10) * 100}%` }}
+                  />
+                </div>
+                <span className="font-mono text-[10px] font-black tabular-nums text-white">
+                  {clip.virality_score.toFixed(1)}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Action buttons */}
           <div className="mt-auto flex gap-3">
             <Button
               size="default"
@@ -116,7 +145,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
                 download={`clip_${index + 1}.mp4`}
               >
                 <Download className="mr-2 h-4 w-4" />
-                DL
+                Download
               </a>
             </Button>
             <Button
@@ -126,7 +155,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
               onClick={() => onDelete(clip.id)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              DEL
+              Delete
             </Button>
           </div>
         </div>
@@ -570,7 +599,8 @@ export default function TaskPage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {/* Vertical single-column layout for focused viewing */}
+              <div className="mx-auto flex max-w-sm flex-col gap-8">
                 {clips.map((clip, index) => (
                   <LazyClipCard
                     key={clip.id}
