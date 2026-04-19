@@ -1302,8 +1302,25 @@ export default function Home() {
                               <div className="mx-auto mt-4 h-1.5 w-[120px] rounded-full bg-white/80" />
                             </div>
                           </div>
+                          </div>
                         </div>
 
+                        {/* Caption info below phone */}
+                        <div className="mt-6 space-y-3 px-2 brutal-card p-4 mx-4">
+                          <div className="flex items-center justify-between text-xs text-white/30">
+                            <span>Font Family</span>
+                            <span className="font-medium text-white/50">
+                              Komika Axis
+                            </span>
+                          </div>
+                          <Separator className="bg-white/[0.06]" />
+                          <div className="flex items-center justify-between text-xs text-white/30">
+                            <span>Caption Template</span>
+                            <span className="font-medium text-white/50">
+                              MrBeast Style Default
+                            </span>
+                          </div>
+                        </div>
 
                       </div>
                     </div>
