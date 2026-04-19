@@ -777,18 +777,18 @@ export default function Home() {
                     <Sparkles className="h-4 w-4 text-white" />
                     STYLE & CAPTIONS
                   </div>
-
-                  <div className="space-y-3 px-2 py-3 rounded-lg border border-[#00FF00]/20 bg-[#00FF00]/5">
-                    <div className="flex items-center justify-between text-xs text-[#00FF00]/70">
+                  <div className="space-y-3 px-3 py-3 rounded-lg border border-white/20 bg-white/5 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent shimmer-effect" />
+                    <div className="relative flex items-center justify-between text-xs text-white/50">
                       <span>Font Family</span>
-                      <span className="font-bold text-[#00FF00]">
+                      <span className="font-bold text-white tracking-wide drop-shadow-sm">
                         Komika Axis
                       </span>
                     </div>
-                    <Separator className="bg-[#00FF00]/10" />
-                    <div className="flex items-center justify-between text-xs text-[#00FF00]/70">
+                    <Separator className="bg-white/10 relative" />
+                    <div className="relative flex items-center justify-between text-xs text-white/50">
                       <span>Caption Template</span>
-                      <span className="font-bold text-[#00FF00]">
+                      <span className="font-bold text-white tracking-wide drop-shadow-sm">
                         MrBeast Style Default
                       </span>
                     </div>
