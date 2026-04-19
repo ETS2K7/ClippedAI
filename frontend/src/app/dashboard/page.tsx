@@ -1302,7 +1302,6 @@ export default function Home() {
                               <div className="mx-auto mt-4 h-1.5 w-[120px] rounded-full bg-white/80" />
                             </div>
                           </div>
-                          </div>
                         </div>
 
                         {/* Caption info below phone */}
@@ -1324,7 +1323,6 @@ export default function Home() {
 
                       </div>
                     </div>
-                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
