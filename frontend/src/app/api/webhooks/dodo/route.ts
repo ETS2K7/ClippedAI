@@ -23,7 +23,7 @@ export async function POST(req: Request) {
       
       if (email) {
         // Did they buy a credit pack?
-        const product_id = data.productCart?.[0]?.productId;
+        const product_id = data.product_cart?.[0]?.product_id;
         
         let creditsToAdd = 0;
         if (product_id === "prod_credits_small") creditsToAdd = 100;
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
               credits: {
                 increment: creditsToAdd,
               },
-              dodoCustomerId: data.customer.customerId || data.customerId,
+              dodoCustomerId: data.customer?.customer_id || data.customer_id,
             },
           });
           console.log(`Added ${creditsToAdd} credits to ${email}`);
@@ -48,13 +48,13 @@ export async function POST(req: Request) {
       // Subscription was purchased or renewed
       const email = data.customer?.email;
       if (email) {
-        // e.g. add a monthly allowance of credits or activate a boolean
+        // Subscription was purchased or renewed
         await db.user.update({
           where: { email },
           data: {
-            dodoSubscriptionId: data.subscriptionId,
-            dodoCustomerId: data.customer.customerId || data.customerId,
-            dodoCurrentPeriodEnd: new Date(data.currentPeriodEnd),
+            dodoSubscriptionId: data.subscription_id,
+            dodoCustomerId: data.customer?.customer_id || data.customer_id,
+            dodoCurrentPeriodEnd: new Date(data.next_billing_date),
             // Example: give 1000 credits per month on Pro plan
             credits: {
               increment: 1000

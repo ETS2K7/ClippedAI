@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "~/server/auth/config"; // We need to export auth from our config, or use getServerSession
-// Actually, with NextAuth v5, we should import auth from the main auth file, but here we'll mock auth check
+import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import DodoPayments from "dodopayments";
 
@@ -33,20 +32,21 @@ export async function POST(req: Request) {
       // Create Subscription Checkout Link
       const session = await dodoClient.subscriptions.create({
         billing: {
-          country: "US", // Can be dynamic or collected on Dodo hosted page
+          country: "US",
           zipcode: "00000",
           city: "Any",
           state: "Any",
           street: "Any",
         },
         customer: {
-          email: email,
+          email: email as string,
         },
-        planId: planId,
-        returnUrl: returnUrl,
+        product_id: planId as string,
+        quantity: 1,
+        return_url: returnUrl,
       });
 
-      return NextResponse.json({ url: session.paymentLink });
+      return NextResponse.json({ url: session.payment_link });
 
     } else if (type === "credits") {
       // Create One-time Payment Link
@@ -61,19 +61,19 @@ export async function POST(req: Request) {
         customer: {
           email: email,
         },
-        productCart: [
+        product_cart: [
           {
-            productId: planId, // This acts as the credit pack ID
+            product_id: planId, // This acts as the credit pack ID
             quantity: 1,
           },
         ],
-        returnUrl: returnUrl,
+        return_url: returnUrl,
       });
 
       // Usually payment links have a property `paymentLink` or similar. 
       // If payment API creates direct charge, we use paymentLink API. Assuming SDK maps it.
       // Dodo Payments REST typically returns a hosted payment page URL.
-      const checkoutUrl = (payment as any).paymentLink || (payment as any).url || "https://dodopayments.com/checkout/mock";
+      const checkoutUrl = payment.payment_link || (payment as any).url || "https://dodopayments.com/checkout/mock";
 
       return NextResponse.json({ url: checkoutUrl });
     } else {
