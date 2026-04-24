@@ -13,6 +13,11 @@ function toISO(val: Date | number | string): string {
 
 
 async function getPresignedUrl(key: string): Promise<string> {
+  // Local clips bypass AWS S3 entirely and render straight from public/
+  if (key.startsWith("local-clips/")) {
+    return `/${key}`;
+  }
+
   const command = new GetObjectCommand({
     Bucket: env.S3_BUCKET_NAME,
     Key: key,

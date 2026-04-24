@@ -32,7 +32,6 @@ def validate_required_env_vars():
     """
     required_vars = [
         "ASSEMBLYAI_KEY",
-        "GROQ_KEY",
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "S3_BUCKET_NAME",
@@ -53,7 +52,6 @@ def validate_required_env_vars():
 # Defer validation to first use so containerised startup doesn't crash
 # before the app has a chance to log diagnostic information.
 _assemblyai_key: str | None = None
-_groq_key: str | None = None
 
 
 def _get_assemblyai_key() -> str:
@@ -64,19 +62,10 @@ def _get_assemblyai_key() -> str:
             raise ValueError("ASSEMBLYAI_KEY must be set in the environment.")
     return _assemblyai_key
 
-
-def _get_groq_key() -> str:
-    global _groq_key
-    if _groq_key is None:
-        _groq_key = os.getenv("GROQ_KEY")
-        if not _groq_key:
-            raise ValueError("GROQ_KEY must be set in the environment.")
-    return _groq_key
-
-
 # Public accessors used by other modules — lazy-validated on first call
 ASSEMBLYAI_KEY = _get_assemblyai_key  # Call as ASSEMBLYAI_KEY()
-GROQ_KEY = _get_groq_key              # Call as GROQ_KEY()
+
+GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "clippedai-493912")
 
 
 # Local pipeline video paths (used by downloader.py and run_local.py)

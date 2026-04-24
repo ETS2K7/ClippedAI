@@ -31,8 +31,8 @@ export async function POST(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Only allow retrying failed tasks
-    if (task.status !== "failed") {
+    // Only allow retrying failed tasks (except in development)
+    if (task.status !== "failed" && process.env.NODE_ENV !== "development") {
       return NextResponse.json(
         { error: "Can only retry failed tasks" },
         { status: 400 }

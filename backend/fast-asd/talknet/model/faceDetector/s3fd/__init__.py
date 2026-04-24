@@ -23,7 +23,7 @@ class S3FD():
         # print('[S3FD] loading with', self.device)
         self.net = S3FDNet(device=self.device).to(self.device)
         PATH = os.path.join(os.getcwd(), PATH_WEIGHT)
-        state_dict = torch.load(PATH, map_location=self.device)
+        state_dict = torch.load(PATH, map_location='cpu', weights_only=False)
         self.net.load_state_dict(state_dict)
         self.net.eval()
         # print('[S3FD] finished loading (%.4f sec)' % (time.time() - tstamp))

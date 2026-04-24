@@ -75,10 +75,10 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
   };
 
   return (
-    <Card ref={ref} className="brutal-card flex overflow-hidden">
+    <Card ref={ref} className="brutal-card flex overflow-hidden p-0 gap-0">
       <CardContent className="flex flex-1 flex-col md:flex-row p-0">
         {/* Video Player — tall 9:16 aspect */}
-        <div className="relative isolate aspect-[9/16] w-full shrink-0 md:w-72 border-b md:border-b-0 md:border-r border-white/10 bg-transparent">
+        <div className="relative isolate overflow-hidden rounded-[1rem] aspect-[9/16] w-full shrink-0 md:w-72 border-b md:border-b-0 md:border-r border-white/10 bg-transparent">
           {isVisible ? (
             <DynamicVideoPlayer
               ref={videoRef}
@@ -475,14 +475,26 @@ export default function TaskPage() {
                 {task.status}
               </span>
 
-              <div className="ml-auto">
+              <div className="ml-auto flex items-center gap-2">
+                {process.env.NODE_ENV === "development" && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-white/60 hover:bg-white/10 hover:text-white"
+                    onClick={handleRetry}
+                    disabled={isRetrying}
+                  >
+                    {isRetrying ? <Clock className="h-3.5 w-3.5 animate-spin" /> : <Edit2 className="h-3.5 w-3.5" />}
+                    {isRetrying ? "Retrying..." : "Dev Force Retry"}
+                  </Button>
+                )}
                 <Button
                   size="sm"
                   variant="ghost"
                   className="text-red-400/60 hover:bg-red-500/[0.06] hover:text-red-400"
                   onClick={() => setShowDeleteDialog(true)}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
                   Delete
                 </Button>
               </div>

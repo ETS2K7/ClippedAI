@@ -65,7 +65,7 @@ def scene_detect(video_path, save = False, start_frame = 0, end_frame = None):
 			# sys.stderr.write('%s - scenes detected %d\n'%(video_path, len(sceneList)))
 	return sceneList
 
-def initialize_detector(device='mps'):
+def initialize_detector(device='cpu'):
 	# Initialize the face detector
 	DET = S3FD(device=device)
 	return DET
@@ -115,9 +115,12 @@ def bb_intersection_over_union(boxA, boxB, evalCol = False):
 	boxAArea = (boxA[2] - boxA[0]) * (boxA[3] - boxA[1])
 	boxBArea = (boxB[2] - boxB[0]) * (boxB[3] - boxB[1])
 	if evalCol == True:
+		if float(boxAArea) == 0.0: return 0.0
 		iou = interArea / float(boxAArea)
 	else:
-		iou = interArea / float(boxAArea + boxBArea - interArea)
+		denominator = float(boxAArea + boxBArea - interArea)
+		if denominator == 0.0: return 0.0
+		iou = interArea / denominator
 	return iou
 
 def track_shot(sceneFaces):

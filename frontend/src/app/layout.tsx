@@ -4,6 +4,9 @@ import { type Metadata } from "next";
 import { Geist, Geist_Mono, Syne } from "next/font/google";
 
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { CookieConsent } from "~/components/CookieConsent";
+import { PostHogProvider } from "~/providers/PostHogProvider";
+import { FeedbackButton } from "~/components/feedback-button";
 
 export const metadata: Metadata = {
   title: {
@@ -103,7 +106,11 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${syne.variable} antialiased`}
       >
-        <TooltipProvider>{children}</TooltipProvider>
+        <PostHogProvider>
+          <TooltipProvider>{children}</TooltipProvider>
+          <CookieConsent />
+          <FeedbackButton />
+        </PostHogProvider>
       </body>
     </html>
   );

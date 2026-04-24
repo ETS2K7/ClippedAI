@@ -2,7 +2,9 @@
 Module responsible for extracting lightweight audio payloads and polling AssemblyAI for high-accuracy transcripts and speaker diarization.
 """
 
+import hashlib
 import os
+import pathlib
 import time
 import subprocess
 from typing import List, Dict, Any
@@ -64,6 +66,42 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
         _video_url: Unused — kept for call-site compatibility.
     """
     logger.info("==================== PHASE 2: TRANSCRIPTION ====================")
+
+    # ── Transcript cache ───────────────────────────────────────────────────
+    # Key: SHA-256 of the raw video file bytes.
+    # Same video file → same key → same words list without calling AssemblyAI,
+    # which also stabilises the downstream LLM cache key.
+    import json as _json
+    _tcache_dir = pathlib.Path.home() / ".clippedai" / "cache" / "transcript"
+    _tcache_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        _hasher = hashlib.sha256()
+        with open(video_path, "rb") as _vf:
+            for _chunk in iter(lambda: _vf.read(65536), b""):
+                _hasher.update(_chunk)
+        _video_hash = _hasher.hexdigest()
+        _tcache_file = _tcache_dir / f"transcript_{_video_hash}.json"
+    except OSError as _he:
+        logger.warning(f"[Transcript] Could not hash video file ({_he}); cache disabled.")
+        _tcache_file = None
+        _video_hash = "<unknown>"
+
+    if _tcache_file and _tcache_file.exists():
+        try:
+            words = _json.loads(_tcache_file.read_text("utf-8"))
+            if isinstance(words, list) and len(words) > 0:
+                logger.info(
+                    f"[Transcript] 🟢 Cache hit — skipping AssemblyAI "
+                    f"(key={_video_hash[:8]}, {len(words)} words)"
+                )
+                return words
+            else:
+                logger.warning("[Transcript] Cache entry empty/invalid, re-transcribing.")
+        except Exception as _ce:
+            logger.warning(f"[Transcript] Cache read failed ({_ce}), re-transcribing.")
+
+    logger.info(f"[Transcript] 🔴 Cache miss (key={_video_hash[:8]}). Calling AssemblyAI...")
 
     # Extract lightweight audio for upload (P0 optimization)
     upload_path = _extract_audio(video_path)
@@ -145,6 +183,17 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
         if status == "completed":
             words = data["words"]
             logger.info(f"Transcription complete after {attempt + 1} polls.")
+
+            # Write transcript cache
+            if _tcache_file:
+                try:
+                    _tcache_file.write_text(_json.dumps(words), "utf-8")
+                    logger.info(
+                        f"[Transcript] Cached {len(words)} words to {_tcache_file.name}"
+                    )
+                except Exception as _we:
+                    logger.warning(f"[Transcript] Cache write failed (non-fatal): {_we}")
+
             return words
         
         if status == "error":

@@ -35,5 +35,16 @@ assemblyai_*_cache_*.json
 .idea/
 *.swp
 
+# Local development (never deploy)
+local_dev_server.py
+fast_asd_local.py
+run_local.sh
+run_local.py
+local.env
+local.env.example
+local_requirements.txt
+local_venv/
+scratch/
+
 # macOS
 .DS_Store

@@ -8,6 +8,7 @@ interface DynamicVideoPlayerProps {
   muted?: boolean;
   loop?: boolean;
   className?: string;
+  videoClassName?: string;
   onPlay?: () => void;
   onPause?: () => void;
 }
@@ -22,6 +23,7 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
       muted = false,
       loop = false,
       className = "",
+      videoClassName = "",
       onPlay,
       onPause,
     },
@@ -66,7 +68,7 @@ const DynamicVideoPlayer = forwardRef<HTMLVideoElement, DynamicVideoPlayerProps>
               }
             : {})}
           preload="metadata"
-          className="absolute inset-0 h-full w-full bg-black object-contain"
+          className={`absolute inset-0 h-full w-full bg-transparent object-cover ${videoClassName}`.trim()}
           tabIndex={0}
           aria-label="Video player"
           onPlay={onPlay}

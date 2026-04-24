@@ -49,6 +49,13 @@ model User {
   prefFontFamily String         @default("TikTokSans-Regular")
   prefFontSize   Int            @default(24)
   prefFontColor  String         @default("#FFFFFF")
+  
+  /// Dodo Payments (Hybrid model)
+  credits              Int       @default(0)
+  dodoCustomerId       String?   @unique
+  dodoSubscriptionId   String?   @unique
+  dodoCurrentPeriodEnd DateTime?
+
   accounts       Account[]
   clips          Clip[]
   sessions       Session[]

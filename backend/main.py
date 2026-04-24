@@ -206,7 +206,8 @@ def _process_single_clip(
         font_color=font_color,
         work_dir=work_dir,
     )
-    merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=use_gpu)
+    fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
+    merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=use_gpu, fonts_dir=fonts_dir)
 
     clip_out_path = f"{work_dir}/clip_{index}.mp4"
     output_s3_key = f"{s3_key_dir}/clip_{index}.mp4"
