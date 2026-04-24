@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import bcrypt from "bcryptjs";
+import { Resend } from "resend";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   try {
     const { token, password } = await req.json();
 

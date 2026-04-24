@@ -3,9 +3,10 @@ import { db } from "~/server/db";
 import { v4 as uuidv4 } from "uuid";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   try {
     const { email } = await req.json();
 
