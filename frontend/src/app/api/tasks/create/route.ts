@@ -12,15 +12,25 @@ export async function POST(req: Request) {
   
   const isLocalDev = process.env.NODE_ENV === "development";
   const isTestAdmin = session.user?.email === "admin@clippedai.app" || session.user?.email === env.ADMIN_EMAIL;
-  
-  if (!user?.isAdmin && !isLocalDev && !isTestAdmin) {
-    return new NextResponse(
-      JSON.stringify({
-        error:
-          "Access Denied: Video processing is currently restricted to administrators only.",
-      }),
-      { status: 403 },
-    );
+
+  // Allow admins and local dev through without billing checks
+  const bypassBilling = user?.isAdmin || isLocalDev || isTestAdmin;
+
+  if (!bypassBilling) {
+    const now = new Date();
+    const hasActiveSub =
+      user?.dodoCurrentPeriodEnd != null && user.dodoCurrentPeriodEnd > now;
+    const hasCredits = (user?.credits ?? 0) >= 1;
+
+    if (!hasActiveSub && !hasCredits) {
+      return new NextResponse(
+        JSON.stringify({
+          error: "out_of_credits",
+          message: "You have no credits remaining. Please upgrade your plan or purchase a credit pack.",
+        }),
+        { status: 402 },
+      );
+    }
   }
 
   const body = await req.json();
@@ -96,6 +106,7 @@ export async function POST(req: Request) {
         generatedS3Key,
         newFile.id,
         session.user.id,
+        bypassBilling,
         canonicalYoutubeUrl,
         fontOptions.font_family,
         fontOptions.font_color,
@@ -142,6 +153,7 @@ export async function POST(req: Request) {
       existing.s3Key,
       uploadedFileId,
       session.user.id,
+      bypassBilling,
       undefined,
       fontOptions.font_family,
       fontOptions.font_color,
@@ -166,6 +178,7 @@ function scheduleModalJob(
   s3Key: string,
   uploadedFileId: string,
   userId: string,
+  bypassBilling: boolean,
   youtubeUrl?: string,
   fontFamily?: string,
   fontColor?: string,
@@ -182,7 +195,12 @@ function scheduleModalJob(
         fontColor,
         fontSize,
       );
-      // Invalidate cache for this user's tasks
+      // Deduct 1 credit after successful dispatch (not for admins/dev)
+      if (!bypassBilling) {
+        await db.user
+          .update({ where: { id: userId }, data: { credits: { decrement: 1 } } })
+          .catch(() => null);
+      }
       await invalidateCache(`tasks:${userId}`);
     } catch (err) {
       console.error(`[Modal] Failed to fire job for ${uploadedFileId}:`, err);

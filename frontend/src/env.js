@@ -25,6 +25,16 @@ export const env = createEnv({
     // Email Integrations
     RESEND_API_KEY: z.string().optional(),
     ADMIN_EMAIL: z.string().optional(),
+    
+    // Dodo Payments
+    DODO_PAYMENTS_API_KEY: z.string().optional(),
+    DODO_WEBHOOK_SECRET: z.string().optional(),
+    // Dodo Product IDs
+    DODO_PLAN_STARTER: z.string().optional(),
+    DODO_PLAN_PRO: z.string().optional(),
+    DODO_PLAN_STUDIO: z.string().optional(),
+    DODO_CREDITS_SMALL: z.string().optional(),
+    DODO_CREDITS_LARGE: z.string().optional(),
     // Redis caching (optional - for performance optimization)
     UPSTASH_REDIS_REST_URL: z.string().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
@@ -56,6 +66,13 @@ export const env = createEnv({
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
+    DODO_PAYMENTS_API_KEY: process.env.DODO_PAYMENTS_API_KEY,
+    DODO_WEBHOOK_SECRET: process.env.DODO_WEBHOOK_SECRET,
+    DODO_PLAN_STARTER: process.env.DODO_PLAN_STARTER,
+    DODO_PLAN_PRO: process.env.DODO_PLAN_PRO,
+    DODO_PLAN_STUDIO: process.env.DODO_PLAN_STUDIO,
+    DODO_CREDITS_SMALL: process.env.DODO_CREDITS_SMALL,
+    DODO_CREDITS_LARGE: process.env.DODO_CREDITS_LARGE,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
