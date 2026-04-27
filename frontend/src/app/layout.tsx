@@ -7,6 +7,7 @@ import { TooltipProvider } from "~/components/ui/tooltip";
 import { CookieConsent } from "~/components/CookieConsent";
 import { PostHogProvider } from "~/providers/PostHogProvider";
 import { FeedbackButton } from "~/components/feedback-button";
+import { AuthProvider } from "~/providers/AuthProvider";
 
 export const metadata: Metadata = {
   title: {
@@ -106,11 +107,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${syne.variable} antialiased`}
       >
-        <PostHogProvider>
-          <TooltipProvider>{children}</TooltipProvider>
-          <CookieConsent />
-          <FeedbackButton />
-        </PostHogProvider>
+        <AuthProvider>
+          <PostHogProvider>
+            <TooltipProvider>{children}</TooltipProvider>
+            <CookieConsent />
+            <FeedbackButton />
+          </PostHogProvider>
+        </AuthProvider>
       </body>
     </html>
   );
