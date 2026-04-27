@@ -7,6 +7,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 RUN npm ci --legacy-peer-deps
+# Explicitly generate Prisma client with the correct binary target for Alpine
+RUN npx prisma generate
 
 # ─── Stage 2: Build ─────────────────────────────────────────────────────────
 FROM base AS builder
@@ -14,7 +16,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client (Already generated securely inside deps stage)
+# Generate Prisma client with the correct linux-musl-openssl-3.0.x binary
+COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 
 # Build Next.js standalone
 ENV SKIP_ENV_VALIDATION=1
