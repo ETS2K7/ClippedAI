@@ -1,13 +1,10 @@
-import type { Metadata } from "next";
+"use client";
+
 import dynamic from "next/dynamic";
 
-export const metadata: Metadata = {
-  title: "Pricing — ClippedAI",
-  description: "Simple, transparent pricing for AI-powered short-form video clips.",
-};
-
-// Dynamically import the interactive pricing UI with ssr:false to prevent
-// useSession() from crashing during Next.js build-time static prerendering.
+// ssr:false is only allowed in Client Components (App Router restriction).
+// The page itself is a client component; PricingClient is loaded lazily so
+// useSession() is never called at build time.
 const PricingClient = dynamic(() => import("./pricing-client"), {
   ssr: false,
   loading: () => (
