@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -87,9 +88,18 @@ const CREDIT_PACKS = [
 ];
 
 export default function PricingPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+
+  // Avoid crashing during SSR/prerender — render a skeleton until hydrated
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-violet-500 border-t-transparent" />
+      </div>
+    );
+  }
 
   async function handleCheckout(planId: string, type: "subscription" | "credits") {
     if (!session) {
