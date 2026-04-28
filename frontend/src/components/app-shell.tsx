@@ -7,7 +7,7 @@ import { Separator } from "~/components/ui/separator";
 import { signOut, useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, X, LogOut, List, Settings, Plus, Shield } from "lucide-react";
+import { Menu, X, LogOut, List, Settings, Plus, Shield, Tag } from "lucide-react";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
@@ -70,6 +70,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
                 >
                   GENERATIONS
+                </Button>
+              </Link>
+              <Link href="/pricing">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
+                >
+                  PRICING
                 </Button>
               </Link>
               <Link href="/settings">
@@ -190,6 +199,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <List className="h-4 w-4 text-white/30" />
                 Generations
+              </Link>
+              <Link
+                href="/pricing"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
+              >
+                <Tag className="h-4 w-4 text-white/30" />
+                Pricing
               </Link>
               {isAdmin && (
                 <Link

@@ -4,7 +4,7 @@ import { StickyNarrative } from "~/components/landing-v3/sticky-narrative";
 import { KineticTypography } from "~/components/landing-v3/kinetic-typography";
 import { VoidCTA } from "~/components/landing-v3/void-cta";
 import { FloatingNav } from "~/components/landing-v2/floating-nav";
-import { Home, Zap } from "lucide-react";
+import { Home, Zap, Tag } from "lucide-react";
 
 export const metadata: Metadata = {
   title:
@@ -86,6 +86,11 @@ export default function HomePage() {
       name: "Home",
       link: "/",
       icon: <Home className="h-4 w-4 text-white" />,
+    },
+    {
+      name: "Pricing",
+      link: "/pricing",
+      icon: <Tag className="h-4 w-4 text-white" />,
     },
     {
       name: "Dashboard",

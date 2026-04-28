@@ -73,6 +73,12 @@ export const VoidCTA = () => {
         <div>© 2026 ClippedAI</div>
         <div className="flex gap-6">
           <Link
+            href="/pricing"
+            className="font-bold transition-colors hover:text-black"
+          >
+            Pricing
+          </Link>
+          <Link
             href="/terms"
             className="font-bold transition-colors hover:text-black"
           >
