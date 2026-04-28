@@ -21,6 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!session?.user) return <>{children}</>;
 
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-black">
       {/* ── Ambient depth layers (matching landing page) ── */}
@@ -72,7 +73,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   GENERATIONS
                 </Button>
               </Link>
-              <Link href="/pricing">
+              <Link href="/upgrade">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -201,7 +202,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 Generations
               </Link>
               <Link
-                href="/pricing"
+                href="/upgrade"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
               >

@@ -59,7 +59,7 @@ def _get_assemblyai_key() -> str:
     if _assemblyai_key is None:
         _assemblyai_key = os.getenv("ASSEMBLYAI_KEY")
         if not _assemblyai_key:
-            raise ValueError("ASSEMBLYAI_KEY must be set in the environment.")
+           raise ValueError("ASSEMBLYAI_KEY must be set in the environment.")
     return _assemblyai_key
 
 # Public accessors used by other modules — lazy-validated on first call

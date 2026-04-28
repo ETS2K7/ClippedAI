@@ -191,7 +191,7 @@ def _process_single_clip(
 ) -> dict:
     """
     Processes a single clip through the full sub-pipeline:
-    extract → track → subtitle → merge → S3 upload.
+    extract -> track -> subtitle -> merge -> S3 upload.
     Returns a dict with {"s3Key": ..., "thumbnailKey": ...}.
 
     Designed to run concurrently with other clip pipelines via ThreadPoolExecutor.

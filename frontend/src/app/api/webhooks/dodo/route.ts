@@ -13,16 +13,22 @@ const dodo = new DodoPayments({
 
 // Map Dodo product IDs → credits granted on one-time purchase
 const CREDIT_PACK_MAP: Record<string, number> = {
-  [process.env.DODO_CREDITS_SMALL ?? ""]: 50,
-  [process.env.DODO_CREDITS_LARGE ?? ""]: 200,
+  [process.env.DODO_CREDITS_100 ?? ""]: 100,
+  [process.env.DODO_CREDITS_250 ?? ""]: 250,
+  [process.env.DODO_CREDITS_500 ?? ""]: 500,
 };
 
 // Map Dodo product IDs → monthly credit allowance for subscriptions
 const SUBSCRIPTION_CREDIT_MAP: Record<string, number> = {
-  [process.env.DODO_PLAN_STARTER ?? ""]: 50,
+  [process.env.DODO_PLAN_STARTER ?? ""]: 20,
   [process.env.DODO_PLAN_PRO ?? ""]: 200,
-  [process.env.DODO_PLAN_STUDIO ?? ""]: 9999, // effectively unlimited
+  [process.env.DODO_PLAN_PRO_FOUNDING ?? ""]: 200, // founding member — same credits as Pro
 };
+
+// Products that grant founding member status
+const FOUNDING_MEMBER_PRODUCTS = new Set([
+  process.env.DODO_PLAN_PRO_FOUNDING ?? "",
+]);
 
 export async function POST(req: Request) {
   const rawBody = await req.text();
@@ -84,7 +90,8 @@ async function processEvent(event: any) {
     case "subscription.renewed": {
       if (!email) return;
       const productId: string = data?.product_id ?? "";
-      const monthlyCredits = SUBSCRIPTION_CREDIT_MAP[productId] ?? 50;
+      const monthlyCredits = SUBSCRIPTION_CREDIT_MAP[productId] ?? 20;
+      const isFoundingProduct = FOUNDING_MEMBER_PRODUCTS.has(productId);
 
       await db.user.update({
         where: { email },
@@ -94,11 +101,14 @@ async function processEvent(event: any) {
           dodoCurrentPeriodEnd: data?.next_billing_date
             ? new Date(data.next_billing_date)
             : undefined,
+          dodoPlanId: productId || undefined,
+          // Only set founding member on first activation, never unset it
+          ...(isFoundingProduct ? { isFoundingMember: true } : {}),
           // Replenish monthly credit allowance
           credits: { increment: monthlyCredits },
         },
       });
-      console.log(`[dodo] subscription ${type} → ${email}, +${monthlyCredits} credits`);
+      console.log(`[dodo] subscription ${type} → ${email}, +${monthlyCredits} credits, plan=${productId}`);
       break;
     }
 

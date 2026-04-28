@@ -36,6 +36,7 @@ import {
   Lock,
   Send,
   X,
+  Zap,
 } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
@@ -111,6 +112,7 @@ const getYouTubeThumbnailUrl = (value: string): string | null => {
 
 export default function Home() {
   const [showBetaModal, setShowBetaModal] = useState(false);
+  const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [betaMessage, setBetaMessage] = useState("");
   const [betaSending, setBetaSending] = useState(false);
   const [betaSent, setBetaSent] = useState(false);
@@ -415,6 +417,14 @@ export default function Home() {
       });
 
       if (!startResponse.ok) {
+        // 402 out_of_credits → show upgrade modal instead of generic error
+        if (startResponse.status === 402) {
+          const body = await startResponse.json().catch(() => ({})) as { error?: string };
+          if (body?.error === "out_of_credits") {
+            setShowCapacityModal(true);
+            return;
+          }
+        }
         const startError = await parseApiError(
           startResponse,
           `API error: ${startResponse.status}`,
@@ -474,6 +484,66 @@ export default function Home() {
   return (
     <AppShell>
       <AnimatePresence>
+        {/* ── Capacity / out-of-credits modal ─────────────────── */}
+        {showCapacityModal && (
+          <motion.div
+            key="capacity-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="fixed inset-0 z-[500] flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
+              onClick={() => setShowCapacityModal(false)}
+            />
+            <motion.div
+              initial={{ scale: 0.96, y: 18 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.96, y: 18 }}
+              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+              className="brutal-card relative w-full max-w-md overflow-hidden p-8"
+            >
+              <button
+                onClick={() => setShowCapacityModal(false)}
+                aria-label="Close"
+                className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-white/40 transition-all hover:bg-white/10 hover:text-white"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
+                <Zap className="h-5 w-5 text-white/60" />
+              </div>
+
+              <h3 className="font-syne mb-2 text-2xl font-black tracking-tight text-white uppercase">
+                Out of credits.
+              </h3>
+              <p className="mb-8 font-mono text-[11px] leading-relaxed tracking-wide text-white/40 uppercase">
+                You&apos;ve used all your credits for this month. Upgrade to Pro for 200 credits per month, or top up with a one-time credit pack.
+              </p>
+
+              <div className="flex flex-col gap-3">
+                <Link
+                  href="/upgrade"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3.5 font-mono text-[11px] font-black tracking-widest text-black uppercase transition-all hover:bg-white/90"
+                  onClick={() => setShowCapacityModal(false)}
+                >
+                  Upgrade to Pro <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+                <button
+                  onClick={() => setShowCapacityModal(false)}
+                  className="w-full rounded-xl border border-white/10 py-3 font-mono text-[10px] tracking-widest text-white/30 uppercase transition-all hover:border-white/20 hover:text-white/50"
+                >
+                  Maybe later
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* ── Beta modal ──────────────────────────────────────── */}
         {showBetaModal && (
           <motion.div
             key="beta-modal"
@@ -1125,28 +1195,21 @@ export default function Home() {
                               </div>
                             </div>
 
-                            {/* Video display */}
-                            <div
-                              className="absolute inset-0 bg-black cursor-pointer"
-                              onMouseEnter={() => {
-                                if (videoPreviewRef.current) {
-                                  void videoPreviewRef.current.play();
-                                }
-                              }}
-                              onMouseLeave={() => {
-                                if (videoPreviewRef.current) {
-                                  videoPreviewRef.current.pause();
-                                }
-                              }}
-                            >
-                              <video
-                                ref={videoPreviewRef}
-                                src="/14.mp4"
-                                autoPlay
-                                muted
-                                playsInline
-                                className="h-full w-full object-cover transition-opacity duration-300"
-                              />
+                            {/* Best Frame display */}
+                            <div className="absolute inset-0 bg-black cursor-pointer">
+                              {youtubeThumbnailUrl || fileName ? (
+                                <img
+                                  src={youtubeThumbnailUrl || "/images/og-thumbnail.jpg"}
+                                  alt="Video preview"
+                                  className="h-full w-full object-cover transition-opacity duration-300"
+                                />
+                              ) : (
+                                <img
+                                  src="/images/og-thumbnail.jpg"
+                                  alt="Default preview"
+                                  className="h-full w-full object-cover transition-opacity duration-300"
+                                />
+                              )}
                             </div>
 
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />

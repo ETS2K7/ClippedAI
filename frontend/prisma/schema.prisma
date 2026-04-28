@@ -55,6 +55,10 @@ model User {
   dodoCustomerId       String?   @unique
   dodoSubscriptionId   String?   @unique
   dodoCurrentPeriodEnd DateTime?
+  /// Which Dodo product ID the user is currently subscribed to
+  dodoPlanId           String?
+  /// True if the user subscribed via the founding member promotional product
+  isFoundingMember     Boolean   @default(false)
 
   accounts       Account[]
   clips          Clip[]

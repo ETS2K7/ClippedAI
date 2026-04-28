@@ -32,9 +32,10 @@ export const env = createEnv({
     // Dodo Product IDs
     DODO_PLAN_STARTER: z.string().optional(),
     DODO_PLAN_PRO: z.string().optional(),
-    DODO_PLAN_STUDIO: z.string().optional(),
-    DODO_CREDITS_SMALL: z.string().optional(),
-    DODO_CREDITS_LARGE: z.string().optional(),
+    DODO_PLAN_PRO_FOUNDING: z.string().optional(),
+    DODO_CREDITS_100: z.string().optional(),
+    DODO_CREDITS_250: z.string().optional(),
+    DODO_CREDITS_500: z.string().optional(),
     // Redis caching (optional - for performance optimization)
     UPSTASH_REDIS_REST_URL: z.string().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
@@ -47,8 +48,14 @@ export const env = createEnv({
     NEXT_PUBLIC_DATAFAST_DOMAIN: z.string().optional(),
     // Set to "false" to enable monetization in self-hosted mode
     NEXT_PUBLIC_SELF_HOST: z.string().optional(),
-    // CloudFront CDN domain (optional — set to enable CDN)
     NEXT_PUBLIC_CLOUDFRONT_DOMAIN: z.string().optional(),
+    // Public Dodo Product IDs
+    NEXT_PUBLIC_DODO_PLAN_STARTER: z.string().optional(),
+    NEXT_PUBLIC_DODO_PLAN_PRO: z.string().optional(),
+    NEXT_PUBLIC_DODO_PLAN_PRO_FOUNDING: z.string().optional(),
+    NEXT_PUBLIC_DODO_CREDITS_100: z.string().optional(),
+    NEXT_PUBLIC_DODO_CREDITS_250: z.string().optional(),
+    NEXT_PUBLIC_DODO_CREDITS_500: z.string().optional(),
   },
 
   runtimeEnv: {
@@ -70,9 +77,10 @@ export const env = createEnv({
     DODO_WEBHOOK_SECRET: process.env.DODO_WEBHOOK_SECRET,
     DODO_PLAN_STARTER: process.env.DODO_PLAN_STARTER,
     DODO_PLAN_PRO: process.env.DODO_PLAN_PRO,
-    DODO_PLAN_STUDIO: process.env.DODO_PLAN_STUDIO,
-    DODO_CREDITS_SMALL: process.env.DODO_CREDITS_SMALL,
-    DODO_CREDITS_LARGE: process.env.DODO_CREDITS_LARGE,
+    DODO_PLAN_PRO_FOUNDING: process.env.DODO_PLAN_PRO_FOUNDING,
+    DODO_CREDITS_100: process.env.DODO_CREDITS_100,
+    DODO_CREDITS_250: process.env.DODO_CREDITS_250,
+    DODO_CREDITS_500: process.env.DODO_CREDITS_500,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:
@@ -82,6 +90,12 @@ export const env = createEnv({
     NEXT_PUBLIC_DATAFAST_DOMAIN: process.env.NEXT_PUBLIC_DATAFAST_DOMAIN,
     NEXT_PUBLIC_SELF_HOST: process.env.NEXT_PUBLIC_SELF_HOST,
     NEXT_PUBLIC_CLOUDFRONT_DOMAIN: process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN,
+    NEXT_PUBLIC_DODO_PLAN_STARTER: process.env.NEXT_PUBLIC_DODO_PLAN_STARTER,
+    NEXT_PUBLIC_DODO_PLAN_PRO: process.env.NEXT_PUBLIC_DODO_PLAN_PRO,
+    NEXT_PUBLIC_DODO_PLAN_PRO_FOUNDING: process.env.NEXT_PUBLIC_DODO_PLAN_PRO_FOUNDING,
+    NEXT_PUBLIC_DODO_CREDITS_100: process.env.NEXT_PUBLIC_DODO_CREDITS_100,
+    NEXT_PUBLIC_DODO_CREDITS_250: process.env.NEXT_PUBLIC_DODO_CREDITS_250,
+    NEXT_PUBLIC_DODO_CREDITS_500: process.env.NEXT_PUBLIC_DODO_CREDITS_500,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

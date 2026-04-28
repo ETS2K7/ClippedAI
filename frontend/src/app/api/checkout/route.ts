@@ -9,16 +9,18 @@ const dodo = new DodoPayments({
   environment: "test_mode",
 });
 
-// Allowlist of valid product IDs so callers can't pass arbitrary IDs
+// Allowlist of valid subscription product IDs
 const VALID_SUBSCRIPTION_IDS = new Set([
   process.env.DODO_PLAN_STARTER,
   process.env.DODO_PLAN_PRO,
-  process.env.DODO_PLAN_STUDIO,
+  process.env.DODO_PLAN_PRO_FOUNDING,
 ]);
 
+// Allowlist of valid one-time credit pack product IDs
 const VALID_CREDIT_IDS = new Set([
-  process.env.DODO_CREDITS_SMALL,
-  process.env.DODO_CREDITS_LARGE,
+  process.env.DODO_CREDITS_100,
+  process.env.DODO_CREDITS_250,
+  process.env.DODO_CREDITS_500,
 ]);
 
 export async function POST(req: Request) {
@@ -39,6 +41,7 @@ export async function POST(req: Request) {
   const email = session.user.email;
   const returnUrl = `${process.env.BASE_URL}/dashboard?payment=success`;
   const cancelUrl = `${process.env.BASE_URL}/pricing?payment=cancelled`;
+
 
   try {
     if (type === "subscription") {
