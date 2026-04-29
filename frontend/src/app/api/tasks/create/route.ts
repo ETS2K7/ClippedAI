@@ -33,117 +33,104 @@ export async function POST(req: Request) {
     }
   }
 
-  const body = await req.json();
-  const sourceUrl: string | undefined = body?.source?.url;
-  const fontOptions = body?.font_options || {};
-
-  if (!sourceUrl) {
-    return new NextResponse(
-      JSON.stringify({ error: "No source URL provided" }),
-      { status: 400 },
-    );
-  }
-
-  // Validate and sanitize sourceUrl
-  if (typeof sourceUrl !== "string" || sourceUrl.length > 2048) {
-    return new NextResponse(
-      JSON.stringify({ error: "Invalid source URL" }),
-      { status: 400 },
-    );
-  }
-
-  // YouTube URL — create a new DB record for it
-  const YOUTUBE_HOSTS = new Set([
-    "youtube.com",
-    "www.youtube.com",
-    "m.youtube.com",
-    "youtu.be",
-    "www.youtu.be",
-  ]);
-
-  let parsedUrl: URL | null = null;
   try {
-    parsedUrl = new URL(sourceUrl);
-  } catch {
-    // Not a valid URL — treat as uploaded file ID (below)
-  }
+    // Existing logic start
+    const body = await req.json();
+    const sourceUrl: string | undefined = body?.source?.url;
+    const fontOptions = body?.font_options || {};
 
-  if (
-    parsedUrl &&
-    (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") &&
-    YOUTUBE_HOSTS.has(parsedUrl.hostname)
-  ) {
-    const videoIdMatch = sourceUrl.match(
-      /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/,
-    );
-    const videoId = videoIdMatch ? videoIdMatch[1] : null;
-
-    if (!videoId) {
-      return NextResponse.json(
-        { error: "Could not extract a valid YouTube video ID from the URL." },
+    if (!sourceUrl) {
+      return new NextResponse(
+        JSON.stringify({ error: "No source URL provided" }),
         { status: 400 },
       );
     }
 
-    // Reconstruct a canonical YouTube URL from the validated video ID
-    // instead of forwarding raw user input to Modal
-    const canonicalYoutubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const generatedS3Key = `youtube-downloads/${session.user.id}-${Date.now()}/${videoId}/original.mp4`;
-
-    try {
-      const newFile = await db.uploadedFile.create({
-        data: {
-          userId: session.user.id,
-          s3Key: generatedS3Key,
-          status: "processing",
-          uploaded: true,
-        },
-      });
-
-      // Must run after the response: an un-awaited fetch is often aborted when
-      // the route handler returns (standalone / serverless), so Modal never runs.
-      scheduleModalJob(
-        generatedS3Key,
-        newFile.id,
-        session.user.id,
-        bypassBilling,
-        canonicalYoutubeUrl,
-        fontOptions.font_family,
-        fontOptions.font_color,
-        fontOptions.font_size,
-      );
-      return NextResponse.json({ task_id: newFile.id });
-    } catch (err) {
-      console.error("[tasks/create] YouTube DB create failed:", err);
-      return NextResponse.json(
-        { error: "Failed to create task. Please sign out and sign in again." },
-        { status: 500 },
+    if (typeof sourceUrl !== "string" || sourceUrl.length > 2048) {
+      return new NextResponse(
+        JSON.stringify({ error: "Invalid source URL" }),
+        { status: 400 },
       );
     }
-  }
 
-  // Uploaded file — find existing DB record
-  const uploadedFileId = sourceUrl;
+    const YOUTUBE_HOSTS = new Set([
+      "youtube.com",
+      "www.youtube.com",
+      "m.youtube.com",
+      "youtu.be",
+      "www.youtu.be",
+    ]);
 
-  try {
+    let parsedUrl: URL | null = null;
+    try {
+      parsedUrl = new URL(sourceUrl);
+    } catch {
+      // Not a valid URL
+    }
+
+    if (
+      parsedUrl &&
+      (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") &&
+      YOUTUBE_HOSTS.has(parsedUrl.hostname)
+    ) {
+      const videoIdMatch = sourceUrl.match(
+        /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/,
+      );
+      const videoId = videoIdMatch ? videoIdMatch[1] : null;
+
+      if (!videoId) {
+        return NextResponse.json(
+          { error: "Could not extract a valid YouTube video ID from the URL." },
+          { status: 400 },
+        );
+      }
+
+      const canonicalYoutubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      const generatedS3Key = `youtube-downloads/${session.user.id}-${Date.now()}/${videoId}/original.mp4`;
+
+      try {
+        const newFile = await db.uploadedFile.create({
+          data: {
+            userId: session.user.id,
+            s3Key: generatedS3Key,
+            status: "processing",
+            uploaded: true,
+          },
+        });
+
+        scheduleModalJob(
+          generatedS3Key,
+          newFile.id,
+          session.user.id,
+          bypassBilling,
+          canonicalYoutubeUrl,
+          fontOptions.font_family,
+          fontOptions.font_color,
+          fontOptions.font_size,
+        );
+        return NextResponse.json({ task_id: newFile.id });
+      } catch (err: any) {
+        return NextResponse.json(
+          { error: "DB Create error: " + err?.message },
+          { status: 500 },
+        );
+      }
+    }
+
+    const uploadedFileId = sourceUrl;
     const existing = await db.uploadedFile.findUnique({
       where: { id: uploadedFileId, userId: session.user.id },
       select: { id: true, s3Key: true, uploaded: true, status: true },
     });
 
     if (!existing) {
-      return new NextResponse(
-        JSON.stringify({ error: "Upload record not found" }),
-        { status: 404 },
-      );
+      return NextResponse.json({ error: "Upload record not found" }, { status: 404 });
     }
 
-    // Idempotency guard — don't requeue if already dispatched
     if (existing.uploaded) {
       return NextResponse.json({ task_id: existing.id });
     }
 
-    // Mark as processing immediately
     await db.uploadedFile.update({
       where: { id: uploadedFileId },
       data: { uploaded: true, status: "processing" },
@@ -161,12 +148,9 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ task_id: existing.id });
-  } catch (err) {
-    console.error("[tasks/create] Error:", err);
-    return new NextResponse(
-      JSON.stringify({ error: "Failed to start processing" }),
-      { status: 500 },
-    );
+  } catch (globalErr: any) {
+    console.error("Global task error", globalErr);
+    return NextResponse.json({ error: "Global error: " + globalErr?.message }, { status: 500 });
   }
 }
 
