@@ -173,36 +173,14 @@ export default function PricingClient() {
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:80px_80px]" />
         <div className="absolute top-[-20%] left-1/2 h-[80vh] w-[80vw] -translate-x-1/2 rounded-full bg-white/[0.025] blur-[160px]" />
-        {/* Background headline — fixed in place, aligned with top of pricing cards */}
-        <div className="absolute inset-x-0 top-[13rem] flex flex-col items-center overflow-hidden">
-          <p
-            aria-hidden
-            className="font-syne select-none text-[clamp(48px,10vw,130px)] font-black leading-none tracking-tighter text-white/[0.08] uppercase"
-          >
-            START FREE.
-          </p>
-          <p
-            aria-hidden
-            className="font-syne select-none text-[clamp(48px,10vw,130px)] font-black leading-none tracking-tighter uppercase"
-            style={{ WebkitTextStroke: "1.5px rgba(255,255,255,0.1)", color: "transparent" }}
-          >
-            SCALE WHEN
-          </p>
-          <p
-            aria-hidden
-            className="font-syne select-none text-[clamp(48px,10vw,130px)] font-black leading-none tracking-tighter uppercase"
-            style={{ WebkitTextStroke: "1.5px rgba(255,255,255,0.1)", color: "transparent" }}
-          >
-            YOU&apos;RE READY.
-          </p>
-        </div>
+        {/* Background removed */}
       </div>
 
       {/* ── Nav ────────────────────────────────────────────── */}
       <FloatingNav navItems={navItems} />
 
       {/* ── Compact hero (badge + subtitle only) ───────────── */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pb-8 pt-28 text-center">
+      <section className="relative z-10 mx-auto max-w-6xl px-4 pb-4 pt-28 text-center">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -218,14 +196,22 @@ export default function PricingClient() {
               Simple, transparent pricing
             </span>
           </div>
-          <p className="font-mono text-[10px] tracking-widest text-white/25 uppercase">
+          <h1 className="font-syne mt-3 whitespace-nowrap text-[clamp(2rem,5vw,4rem)] font-black uppercase tracking-tighter">
+            <span className="relative inline-block">
+              <span className="absolute -inset-2 rounded-full bg-white/10 blur-xl"></span>
+              <span className="relative bg-gradient-to-r from-white via-white to-zinc-400 bg-clip-text text-transparent">
+                SCALE WHEN YOU&apos;RE READY.
+              </span>
+            </span>
+          </h1>
+          <p className="mt-2 font-mono text-[10px] tracking-widest text-white/25 uppercase">
             No credit card required &middot; Cancel anytime
           </p>
         </motion.div>
       </section>
 
       {/* ── Plans ─────────────────────────────────────────── */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pb-16">
+      <section className="relative z-10 mx-auto max-w-6xl px-4 pb-8">
         <div className="grid gap-4 md:grid-cols-3">
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;
@@ -235,11 +221,8 @@ export default function PricingClient() {
             const showFoundingOffer = isProPlan && slots?.available;
 
             return (
-              <motion.div
+              <div
                 key={plan.id}
-                initial={{ opacity: 0, y: 32 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 + i * 0.1, ease: [0.22, 1, 0.36, 1] }}
                 className={`relative flex flex-col rounded-2xl border p-8 transition-all duration-300 ${
                   plan.isComingSoon
                     ? "border-white/[0.05] bg-white/[0.01] opacity-70"
@@ -379,14 +362,10 @@ export default function PricingClient() {
                     )}
                   </button>
                 )}
-              </motion.div>
+              </div>
             );
           })}
         </div>
-
-        <p className="mt-8 text-center font-mono text-[10px] tracking-widest text-white/20 uppercase">
-          All plans include speaker tracking · auto-reframing · burned-in captions · cloud storage
-        </p>
       </section>
 
       {/* ── Divider ─────────────────────────────────────────── */}
@@ -448,7 +427,7 @@ export default function PricingClient() {
         <h2 className="font-syne mb-12 text-center text-4xl font-black tracking-tight text-white uppercase">FAQ.</h2>
         <div className="space-y-3">
           {[
-            { q: "What is a credit?", a: "One credit = one AI-generated short clip, regardless of the source video's length." },
+            { q: "What is a credit?", a: "One credit equals one minute of video. For example, processing a 10-minute video consumes 10 credits." },
             { q: "What does the watermark look like?", a: "A small ClippedAI logo in the corner of each exported clip. Upgrade to Pro to remove it." },
             { q: "Do credits roll over?", a: "Pro subscribers: unused credits roll over for one month, then reset. One-time top-up credits never expire." },
             { q: "Can I cancel anytime?", a: "Yes. Cancel from your account settings. You keep Pro access until the end of the billing period." },

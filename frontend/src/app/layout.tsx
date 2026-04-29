@@ -6,7 +6,6 @@ import { Geist, Geist_Mono, Syne } from "next/font/google";
 import { TooltipProvider } from "~/components/ui/tooltip";
 import { CookieConsent } from "~/components/CookieConsent";
 import { PostHogProvider } from "~/providers/PostHogProvider";
-import { FeedbackButton } from "~/components/feedback-button";
 import { AuthProvider } from "~/providers/AuthProvider";
 
 export const metadata: Metadata = {
@@ -111,7 +110,6 @@ export default function RootLayout({
           <PostHogProvider>
             <TooltipProvider>{children}</TooltipProvider>
             <CookieConsent />
-            <FeedbackButton />
           </PostHogProvider>
         </AuthProvider>
       </body>
