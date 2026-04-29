@@ -47,6 +47,7 @@ graph TB
 | Frontend | Next.js 15, React 19, TailwindCSS v4, shadcn/ui |
 | Auth | NextAuth v5 (credentials + JWT) |
 | Database | PostgreSQL + Prisma ORM |
+| Payments | Dodo Payments (Subscriptions & PAYG) |
 | Background Jobs | Inngest |
 | Storage | AWS S3 |
 | Backend | Python 3.10 on Modal (serverless GPU) |
@@ -99,8 +100,10 @@ modal deploy main.py
 | `PROCESS_VIDEO_ENDPOINT` | ✅ | Modal backend endpoint URL |
 | `PROCESS_VIDEO_ENDPOINT_AUTH` | ✅ | Bearer token for backend |
 | `BASE_URL` | ✅ | App base URL (e.g. `https://clippedai.app`) |
-| `STRIPE_SECRET_KEY` | ❌ | Stripe secret (optional) |
-| `STRIPE_WEBHOOK_SECRET` | ❌ | Stripe webhook secret (optional) |
+| `DODO_PAYMENTS_API_KEY` | ✅ | Dodo Payments Secret Key |
+| `DODO_WEBHOOK_SECRET` | ✅ | Dodo Webhook Secret |
+| `DODO_PLAN_*` | ✅ | Dodo Product IDs (Pro, Founding, Starter) |
+| `DODO_CREDITS_*` | ✅ | Dodo Pay-As-You-Go Credit Bundle IDs |
 
 ### Backend (`backend/.env`)
 
@@ -112,6 +115,13 @@ modal deploy main.py
 | `AWS_ACCESS_KEY_ID` | ✅ | AWS credentials |
 | `AWS_SECRET_ACCESS_KEY` | ✅ | AWS credentials |
 | `AUTH_TOKEN` | ✅ | Bearer token (must match frontend) |
+
+## Pricing & Monetization
+
+The platform integrates with **Dodo Payments** and uses a hybrid billing architecture:
+- **Subscriptions:** Starter (Free) and Pro ($12.99/mo). Includes a live-updating limited "Founding Member" tier ($7.50/mo) capped at 25 users.
+- **Pay-As-You-Go (PAYG):** Pro users can purchase non-expiring credit bundles (100, 250, 500).
+- **Credit System:** 1 credit = 1 minute of video processing. Capacity gating enforces platform limits dynamically.
 
 ## Deployment
 
