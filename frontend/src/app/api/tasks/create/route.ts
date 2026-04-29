@@ -1,40 +1,39 @@
-import { after, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
 import { env } from "~/env";
 import { invalidateCache } from "~/lib/cache";
 
 export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) return new NextResponse(null, { status: 401 });
-
-  const user = await db.user.findUnique({ where: { id: session.user.id } });
-  
-  const isLocalDev = process.env.NODE_ENV === "development";
-  const isTestAdmin = session.user?.email === "admin@clippedai.app" || session.user?.email === env.ADMIN_EMAIL;
-
-  // Allow admins and local dev through without billing checks
-  const bypassBilling = user?.isAdmin || isLocalDev || isTestAdmin;
-
-  if (!bypassBilling) {
-    const now = new Date();
-    const hasActiveSub =
-      user?.dodoCurrentPeriodEnd != null && user.dodoCurrentPeriodEnd > now;
-    const hasCredits = (user?.credits ?? 0) >= 1;
-
-    if (!hasActiveSub && !hasCredits) {
-      return new NextResponse(
-        JSON.stringify({
-          error: "out_of_credits",
-          message: "You have no credits remaining. Please upgrade your plan or purchase a credit pack.",
-        }),
-        { status: 402 },
-      );
-    }
-  }
-
   try {
-    // Existing logic start
+    const session = await auth();
+    if (!session?.user?.id) return new NextResponse(null, { status: 401 });
+
+    const user = await db.user.findUnique({ where: { id: session.user.id } });
+    
+    const isLocalDev = process.env.NODE_ENV === "development";
+    const isTestAdmin = session.user?.email === "admin@clippedai.app" || session.user?.email === env.ADMIN_EMAIL;
+
+    // Allow admins and local dev through without billing checks
+    const bypassBilling = user?.isAdmin || isLocalDev || isTestAdmin;
+
+    if (!bypassBilling) {
+      const now = new Date();
+      const hasActiveSub =
+        user?.dodoCurrentPeriodEnd != null && user.dodoCurrentPeriodEnd > now;
+      const hasCredits = (user?.credits ?? 0) >= 1;
+
+      if (!hasActiveSub && !hasCredits) {
+        return new NextResponse(
+          JSON.stringify({
+            error: "out_of_credits",
+            message: "You have no credits remaining. Please upgrade your plan or purchase a credit pack.",
+          }),
+          { status: 402 },
+        );
+      }
+    }
+
     const body = await req.json();
     const sourceUrl: string | undefined = body?.source?.url;
     const fontOptions = body?.font_options || {};
@@ -168,7 +167,8 @@ function scheduleModalJob(
   fontColor?: string,
   fontSize?: number,
 ) {
-  after(async () => {
+  // Execute in the background without blocking the response
+  void (async () => {
     try {
       await dispatchModalJobToModal(
         s3Key,
@@ -192,7 +192,7 @@ function scheduleModalJob(
         .update({ where: { id: uploadedFileId }, data: { status: "failed" } })
         .catch(() => null);
     }
-  });
+  })();
 }
 
 function modalDispatchAccepted(status: number): boolean {
