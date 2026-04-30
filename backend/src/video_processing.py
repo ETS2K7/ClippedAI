@@ -126,7 +126,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
 
 # ─── Phase 7 ──────────────────────────────────────────────────────────────────
 
-def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: int, work_dir: str = "", use_gpu: bool = False, fonts_dir: str = ""):
+def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str | None, idx: int, work_dir: str = "", use_gpu: bool = False, fonts_dir: str = ""):
     """Merges subtitle-ass video with audio from original segment.
 
     Uses FFmpeg to burn in ASS subtitles and copy audio from the extracted segment.
@@ -141,24 +141,26 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
     )
     out_file = f"{work_dir}/clip_{idx}.mp4" if work_dir else f"output/clip_{idx}.mp4"
 
-    # Re-encode tracked .avi (MJPG) to H.264, burn in ASS subtitles, and mux audio.
+    # Re-encode tracked .avi (MJPG) to H.264, optionally burn in ASS subtitles, and mux audio.
     # -c:v libx264 is always available; we intentionally do NOT use NVENC here because
     # MJPG pixel format (yuvj420p) requires colour-range conversion that NVENC rejects.
     # The ass= filter path must have colons escaped for FFmpeg's filter syntax on Linux.
-    safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
-
-    # Build the ass filter — include fontsdir if a custom font directory is provided
-    if fonts_dir:
-        safe_fonts = fonts_dir.replace("\\", "/").replace(":", "\\:")
-        ass_filter = f"ass={safe_sub}:fontsdir={safe_fonts}"
-    else:
-        ass_filter = f"ass={safe_sub}"
-
     cmd = [
         "ffmpeg", "-y",
         "-i", tracked_vid,
         "-i", extract_vid,
-        "-vf", ass_filter,
+    ]
+
+    if sub_file:
+        safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
+        if fonts_dir:
+            safe_fonts = fonts_dir.replace("\\", "/").replace(":", "\\:")
+            ass_filter = f"ass={safe_sub}:fontsdir={safe_fonts}"
+        else:
+            ass_filter = f"ass={safe_sub}"
+        cmd.extend(["-vf", ass_filter])
+
+    cmd.extend([
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
         "-preset", "veryfast",
@@ -168,7 +170,7 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
         "-map", "1:a:0?",
         "-shortest",
         out_file,
-    ]
+    ])
 
     _run_ffmpeg(cmd, f"merge for clip {idx}")
 
@@ -176,7 +178,8 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
     try:
         os.remove(tracked_vid)
         os.remove(extract_vid)
-        os.remove(sub_file)
+        if sub_file:
+            os.remove(sub_file)
     except OSError as e:
         logger.warning(f"Failed to clean up temporary files for clip {idx}: {e}")
 

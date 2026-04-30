@@ -7,7 +7,8 @@ export const dynamic = "force-dynamic";
 // Initialise SDK with webhook key so .unwrap() can verify signatures
 const dodo = new DodoPayments({
   bearerToken: process.env.DODO_PAYMENTS_API_KEY ?? "",
-  environment: "test_mode",
+  environment:
+    process.env.DODO_PAYMENTS_ENV === "live_mode" ? "live_mode" : "test_mode",
   webhookKey: process.env.DODO_WEBHOOK_SECRET ?? "",
 });
 

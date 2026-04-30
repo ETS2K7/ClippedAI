@@ -1,4 +1,4 @@
-name: Deploy to Oracle Cloud
+name: Deploy to DigitalOcean
 
 on:
   push:
@@ -22,9 +22,9 @@ jobs:
       - name: Setup SSH agent
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.OCI_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -T 10 -H "${{ secrets.OCI_SERVER_IP }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -T 10 -H "${{ secrets.DO_SERVER_IP }}" >> ~/.ssh/known_hosts
 
       # ── Write .env.production locally ──────────────────────────────────
       - name: Write .env.production
@@ -73,17 +73,17 @@ jobs:
             --exclude='frontend/.env*' \
             --exclude='.env*' \
             -e "ssh -i ~/.ssh/deploy_key" \
-            ./ ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/
+            ./ root@${{ secrets.DO_SERVER_IP }}:/opt/clippedai/
 
       # ── Upload .env.production and root .env AFTER rsync so they're never deleted ───────
       - name: Upload env files to server
         run: |
           scp -i ~/.ssh/deploy_key \
             /tmp/env.production \
-            ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/frontend/.env.production
+            root@${{ secrets.DO_SERVER_IP }}:/opt/clippedai/frontend/.env.production
           scp -i ~/.ssh/deploy_key \
             /tmp/root.env \
-            ubuntu@${{ secrets.OCI_SERVER_IP }}:/opt/clippedai/.env
+            root@${{ secrets.DO_SERVER_IP }}:/opt/clippedai/.env
 
       # ── Rebuild on server ────────────────────────────────────────────────
       - name: Write server deploy script
@@ -140,9 +140,9 @@ jobs:
         run: |
           scp -i ~/.ssh/deploy_key \
             /tmp/server-deploy.sh \
-            ubuntu@${{ secrets.OCI_SERVER_IP }}:/tmp/server-deploy.sh
+            root@${{ secrets.DO_SERVER_IP }}:/tmp/server-deploy.sh
           ssh -i ~/.ssh/deploy_key \
-            ubuntu@${{ secrets.OCI_SERVER_IP }} \
+            root@${{ secrets.DO_SERVER_IP }} \
             "bash /tmp/server-deploy.sh"
 
       - name: Verify deployment
@@ -150,7 +150,7 @@ jobs:
           echo "==> Verifying app health directly on server (bypasses Cloudflare bot protection)..."
           for i in $(seq 1 12); do
             HEALTH=$(ssh -i ~/.ssh/deploy_key \
-              ubuntu@${{ secrets.OCI_SERVER_IP }} \
+              root@${{ secrets.DO_SERVER_IP }} \
               "curl -sf http://localhost:3000/api/health 2>/dev/null || echo unreachable" 2>/dev/null || echo unreachable)
             if echo "$HEALTH" | grep -q '"status":"ok"'; then
               echo "✅ App is healthy: $HEALTH"
@@ -162,6 +162,6 @@ jobs:
           done
           echo "✗ Health check timed out"
           ssh -i ~/.ssh/deploy_key \
-            ubuntu@${{ secrets.OCI_SERVER_IP }} \
+            root@${{ secrets.DO_SERVER_IP }} \
             "cd /opt/clippedai && docker compose logs app --tail=30" || true
           exit 1

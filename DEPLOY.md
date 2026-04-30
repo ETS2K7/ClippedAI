@@ -1,6 +1,6 @@
-# ClippedAI — Deployment Guide (GitHub → OCI)
+# ClippedAI — Deployment Guide (GitHub → DigitalOcean)
 
-The deployment pipeline is: **push to `main` → GitHub Actions → OCI ARM server**.
+The deployment pipeline is: **push to `main` → GitHub Actions → DigitalOcean Droplet**.
 
 ---
 
@@ -9,7 +9,7 @@ The deployment pipeline is: **push to `main` → GitHub Actions → OCI ARM serv
 ```
 Your Machine  →  git push  →  GitHub (main branch)
                                     ↓  (GitHub Actions triggers)
-                              OCI ARM A1 Server
+                              DigitalOcean Droplet
                                  git pull
                                  docker compose build app
                                  docker compose up -d
@@ -40,67 +40,35 @@ git push -u origin main
 
 ---
 
-### Step 2 — Install OCI CLI
+### Step 2 — Provision DigitalOcean Droplet
 
-```bash
-pip install oci-cli
-oci --version  # verify
-```
-
----
-
-### Step 3 — Configure OCI CLI
-
-```bash
-oci setup config
-```
-
-You'll be prompted for:
-- **Tenancy OCID** → OCI Console → Avatar → Tenancy → Copy OCID
-- **User OCID** → OCI Console → Avatar → My Profile → Copy OCID
-- **Region** → e.g. `ap-mumbai-1`
-- **Generate new API key?** → Yes
-
-Then paste the generated public key into:
-OCI Console → Avatar → My Profile → API Keys → Add API Key → Paste public key
+1. Go to your DigitalOcean Control Panel.
+2. Click **Create** → **Droplets**.
+3. Choose **Ubuntu 24.04 (LTS) x64**.
+4. Choose a Basic Plan (e.g., $6/mo or $12/mo depending on your needs, using your $200 credit).
+5. Add your SSH keys.
+6. Click **Create Droplet**.
+7. Once created, copy the **Public IP** of the Droplet.
 
 ---
 
-### Step 4 — Install jq (required by scripts)
-
-```bash
-brew install jq
-```
-
----
-
-### Step 5 — Provision OCI Instance
-
-```bash
-./deploy/oci-provision.sh
-```
-
-This takes ~3 minutes and outputs your **public IP**. Note it down.
-
----
-
-### Step 6 — Point DNS
+### Step 3 — Point DNS
 
 In your domain registrar for `clippedai.app`:
 
 | Type | Name | Value |
 |------|------|-------|
-| A | @ | `YOUR_OCI_PUBLIC_IP` |
-| A | www | `YOUR_OCI_PUBLIC_IP` |
+| A | @ | `YOUR_DigitalOcean_PUBLIC_IP` |
+| A | www | `YOUR_DigitalOcean_PUBLIC_IP` |
 
 Wait 5–15 minutes for propagation.
 
 ---
 
-### Step 7 — Bootstrap the Server
+### Step 4 — Bootstrap the Server
 
 ```bash
-./deploy/bootstrap.sh https://github.com/ETS2K7/ClippedAI.git
+./deploy/bootstrap.sh <YOUR_DO_PUBLIC_IP> https://github.com/ETS2K7/ClippedAI.git
 ```
 
 This will:
@@ -112,7 +80,7 @@ This will:
 
 ---
 
-### Step 8 — Add GitHub Actions Secrets
+### Step 5 — Add GitHub Actions Secrets
 
 Go to: **GitHub repo → Settings → Secrets and variables → Actions**
 
@@ -120,12 +88,12 @@ Add every secret listed in [`deploy/github-secrets.md`](./github-secrets.md).
 
 | The two infrastructure secrets: |
 |---|
-| `OCI_SERVER_IP` = your OCI public IP |
-| `OCI_SSH_PRIVATE_KEY` = the private key printed by `bootstrap.sh` |
+| `DigitalOcean_SERVER_IP` = your DigitalOcean public IP |
+| `DigitalOcean_SSH_PRIVATE_KEY` = the private key printed by `bootstrap.sh` |
 
 ---
 
-### Step 9 — Issue SSL Certificate
+### Step 6 — Issue SSL Certificate
 
 After DNS has propagated (verify with `dig +short clippedai.app`):
 
@@ -135,13 +103,13 @@ After DNS has propagated (verify with `dig +short clippedai.app`):
 
 ---
 
-### Step 10 — Trigger First Deploy
+### Step 7 — Trigger First Deploy
 
 ```bash
 git push origin main
 ```
 
-Watch it at: **GitHub → Actions tab → "Deploy to Oracle Cloud"**
+Watch it at: **GitHub → Actions tab → "Deploy to DigitalOcean"**
 
 Then verify:
 ```bash
@@ -154,7 +122,7 @@ curl https://clippedai.app/api/health
 ## Ongoing Deployments
 
 Every `git push origin main` automatically:
-1. SSH into OCI server
+1. SSH into DigitalOcean server
 2. Writes `.env.production` from GitHub secrets
 3. `git pull` latest code
 4. `docker compose up -d --build app` (rebuilds only the app layer)
@@ -169,7 +137,7 @@ Every `git push origin main` automatically:
 
 ```bash
 # SSH in
-ssh -i ~/.ssh/id_ed25519 ubuntu@YOUR_OCI_IP
+ssh -i ~/.ssh/id_ed25519 root@YOUR_DigitalOcean_IP
 
 # View live logs
 cd /opt/clippedai && docker compose logs -f app

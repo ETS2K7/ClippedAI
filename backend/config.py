@@ -32,6 +32,7 @@ def validate_required_env_vars():
     """
     required_vars = [
         "ASSEMBLYAI_KEY",
+        "AUTH_TOKEN",
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "S3_BUCKET_NAME",
@@ -43,6 +44,12 @@ def validate_required_env_vars():
         raise RuntimeError(
             f"Missing required environment variables: {', '.join(missing_vars)}. "
             "Please set these in your environment or Modal secrets."
+        )
+
+    if not any(os.environ.get(var) for var in ("GROQ_KEY", "GOOGLE_APPLICATION_CREDENTIALS", "GCP_SERVICE_ACCOUNT_JSON")):
+        raise RuntimeError(
+            "Missing LLM provider key or GCP credentials. Set one of GROQ_KEY, "
+            "GOOGLE_APPLICATION_CREDENTIALS, or GCP_SERVICE_ACCOUNT_JSON."
         )
     
     logger = get_logger(__name__)
@@ -71,4 +78,3 @@ GOOGLE_CLOUD_PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "clippedai-493912"
 # Local pipeline video paths (used by downloader.py and run_local.py)
 MASTER_VIDEO_TMPL = "master_video.%(ext)s"
 MASTER_VIDEO_FILE = "master_video.mp4"
-

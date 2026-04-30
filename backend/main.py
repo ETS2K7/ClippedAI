@@ -113,6 +113,9 @@ class ProcessVideoRequest(BaseModel):
     font_family: str | None = None
     font_color: str | None = None
     font_size: int | None = None
+    caption_template: str | None = None
+    add_subtitles: bool = True
+    output_format: str = "vertical"
 
 image = (modal.Image.debian_slim(python_version="3.10")
     .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig"])
@@ -186,6 +189,7 @@ def _process_single_clip(
     font_family: str | None = None,
     font_color: str | None = None,
     font_size: int | None = None,
+    add_subtitles: bool = True,
     work_dir: str = "",
     use_gpu: bool = False,
 ) -> dict:
@@ -199,13 +203,15 @@ def _process_single_clip(
     logger.info(f"--- Processing Clip {index + 1} (parallel) ---")
     ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=use_gpu)
     trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir)
-    sub_file = generate_subtitles(
-        words, clip, index, chunk_meta,
-        font_family=font_family,
-        font_size=font_size,
-        font_color=font_color,
-        work_dir=work_dir,
-    )
+    sub_file = None
+    if add_subtitles:
+        sub_file = generate_subtitles(
+            words, clip, index, chunk_meta,
+            font_family=font_family,
+            font_size=font_size,
+            font_color=font_color,
+            work_dir=work_dir,
+        )
     fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
     merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=use_gpu, fonts_dir=fonts_dir)
 
@@ -239,6 +245,7 @@ def _process_video_pipeline(
     font_family: str | None = None,
     font_color: str | None = None,
     font_size: int | None = None,
+    add_subtitles: bool = True,
 ) -> dict:
     """
     Shared video processing pipeline used by both CLI and HTTP endpoints.
@@ -337,7 +344,7 @@ def _process_video_pipeline(
                     _process_single_clip,
                     str(video_path), clip, index, words,
                     s3_client, bucket, s3_key_dir,
-                    font_family, font_color, font_size,
+                    font_family, font_color, font_size, add_subtitles,
                     str(base_dir), has_nvenc,
                 ): index
                 for index, clip in enumerate(clips)
@@ -421,6 +428,7 @@ def _send_webhook(
     retries=0,                    # Nullify automatic retries on failure (zero wastage)
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
+        modal.Secret.from_name("my-gcp-secret"),
     ]
 )
 class ClippedAI:
@@ -429,6 +437,7 @@ class ClippedAI:
         """Pre-warm resources during container startup, not first request.
         This runs once when the container boots, before any requests arrive."""
         logger.info("Container starting — pre-warming resources...")
+        validate_required_env_vars()
         
         # Verify GPU availability for NVENC
         try:
@@ -457,6 +466,7 @@ class ClippedAI:
                 font_family=request.font_family,
                 font_color=request.font_color,
                 font_size=request.font_size,
+                add_subtitles=request.add_subtitles,
             )
         except RuntimeError as e:
             logger.error(f"Pipeline failed (RuntimeError): {e}")
@@ -499,7 +509,10 @@ class ClippedAI:
     timeout=1200, 
     max_containers=20, 
     retries=0, 
-    secrets=[modal.Secret.from_name("clippedai-secret")]
+    secrets=[
+        modal.Secret.from_name("clippedai-secret"),
+        modal.Secret.from_name("my-gcp-secret"),
+    ]
 )
 def process_video_cpu_wrapper(request_dict: dict):
     """CPU-only ingestion wrapper. Downloads YouTube natively without holding a GPU hostage."""
@@ -565,4 +578,3 @@ def run_cli_job(s3_key: str, youtube_url: str = None):
 @app.local_entrypoint()
 def main():
     pass
-

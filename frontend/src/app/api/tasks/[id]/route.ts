@@ -134,7 +134,7 @@ export async function DELETE(
     select: {
       id: true,
       s3Key: true,
-      clips: { select: { s3Key: true, thumbnailKey: true } },
+      clips: { select: { s3Key: true, thumbnailKey: true, thumbnailKeys: true } },
     },
   });
 
@@ -145,6 +145,15 @@ export async function DELETE(
   for (const clip of file.clips) {
     if (clip.s3Key) keysToDelete.push(clip.s3Key);
     if (clip.thumbnailKey) keysToDelete.push(clip.thumbnailKey);
+    if (
+      clip.thumbnailKeys &&
+      typeof clip.thumbnailKeys === "object" &&
+      !Array.isArray(clip.thumbnailKeys)
+    ) {
+      for (const key of Object.values(clip.thumbnailKeys)) {
+        if (typeof key === "string") keysToDelete.push(key);
+      }
+    }
   }
 
   // Delete associated files from S3

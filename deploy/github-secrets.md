@@ -9,8 +9,8 @@ Add all of these in your GitHub repo at:
 
 | Secret Name | Value | Notes |
 |-------------|-------|-------|
-| `OCI_SERVER_IP` | `<your OCI public IP>` | Output of `oci-provision.sh` |
-| `OCI_SSH_PRIVATE_KEY` | `<private key content>` | Output of `bootstrap.sh` — the full key including `-----BEGIN...-----END` lines |
+| `DO_SERVER_IP` | `<your DO Droplet public IP>` | From DigitalOcean Dashboard |
+| `DO_SSH_PRIVATE_KEY` | `<private key content>` | Output of `bootstrap.sh` — the full key including `-----BEGIN...-----END` lines |
 
 ---
 
@@ -80,4 +80,4 @@ git commit -m "chore: initial deployment setup"
 git push origin main
 ```
 
-Watch it at: **GitHub → Actions tab → Deploy to Oracle Cloud**
+Watch it at: **GitHub → Actions tab → Deploy to DigitalOcean**

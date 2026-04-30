@@ -72,8 +72,8 @@ def test_process_video_pipeline_success(
     # Assertions
     assert result["status"] == "success"
     assert len(result["clips"]) == 2
-    assert "clip_0.mp4" in result["clips"][0]
-    assert "clip_1.mp4" in result["clips"][1]
+    assert result["clips"][0]["s3Key"] == "user-123/clip_0.mp4"
+    assert result["clips"][1]["s3Key"] == "user-123/clip_1.mp4"
 
     # Verify Youtube download was triggered since youtube_url was provided
     mock_download_yt.assert_called_once()

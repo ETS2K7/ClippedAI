@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic";
 
 const dodo = new DodoPayments({
   bearerToken: process.env.DODO_PAYMENTS_API_KEY ?? "",
-  environment: "test_mode",
+  environment:
+    process.env.DODO_PAYMENTS_ENV === "live_mode" ? "live_mode" : "test_mode",
 });
 
 // Allowlist of valid subscription product IDs

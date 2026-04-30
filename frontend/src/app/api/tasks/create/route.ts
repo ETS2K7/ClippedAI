@@ -4,6 +4,13 @@ import { db } from "~/server/db";
 import { env } from "~/env";
 import { invalidateCache } from "~/lib/cache";
 
+type ProcessingOptions = {
+  captionTemplate?: string;
+  includeBroll?: boolean;
+  outputFormat?: "vertical" | "original";
+  addSubtitles?: boolean;
+};
+
 export async function POST(req: Request) {
   try {
     const session = await auth();
@@ -18,12 +25,9 @@ export async function POST(req: Request) {
     const bypassBilling = user?.isAdmin || isLocalDev || isTestAdmin;
 
     if (!bypassBilling) {
-      const now = new Date();
-      const hasActiveSub =
-        user?.dodoCurrentPeriodEnd != null && user.dodoCurrentPeriodEnd > now;
       const hasCredits = (user?.credits ?? 0) >= 1;
 
-      if (!hasActiveSub && !hasCredits) {
+      if (!hasCredits) {
         return new NextResponse(
           JSON.stringify({
             error: "out_of_credits",
@@ -37,6 +41,26 @@ export async function POST(req: Request) {
     const body = await req.json();
     const sourceUrl: string | undefined = body?.source?.url;
     const fontOptions = body?.font_options || {};
+    const processingOptions: ProcessingOptions = {
+      captionTemplate: body?.caption_template,
+      includeBroll: Boolean(body?.include_broll),
+      outputFormat: body?.output_format === "original" ? "original" : "vertical",
+      addSubtitles: body?.add_subtitles !== false,
+    };
+
+    if (processingOptions.includeBroll) {
+      return NextResponse.json(
+        { error: "AI B-roll is not configured for this deployment." },
+        { status: 422 },
+      );
+    }
+
+    if (processingOptions.outputFormat === "original") {
+      return NextResponse.json(
+        { error: "Wide format output is not available yet. Please use vertical format." },
+        { status: 422 },
+      );
+    }
 
     if (!sourceUrl) {
       return new NextResponse(
@@ -106,6 +130,7 @@ export async function POST(req: Request) {
           fontOptions.font_family,
           fontOptions.font_color,
           fontOptions.font_size,
+          processingOptions,
         );
         return NextResponse.json({ task_id: newFile.id });
       } catch (err: any) {
@@ -144,6 +169,7 @@ export async function POST(req: Request) {
       fontOptions.font_family,
       fontOptions.font_color,
       fontOptions.font_size,
+      processingOptions,
     );
 
     return NextResponse.json({ task_id: existing.id });
@@ -166,10 +192,28 @@ function scheduleModalJob(
   fontFamily?: string,
   fontColor?: string,
   fontSize?: number,
+  processingOptions: ProcessingOptions = {},
 ) {
   // Execute in the background without blocking the response
   void (async () => {
+    let charged = false;
     try {
+      if (!bypassBilling) {
+        const charge = await db.user.updateMany({
+          where: { id: userId, credits: { gt: 0 } },
+          data: { credits: { decrement: 1 } },
+        });
+        if (charge.count !== 1) {
+          await db.uploadedFile.update({
+            where: { id: uploadedFileId },
+            data: { status: "failed" },
+          });
+          await invalidateCache(`tasks:${userId}`);
+          return;
+        }
+        charged = true;
+      }
+
       await dispatchModalJobToModal(
         s3Key,
         uploadedFileId,
@@ -178,16 +222,16 @@ function scheduleModalJob(
         fontFamily,
         fontColor,
         fontSize,
+        processingOptions,
       );
-      // Deduct 1 credit after successful dispatch (not for admins/dev)
-      if (!bypassBilling) {
-        await db.user
-          .update({ where: { id: userId }, data: { credits: { decrement: 1 } } })
-          .catch(() => null);
-      }
       await invalidateCache(`tasks:${userId}`);
     } catch (err) {
       console.error(`[Modal] Failed to fire job for ${uploadedFileId}:`, err);
+      if (charged) {
+        await db.user
+          .update({ where: { id: userId }, data: { credits: { increment: 1 } } })
+          .catch(() => null);
+      }
       await db.uploadedFile
         .update({ where: { id: uploadedFileId }, data: { status: "failed" } })
         .catch(() => null);
@@ -211,6 +255,7 @@ async function dispatchModalJobToModal(
   fontFamily?: string,
   fontColor?: string,
   fontSize?: number,
+  processingOptions: ProcessingOptions = {},
 ) {
   const webhookUrl = `${env.BASE_URL}/api/webhooks/modal`;
 
@@ -234,6 +279,9 @@ async function dispatchModalJobToModal(
       font_family: fontFamily,
       font_color: fontColor,
       font_size: fontSize,
+      caption_template: processingOptions.captionTemplate,
+      add_subtitles: processingOptions.addSubtitles !== false,
+      output_format: processingOptions.outputFormat ?? "vertical",
     }),
     redirect: "manual",
   });

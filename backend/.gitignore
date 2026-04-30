@@ -48,3 +48,6 @@ scratch/
 
 # macOS
 .DS_Store
+
+# Secrets
+.secrets/

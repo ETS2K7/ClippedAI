@@ -3,6 +3,7 @@ Module for generating dynamic ASS subtitles with karaoke animations and layout b
 """
 
 from typing import List, Dict, Any, Optional
+import re
 from config import get_logger
 
 logger = get_logger(__name__)
@@ -11,6 +12,25 @@ logger = get_logger(__name__)
 DEFAULT_FONT_FAMILY = "Komika Axis"
 DEFAULT_FONT_SIZE = 75
 DEFAULT_FONT_COLOR = "&H00FFFFFF"   # ASS format: white
+
+FONT_NAME_RE = re.compile(r"^[A-Za-z0-9 _.-]{1,128}$")
+
+
+def hex_to_ass_color(value: Optional[str]) -> str:
+    """Convert #RRGGBB to ASS &H00BBGGRR format."""
+    if not value or not re.fullmatch(r"#[0-9A-Fa-f]{6}", value):
+        return DEFAULT_FONT_COLOR
+    red = value[1:3]
+    green = value[3:5]
+    blue = value[5:7]
+    return f"&H00{blue}{green}{red}".upper()
+
+
+def resolve_font_family(value: Optional[str]) -> str:
+    if not value:
+        return DEFAULT_FONT_FAMILY
+    cleaned = value.replace("_", " ").strip()
+    return cleaned if FONT_NAME_RE.fullmatch(cleaned) else DEFAULT_FONT_FAMILY
 
 
 def ms_to_ass_time(ms: float) -> str:
@@ -48,10 +68,9 @@ def generate_subtitles(
     start_ms = clip["start_time"] * 1000
     end_ms = clip["end_time"] * 1000
 
-    # Resolve font configuration (frontend overrides → defaults)
-    resolved_family = DEFAULT_FONT_FAMILY
-    resolved_size = DEFAULT_FONT_SIZE
-    resolved_ass_color = DEFAULT_FONT_COLOR
+    resolved_family = resolve_font_family(font_family)
+    resolved_size = font_size if isinstance(font_size, int) and 8 <= font_size <= 144 else DEFAULT_FONT_SIZE
+    resolved_ass_color = hex_to_ass_color(font_color)
 
     logger.info(
         f"Subtitle style locked: {resolved_family} / {resolved_size}pt / "

@@ -12,24 +12,19 @@ info()    { echo -e "${BLUE}==>${NC} ${BOLD}$*${NC}"; }
 success() { echo -e "${GREEN}✓${NC} $*"; }
 die()     { echo -e "${RED}✗${NC} $*" >&2; exit 1; }
 
-STATE_FILE="$(dirname "$0")/oci-state.json"
-[[ -f "$STATE_FILE" ]] || die "State file not found. Run oci-provision.sh first."
+PUBLIC_IP="${1:-}"
+if [[ -z "$PUBLIC_IP" ]]; then
+  echo -e "${YELLOW}Enter your DigitalOcean Droplet Public IP:${NC}"
+  read -r PUBLIC_IP
+fi
+[[ -z "$PUBLIC_IP" ]] && die "Public IP is required."
 
-PUBLIC_IP=$(jq -r '.public_ip' "$STATE_FILE")
 DOMAIN="clippedai.app"
 SSH_KEY="${HOME}/.ssh/id_ed25519"
-SSH_USER="ubuntu"
+SSH_USER="root"
 SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no"
 
-info "Verifying DNS for $DOMAIN points to $PUBLIC_IP..."
-RESOLVED=$(dig +short "$DOMAIN" | head -1)
-if [[ "$RESOLVED" != "$PUBLIC_IP" ]]; then
-  warn "DNS not yet propagated. Resolved: '$RESOLVED', expected: '$PUBLIC_IP'"
-  warn "Wait a few more minutes and retry."
-  echo -e "Run: ${BOLD}dig +short $DOMAIN${NC}"
-  exit 1
-fi
-success "DNS verified: $DOMAIN → $PUBLIC_IP"
+info "Skipping strict DNS check as Cloudflare Proxy is enabled..."
 
 info "Copying Nginx config and issuing SSL certificate..."
 # Copy Nginx config
@@ -43,6 +38,14 @@ set -euo pipefail
 echo "==> Installing Nginx config..."
 sudo cp /tmp/clippedai.conf /etc/nginx/sites-available/clippedai
 sudo ln -sf /etc/nginx/sites-available/clippedai /etc/nginx/sites-enabled/clippedai
+
+echo "==> Configuring Nginx Rate Limit Zones..."
+cat << 'EOF_LIMITS' | sudo tee /etc/nginx/conf.d/limits.conf > /dev/null
+limit_req_zone \$binary_remote_addr zone=auth_limit:10m rate=20r/m;
+limit_req_zone \$binary_remote_addr zone=api_limit:10m rate=100r/m;
+limit_req_zone \$binary_remote_addr zone=feedback_limit:10m rate=5r/m;
+EOF_LIMITS
+
 sudo rm -f /etc/nginx/sites-enabled/default
 
 # Temporarily use HTTP-only config for certbot challenge

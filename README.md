@@ -24,7 +24,7 @@ graph TB
     subgraph Infra["Infrastructure"]
         DB[(PostgreSQL)]
         S3[(AWS S3)]
-        OCI[Oracle Cloud]
+        OCI[DigitalOcean]
         Nginx[Nginx + SSL]
     end
 
@@ -54,7 +54,7 @@ graph TB
 | Transcription | AssemblyAI |
 | AI Clip Selection | Groq (Llama 3.3 70B) |
 | Video Processing | OpenCV, FFmpeg, scipy, scenedetect |
-| Deployment | Docker Compose on Oracle Cloud, Nginx, Let's Encrypt |
+| Deployment | Docker Compose on DigitalOcean, Nginx, Let's Encrypt |
 
 ## Local Development
 
@@ -125,7 +125,7 @@ The platform integrates with **Dodo Payments** and uses a hybrid billing archite
 
 ## Deployment
 
-Production deployment uses Docker Compose on Oracle Cloud with Nginx reverse proxy and Let's Encrypt SSL.
+Production deployment uses Docker Compose on DigitalOcean with Nginx reverse proxy and Let's Encrypt SSL.
 
 ```bash
 # Build and deploy

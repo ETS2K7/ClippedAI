@@ -80,7 +80,7 @@ export async function POST(req: Request) {
   const { category, message } = parsed.data;
   const userIdentifier = session.user.email ?? session.user.id;
 
-  // Always log to Oracle Cloud backend logs
+  // Always log to DigitalOcean backend logs
   console.log(
     `[feedback] user=${userIdentifier} category=${category} message=${message.slice(0, 100)}…`,
   );

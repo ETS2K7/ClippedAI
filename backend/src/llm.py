@@ -144,18 +144,31 @@ def _validate_clips(raw_clips: list, words: list) -> list:
 
 
 def _call_gemini(prompt: str, words: list) -> list:
-    """Fallback 1: Gemini 2.5-flash via Google AI Studio API key."""
+    """Primary: Gemini 2.5-flash via Google Cloud Vertex AI."""
     from google import genai
     from google.genai import types
 
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    if not gemini_key:
-        logger.warning("[LLM Fallback] GEMINI_API_KEY not set, trying OpenRouter.")
-        return _call_openrouter(prompt, words)
+    credentials = None
+    gcp_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
+    
+    if gcp_json:
+        from google.oauth2 import service_account
+        credentials = service_account.Credentials.from_service_account_info(json.loads(gcp_json))
+    elif not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+        logger.warning("[LLM] GCP credentials not set, trying Groq.")
+        return _call_groq(prompt, words)
 
-    logger.info("[LLM Fallback] Calling Gemini 2.5-flash...")
+    logger.info("[LLM] Calling Vertex AI (gemini-2.5-flash)...")
     MAX_RETRIES = 3
-    client = genai.Client(api_key=gemini_key)
+    
+    gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "clippedai-493912")
+    
+    # Initialize Vertex AI client with explicit credentials or fallback to ADC
+    if credentials:
+        client = genai.Client(vertexai=True, project=gcp_project, location="us-central1", credentials=credentials)
+    else:
+        client = genai.Client(vertexai=True, project=gcp_project, location="us-central1")
+        
     response = None
 
     for attempt in range(MAX_RETRIES):
@@ -192,16 +205,15 @@ def _call_gemini(prompt: str, words: list) -> list:
                     logger.debug(f"Gemini output: {response.text}")
                 time.sleep(wait)
             else:
-                logger.warning(f"[LLM Fallback] Gemini failed after {MAX_RETRIES} attempts: {e}. Trying OpenRouter...")
-                return _call_openrouter(prompt, words)
+                logger.warning(f"[LLM Fallback] Vertex AI failed after {MAX_RETRIES} attempts: {e}. Trying Groq...")
+                return _call_groq(prompt, words)
 
 
 def _call_groq(prompt: str, words: list) -> list:
     """Fallback 1: Groq (llama-3.3-70b-versatile) — fastest inference available."""
     groq_key = os.environ.get("GROQ_KEY")
     if not groq_key:
-        logger.warning("[LLM Fallback] GROQ_KEY not set, trying OpenRouter.")
-        return _call_openrouter(prompt, words)
+        raise RuntimeError("GROQ_KEY not set and all LLM fallbacks have been exhausted.")
 
     logger.info("[LLM] Calling Groq (llama-3.3-70b-versatile)...")
     MAX_RETRIES = 3
@@ -241,35 +253,4 @@ def _call_groq(prompt: str, words: list) -> list:
                 logger.warning(f"[LLM] Groq attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {wait}s...")
                 time.sleep(wait)
             else:
-                logger.warning(f"[LLM] Groq failed after {MAX_RETRIES} attempts: {e}. Falling back to Gemini...")
-                return _call_gemini(prompt, words)
-
-
-def _call_openrouter(prompt: str, words: list) -> list:
-    """Fallback 2: OpenRouter (meta-llama/llama-3.3-70b-instruct)."""
-    openrouter_key = os.environ.get("OPENROUTER_KEY")
-    if not openrouter_key:
-        raise RuntimeError("All LLM providers (Gemini, Groq, OpenRouter) are unavailable.")
-
-    logger.info("[LLM Fallback 2] Calling OpenRouter (llama-3.3-70b-instruct)...")
-    resp = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer {openrouter_key}", "Content-Type": "application/json"},
-        json={
-            "model": "meta-llama/llama-3.3-70b-instruct",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.2,
-            "response_format": {"type": "json_object"},
-        },
-        timeout=60,
-    )
-    resp.raise_for_status()
-    data = json.loads(resp.json()["choices"][0]["message"]["content"])
-    raw_clips = data.get("clips") if isinstance(data.get("clips"), list) else []
-    if not raw_clips:
-        raise RuntimeError(f"OpenRouter returned unexpected JSON: {list(data.keys())}")
-    validated = _validate_clips(raw_clips, words)
-    if len(validated) < 3:
-        raise RuntimeError(f"OpenRouter: only {len(validated)} valid clips. All providers exhausted.")
-    logger.info(f"[LLM Fallback 2] ✓ OpenRouter selected {len(validated)} clips.")
-    return validated[:3]
+                raise RuntimeError(f"Groq failed after {MAX_RETRIES} attempts: {e}. All LLM providers exhausted.")
