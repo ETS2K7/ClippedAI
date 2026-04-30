@@ -109,9 +109,6 @@ jobs:
           echo "==> Starting app..."
           docker compose up -d app
 
-          echo "==> Applying database schema updates..."
-          docker compose exec -T app node node_modules/prisma/build/index.js db push --accept-data-loss
-
           echo "==> Waiting for app health (Docker healthcheck)..."
           for i in $(seq 1 24); do
             H=$(docker inspect --format='{{.State.Health.Status}}' clippedai-app-1 2>/dev/null || echo 'missing')
