@@ -55,10 +55,21 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     transcript = "\n".join(sentences)
 
-    # ── Transcript-level cache ────────────────────────────────────────────────
+    prompt = (
+        "Extract exactly 3 viral clips from this transcript for TikTok, YouTube Shorts, and Instagram Reels.\n\n"
+        "Each clip must be 25–35 seconds long. No exceptions.\n"
+        "Clips must not overlap. Spread them across different parts of the video.\n"
+        "Start each clip on a hook (bold claim, surprising fact, emotional moment).\n"
+        "End each clip on a complete thought — never mid-sentence.\n\n"
+        "Return ONLY this JSON:\n"
+        '{"clips": [{"start_time": 12.3, "end_time": 45.6, "title": "Punchy caption", "virality_score": 8.5}]}\n\n'
+        f"TRANSCRIPT:\n{transcript}"
+    )
+
+    # ── Transcript+prompt cache ──────────────────────────────────────────────
     _cache_dir = pathlib.Path.home() / ".clippedai" / "cache" / "llm"
     _cache_dir.mkdir(parents=True, exist_ok=True)
-    _cache_key = hashlib.sha256(transcript.encode("utf-8")).hexdigest()
+    _cache_key = hashlib.sha256((prompt).encode("utf-8")).hexdigest()
     _cache_file = _cache_dir / f"llm_{_cache_key}.json"
 
     if _cache_file.exists():
@@ -76,17 +87,6 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             logger.warning(f"[LLM] Cache read failed ({_ce}), re-running selection.")
 
     logger.info(f"[LLM] 🔴 Cache miss (key={_cache_key[:8]}). Calling Groq...")
-
-    prompt = (
-        "Extract exactly 3 viral clips from this transcript for TikTok, YouTube Shorts, and Instagram Reels.\n\n"
-        "Each clip must be 25–35 seconds long. No exceptions.\n"
-        "Clips must not overlap. Spread them across different parts of the video.\n"
-        "Start each clip on a hook (bold claim, surprising fact, emotional moment).\n"
-        "End each clip on a complete thought — never mid-sentence.\n\n"
-        "Return ONLY this JSON:\n"
-        '{"clips": [{"start_time": 12.3, "end_time": 45.6, "title": "Punchy caption", "virality_score": 8.5}]}\n\n'
-        f"TRANSCRIPT:\n{transcript}"
-    )
 
     validated_clips = _call_groq(prompt, words)
 
