@@ -168,6 +168,7 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str | None, 
         "-c:a", "aac",
         "-map", "0:v:0",
         "-map", "1:a:0?",
+        "-movflags", "+faststart",
         "-shortest",
         out_file,
     ])
