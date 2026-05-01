@@ -84,7 +84,7 @@ export async function GET(
   const clipsWithUrls = await Promise.all(
     file.clips.map(async (clip) => {
       const [videoUrl, thumbnailUrl, thumbnailKeys] = await Promise.all([
-        getPresignedUrl(clip.s3Key),
+        shouldUseCloudFront(clip.s3Key) ? getCloudFrontUrl(clip.s3Key) : getPresignedUrl(clip.s3Key),
         getThumbnailUrl(clip.thumbnailKey ?? null),
         getThumbnailUrls((clip as any).thumbnailKeys as Record<string, string> | null),
       ]);
