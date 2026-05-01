@@ -153,7 +153,9 @@ def _call_gemini(prompt: str, words: list) -> list:
     
     if gcp_json:
         from google.oauth2 import service_account
-        credentials = service_account.Credentials.from_service_account_info(json.loads(gcp_json))
+        credentials = service_account.Credentials.from_service_account_info(
+            json.loads(gcp_json)
+        ).with_scopes(["https://www.googleapis.com/auth/cloud-platform"])
     elif not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
         logger.warning("[LLM] GCP credentials not set, trying Groq.")
         return _call_groq(prompt, words)
