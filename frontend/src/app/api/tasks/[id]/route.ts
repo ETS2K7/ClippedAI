@@ -35,7 +35,7 @@ function shouldUseCloudFront(key: string): boolean {
 }
 
 function getCloudFrontUrl(key: string): string {
-  return `https://${env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN}/${key}`;
+  return `https://${env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN}/${key}?v=1`;
 }
 
 async function getThumbnailUrl(
