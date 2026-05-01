@@ -29,11 +29,9 @@ async function getPresignedUrl(key: string): Promise<string> {
 }
 
 function shouldUseCloudFront(key: string): boolean {
-  // Use CloudFront for public content (thumbnails, HLS segments)
-  return (
-    !!env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN &&
-    (key.includes("thumb_") || key.includes("hls_"))
-  );
+  // Use CloudFront for all public content (thumbnails, videos, HLS segments)
+  // Bypasses presigned URL strict region requirements and CORS issues.
+  return !!env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN;
 }
 
 function getCloudFrontUrl(key: string): string {
