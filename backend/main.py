@@ -239,9 +239,11 @@ def _process_single_clip(
     }
 
 
-def _process_video_pipeline(
+def _render_clips_pipeline(
     s3_key: str,
-    youtube_url: str | None = None,
+    words: list,
+    clips: list,
+    previous_phases: list,
     font_family: str | None = None,
     font_color: str | None = None,
     font_size: int | None = None,
@@ -281,52 +283,14 @@ def _process_video_pipeline(
     s3_client = _create_s3_client()
     bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
 
-    # Phase 1: Video Ingestion
-    timer.begin("ingestion")
-    logger.info(f"Resolving input source for s3_key={s3_key}")
-    if youtube_url:
-        logger.info("Downloading YouTube video")
-        _download_youtube(youtube_url, video_path)
-        logger.info("Uploading downloaded video to S3")
-        s3_client.upload_file(str(video_path), bucket, s3_key)
-    else:
-        # Try downloading from S3; if missing (e.g. prior upload crash), attempt re-ingestion
-        logger.info("Downloading from S3 (Transfer Acceleration)")
-        try:
-            s3_client.download_file(bucket, s3_key, str(video_path))
-        except Exception as e:
-            err_str = str(e)
-            if "404" in err_str or "Not Found" in err_str or "NoSuchKey" in err_str:
-                # The S3 object doesn't exist — likely a prior failed upload.
-                # If this is a YouTube key, reconstruct the URL and re-ingest.
-                parts = s3_key.split("/")
-                # youtube-downloads/<userId>-<ts>/<videoId>/original.mp4
-                if parts[0] == "youtube-downloads" and len(parts) >= 3:
-                    video_id = parts[2]
-                    reconstructed_url = f"https://www.youtube.com/watch?v={video_id}"
-                    logger.warning(
-                        f"S3 key {s3_key} returned 404. "
-                        f"Re-ingesting from YouTube: {reconstructed_url}"
-                    )
-                    _download_youtube(reconstructed_url, video_path)
-                    logger.info("Re-uploading re-downloaded video to S3")
-                    s3_client.upload_file(str(video_path), bucket, s3_key)
-                else:
-                    raise RuntimeError(
-                        f"S3 object not found ({s3_key}) and no YouTube URL to recover from. "
-                        "Please re-upload the file."
-                    ) from e
-            else:
-                raise
+    timer.phases = previous_phases
+    
+    # Phase 3.5: GPU S3 Download
+    timer.begin("gpu_s3_download")
+    logger.info("Downloading from S3 directly to GPU container")
+    s3_client.download_file(bucket, s3_key, str(video_path))
 
     try:
-        # Phase 2: Transcription
-        timer.begin("transcription")
-        words = transcribe(str(video_path), s3_key)
-
-        # Phase 3: LLM Clip Selection
-        timer.begin("clip_selection")
-        clips = select_clips(words)
         s3_key_dir = os.path.dirname(s3_key)
 
         # Phase 4-7: Parallel Clip Processing
@@ -421,7 +385,7 @@ def _send_webhook(
 
 
 @app.cls(
-    gpu="any",
+    gpu="T4",
     timeout=1200,
     scaledown_window=15,          # Aggressive idle shutdown to prevent credit leakage
     max_containers=10,            # Absolute upper bound on simultaneous tasks
@@ -452,17 +416,15 @@ class ClippedAI:
         logger.info("Container warm and ready.")
 
     @modal.method()
-    def process_video_cli(self, s3_key: str, youtube_url: str = None):
-        return _process_video_pipeline(s3_key, youtube_url)
-
-    @modal.method()
-    def process_clips_gpu(self, request_dict: dict):
+    def process_clips_gpu(self, request_dict: dict, words: list, clips: list, previous_phases: list):
         request = ProcessVideoRequest(**request_dict)
         # Run the pipeline
         try:
-            result = _process_video_pipeline(
+            result = _render_clips_pipeline(
                 request.s3_key,
-                request.youtube_url,
+                words,
+                clips,
+                previous_phases,
                 font_family=request.font_family,
                 font_color=request.font_color,
                 font_size=request.font_size,
@@ -515,47 +477,83 @@ class ClippedAI:
     ]
 )
 def process_video_cpu_wrapper(request_dict: dict):
-    """CPU-only ingestion wrapper. Downloads YouTube natively without holding a GPU hostage."""
+    """CPU-only ingestion wrapper. Performs Video Download, Transcription, and LLM selection locally before waking GPU."""
     request = ProcessVideoRequest(**request_dict)
     
-    if request.youtube_url:
-        logger.info("Executing CPU-bound YouTube Apify download...")
-        import uuid
-        import shutil
-        import pathlib
-        
-        run_id = str(uuid.uuid4())
-        base_dir = pathlib.Path("/tmp") / run_id
-        base_dir.mkdir(parents=True, exist_ok=True)
-        video_path = base_dir / "input_ingestion.mp4"
-        
-        try:
+    import uuid
+    import shutil
+    import pathlib
+    
+    run_id = str(uuid.uuid4())
+    timer = PipelineTimer(run_id)
+    base_dir = pathlib.Path("/tmp") / run_id
+    base_dir.mkdir(parents=True, exist_ok=True)
+    video_path = base_dir / "input_ingestion.mp4"
+    
+    s3_client = _create_s3_client()
+    bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
+    
+    try:
+        timer.begin("cpu_ingestion")
+        if request.youtube_url:
+            logger.info("Executing CPU-bound YouTube Apify download...")
             _download_youtube(request.youtube_url, video_path)
             
-            s3_client = _create_s3_client()
-            bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
             logger.info("Uploading ingestion artifact to S3...")
             s3_client.upload_file(str(video_path), bucket, request.s3_key)
-            
-            # Nullify so GPU just downloads directly from S3 natively
             request_dict["youtube_url"] = None
-        except Exception as e:
-            logger.error(f"Ingestion wrapper failed: {e}")
-            if request.webhook_url:
-                _send_webhook(
-                    request.webhook_url, request.webhook_secret,
-                    request.uploaded_file_id, request.user_id,
-                    {"status": "failed", "clips": [], "error": f"CPU Ingestion error: {str(e)}"}
-                )
-            return
-        finally:
-            if base_dir.exists():
-                shutil.rmtree(base_dir, ignore_errors=True)
+        else:
+            logger.info("Downloading from S3 to CPU container for transcription")
+            try:
+                s3_client.download_file(bucket, request.s3_key, str(video_path))
+            except Exception as e:
+                err_str = str(e)
+                if "404" in err_str or "Not Found" in err_str or "NoSuchKey" in err_str:
+                    parts = request.s3_key.split("/")
+                    if parts[0] == "youtube-downloads" and len(parts) >= 3:
+                        video_id = parts[2]
+                        reconstructed_url = f"https://www.youtube.com/watch?v={video_id}"
+                        logger.warning(
+                            f"S3 key {request.s3_key} returned 404. "
+                            f"Re-ingesting from YouTube: {reconstructed_url}"
+                        )
+                        _download_youtube(reconstructed_url, video_path)
+                        logger.info("Re-uploading re-downloaded video to S3")
+                        s3_client.upload_file(str(video_path), bucket, request.s3_key)
+                    else:
+                        raise RuntimeError(
+                            f"S3 object not found ({request.s3_key}) and no YouTube URL to recover from. "
+                            "Please re-upload the file."
+                        ) from e
+                else:
+                    raise
+            
+        timer.begin("transcription")
+        words = transcribe(str(video_path), request.s3_key)
+        
+        timer.begin("clip_selection")
+        clips = select_clips(words)
+        
+        # Flush timer to get accurate timings for CPU phases
+        timer._flush()
+        
+    except Exception as e:
+        logger.error(f"CPU Wrapper failed: {e}")
+        if request.webhook_url:
+            _send_webhook(
+                request.webhook_url, request.webhook_secret,
+                request.uploaded_file_id, request.user_id,
+                {"status": "failed", "clips": [], "error": f"CPU Pipeline error: {str(e)}"}
+            )
+        return
+    finally:
+        if base_dir.exists():
+            shutil.rmtree(base_dir, ignore_errors=True)
 
     # Trigger GPU pipeline
     try:
-        logger.info("Delegating to GPU Pipeline...")
-        result = ClippedAI().process_clips_gpu.remote(request_dict)
+        logger.info(f"Delegating to GPU Pipeline (passing {len(words)} words, {len(clips)} clips)...")
+        result = ClippedAI().process_clips_gpu.remote(request_dict, words, clips, timer.phases)
     except Exception as e:
         logger.error(f"GPU pipeline delegation failed: {e}")
         result = {"status": "failed", "clips": [], "error": f"GPU Wrapper error: {str(e)}"}
@@ -572,8 +570,13 @@ def process_video_cpu_wrapper(request_dict: dict):
 
 @app.local_entrypoint()
 def run_cli_job(s3_key: str, youtube_url: str = None):
-    print(f"Submitting job to Modal for s3_key: {s3_key}")
-    ClippedAI().process_video_cli.remote(s3_key, youtube_url)
+    print(f"Submitting job to CPU wrapper for s3_key: {s3_key}")
+    request_dict = ProcessVideoRequest(
+        s3_key=s3_key, 
+        youtube_url=youtube_url, 
+        output_format="vertical"
+    ).model_dump()
+    process_video_cpu_wrapper.remote(request_dict)
 
 @app.local_entrypoint()
 def main():
