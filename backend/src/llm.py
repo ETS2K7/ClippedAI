@@ -78,47 +78,13 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     logger.info(f"[LLM] 🔴 Cache miss (key={_cache_key[:8]}). Calling Groq...")
 
     prompt = (
-        "Analyze this transcript and extract exactly 3 clips optimized for maximum "
-        "viral potential on short-form platforms (TikTok, YouTube Shorts, Instagram Reels).\n\n"
-        "## CRITICAL DURATION REQUIREMENTS\n"
-        "⚠️ THIS IS THE MOST IMPORTANT RULE — CLIPS THAT VIOLATE IT WILL BE REJECTED:\n"
-        "- The IDEAL clip length is 25 to 35 seconds. Aim for this range.\n"
-        "- The ABSOLUTE MINIMUM is 20 seconds. Any clip under 20 seconds WILL BE REJECTED.\n"
-        "- The ABSOLUTE MAXIMUM is 45 seconds.\n"
-        "- Before finalizing each clip, you MUST calculate: end_time - start_time = duration.\n"
-        "  If the duration is below 20 seconds, you MUST extend the end_time further into the "
-        "transcript to include more content until the clip reaches at least 25 seconds.\n\n"
-        "## CLIP SELECTION RULES\n"
-        "1. Each clip MUST begin with a strong hook — a surprising statement, bold claim, "
-        "emotional moment, or curiosity-inducing question — within the first 3 seconds.\n"
-        "2. Each clip MUST end on a complete thought. Never cut mid-sentence or mid-idea.\n"
-        "3. Clips MUST NOT overlap with each other.\n"
-        "4. Spread clips across different sections of the video. Do NOT cluster them together.\n"
-        "5. Include enough surrounding context so the clip is self-contained and compelling.\n\n"
-        "## WHAT MAKES A CLIP VIRAL\n"
-        "Prioritize moments that contain:\n"
-        "- Controversial or counterintuitive opinions\n"
-        "- Surprising facts or statistics\n"
-        "- Emotional intensity (passion, humor, anger, vulnerability)\n"
-        "- Universal relatability ('everyone has experienced this')\n"
-        "- Actionable advice or 'life hack' energy\n"
-        "- Storytelling with tension and payoff\n\n"
-        "## WHAT TO AVOID\n"
-        "- Generic introductions or 'welcome to the show' segments\n"
-        "- Rambling or unfocused dialogue without a clear point\n"
-        "- Segments that require prior context to understand\n"
-        "- Moments where the speaker trails off or loses energy\n"
-        "- SHORT CLIPS. Do NOT pick a single quote or one-liner. Always include the full "
-        "conversational context around the moment.\n\n"
-        "## OUTPUT FORMAT\n"
-        'Return ONLY this exact JSON structure:\n'
-        '{"clips": ['
-        '{"duration_check": "45.6 - 12.3 = 33.3s ✓ (≥20s)", "start_time": 12.3, "end_time": 45.6, "title": "Short punchy hook title", "virality_score": 8.5}, '
-        '...]}\n'
-        '- duration_check: REQUIRED — show the subtraction math and confirm ≥20 seconds\n'
-        '- start_time/end_time: float in seconds\n'
-        '- title: a short, attention-grabbing title (max 10 words) that could serve as a caption\n'
-        '- virality_score: float from 0.0 to 10.0 representing viral potential\n\n'
+        "Extract exactly 3 viral clips from this transcript for TikTok, YouTube Shorts, and Instagram Reels.\n\n"
+        "Each clip must be 25–35 seconds long. No exceptions.\n"
+        "Clips must not overlap. Spread them across different parts of the video.\n"
+        "Start each clip on a hook (bold claim, surprising fact, emotional moment).\n"
+        "End each clip on a complete thought — never mid-sentence.\n\n"
+        "Return ONLY this JSON:\n"
+        '{"clips": [{"start_time": 12.3, "end_time": 45.6, "title": "Punchy caption", "virality_score": 8.5}]}\n\n'
         f"TRANSCRIPT:\n{transcript}"
     )
 
