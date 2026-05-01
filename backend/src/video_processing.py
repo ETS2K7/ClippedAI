@@ -106,8 +106,8 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
     # Base command
     cmd = [
         "ffmpeg", "-y",
-        "-ss", str(start),
         "-i", input_file,
+        "-ss", str(start),
         "-t", str(dur),
     ]
     
