@@ -81,3 +81,8 @@ git push origin main
 ```
 
 Watch it at: **GitHub → Actions tab → Deploy to DigitalOcean**
+
+### Google OAuth
+- `GOOGLE_CLIENT_ID` - Google Cloud OAuth Client ID.
+- `GOOGLE_CLIENT_SECRET` - Google Cloud OAuth Client Secret.
+

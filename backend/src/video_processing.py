@@ -39,7 +39,7 @@ CROP_W_4          = 540  # 4-speaker grid (540×960 each)
 CROP_H_HALF = int(round(CROP_W_1 * (OUT_H // 2) / OUT_W))  # = 541
 
 # Gaussian smoothing frames (0 = Hard cuts, no sliding)
-SIGMA = 0  
+SIGMA = 12  
 
 # Stabilisation thresholds (entry = min frames before mode activates,
 # gap = min gap frames before mode drops — prevents rapid re-entry)
@@ -792,21 +792,43 @@ def track_speaker_and_frame(
                     col, MIN_SPEAKER_SWITCH_FRAMES, IDENTITY_PX_THRESHOLD
                 )
     else:
-        # Instant tracking mode: just fill gaps with the nearest valid detection
-        # to prevent snapping to 640px default during transient dropouts.
+        # Instant tracking mode: fill gaps by holding the last known position
+        # (forward-fill then backward-fill).
+        #
+        # Why NOT np.interp (linear interpolation):
+        # Linear interpolation creates an artificial sliding trajectory between
+        # detections. For a stationary speaker at x=0.4 with a 20-frame ASD
+        # gap, interp produces values from 0.4 → wherever they're next detected,
+        # even if they never moved. smooth_segment then sees that spread, its
+        # cluster std exceeds STATIONARY_STD_THRESHOLD, the lock fails, and the
+        # speaker is misclassified as "moving" — causing visible drift in a
+        # completely stationary shot.
+        #
+        # Hold-fill keeps gaps at the last known position, so a stationary
+        # speaker's array stays constant → tight cluster → lock fires → zero drift.
+        def _hold_fill(arr: np.ndarray, vidx: np.ndarray, aidx: np.ndarray) -> np.ndarray:
+            """Forward-fill -1 gaps then backward-fill any leading -1 region."""
+            vmask = arr != -1
+            fwd = np.where(vmask, aidx, 0)
+            np.maximum.accumulate(fwd, out=fwd)
+            out = arr[fwd]
+            first_v = vidx[0]
+            if first_v > 0:
+                out[:first_v] = arr[first_v]
+            return out
+
         for slot in range(4):
             col = raw_spk_cx[:, slot]
             valid_mask = col != -1
             if np.any(valid_mask):
                 valid_idx = np.where(valid_mask)[0]
                 all_idx = np.arange(len(col))
-                # Fill gaps using nearest-neighbor (no smoothing)
-                raw_spk_cx[:, slot] = np.interp(all_idx, valid_idx, col[valid_idx])
-                
+                raw_spk_cx[:, slot] = _hold_fill(col, valid_idx, all_idx)
+
                 col_y = raw_spk_cy[:, slot]
                 valid_y = np.where(col_y != -1)[0]
                 if len(valid_y) > 0:
-                    raw_spk_cy[:, slot] = np.interp(all_idx, valid_y, col_y[valid_y])
+                    raw_spk_cy[:, slot] = _hold_fill(col_y, valid_y, all_idx)
 
     # ── 7d. Scene-boundary layout snapping ────────────────────────────────────
     # If a layout change (n=1 -> n=2) happens within 50 frames of a scene cut,

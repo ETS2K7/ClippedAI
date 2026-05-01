@@ -80,7 +80,8 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     f"[LLM] 🟢 Cache hit — returning cached clip selection "
                     f"(key={_cache_key[:8]})"
                 )
-                return cached[:3]
+                # Ensure previously cached short clips are still auto-extended
+                return _validate_clips(cached[:3], words)
             else:
                 logger.warning("[LLM] Cache entry invalid, re-running selection.")
         except Exception as _ce:
