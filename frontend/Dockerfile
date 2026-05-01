@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci --legacy-peer-deps
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps
 # Explicitly generate Prisma client with the correct binary target for Alpine
 RUN npx prisma generate
 
@@ -23,7 +24,8 @@ COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
 # Build Next.js standalone
 ENV SKIP_ENV_VALIDATION=1
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
 # ─── Stage 3: Production runner ─────────────────────────────────────────────
 FROM base AS runner

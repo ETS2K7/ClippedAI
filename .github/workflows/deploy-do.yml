@@ -103,8 +103,8 @@ jobs:
             echo "  Waiting for DB ($((i*5))s)..."; sleep 5
           done
 
-          echo "==> Building app image (no cache to pick up new Prisma engines)..."
-          docker compose build --no-cache app
+          echo "==> Building app image..."
+          docker compose build app
 
           echo "==> Starting app..."
           docker compose up -d app
