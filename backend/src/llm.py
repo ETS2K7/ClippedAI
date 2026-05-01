@@ -136,7 +136,7 @@ def _validate_clips(raw_clips: list, words: list) -> list:
         if start < 0 or end <= start or start > video_end_s:
             logger.warning(f"Skipping invalid clip: start={start}, end={end}")
             continue
-        if duration < 15 or duration > 45:
+        if duration < 10 or duration > 60:
             logger.warning(f"Skipping clip with unusual duration ({duration:.1f}s)")
             continue
         validated.append(clip)
@@ -193,8 +193,8 @@ def _call_gemini(prompt: str, words: list) -> list:
                 raise ValueError(f"Gemini returned unexpected JSON keys: {list(data.keys())}")
 
             validated = _validate_clips(raw_clips, words)
-            if len(validated) < 3:
-                raise ValueError(f"Only {len(validated)} valid clips after validation.")
+            if len(validated) < 1:
+                raise ValueError(f"No valid clips after validation.")
 
             logger.info(f"[LLM] ✓ Gemini selected {len(validated)} clips.")
             return validated[:3]
@@ -243,8 +243,8 @@ def _call_groq(prompt: str, words: list) -> list:
                 raise ValueError(f"Groq returned unexpected JSON keys: {list(data.keys())}")
 
             validated = _validate_clips(raw_clips, words)
-            if len(validated) < 3:
-                raise ValueError(f"Only {len(validated)} valid clips after validation.")
+            if len(validated) < 1:
+                raise ValueError(f"No valid clips after validation.")
 
             logger.info(f"[LLM] ✓ Groq selected {len(validated)} clips.")
             return validated[:3]
