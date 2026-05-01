@@ -81,7 +81,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "Analyze this transcript and extract exactly 3 clips optimized for maximum "
         "viral potential on short-form platforms (TikTok, YouTube Shorts, Instagram Reels).\n\n"
         "## CLIP SELECTION RULES\n"
-        "1. Each clip MUST be between 10 and 60 seconds long.\n"
+        "1. Each clip MUST be between 15 and 45 seconds long.\n"
         "2. Each clip MUST begin with a strong hook — a surprising statement, bold claim, "
         "emotional moment, or curiosity-inducing question — within the first 3 seconds.\n"
         "3. Each clip MUST end on a complete thought. Never cut mid-sentence or mid-idea.\n"
