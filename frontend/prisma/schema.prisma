@@ -36,20 +36,20 @@ model Session {
 }
 
 model User {
-  id             String         @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String?
-  email          String         @unique
+  email          String    @unique
   emailVerified  DateTime?
   /// Nullable so OAuth providers (Google, GitHub) can create accounts without a password
   password       String?
   image          String?
   /// Grants access to admin-only routes and the /admin dashboard
-  isAdmin        Boolean        @default(false)
+  isAdmin        Boolean   @default(false)
   /// Caption / font preferences — persisted by PATCH /api/preferences
-  prefFontFamily String         @default("TikTokSans-Regular")
-  prefFontSize   Int            @default(24)
-  prefFontColor  String         @default("#FFFFFF")
-  
+  prefFontFamily String    @default("TikTokSans-Regular")
+  prefFontSize   Int       @default(24)
+  prefFontColor  String    @default("#FFFFFF")
+
   /// Dodo Payments (Hybrid model)
   credits              Int       @default(0)
   dodoCustomerId       String?   @unique
@@ -60,10 +60,12 @@ model User {
   /// True if the user subscribed via the founding member promotional product
   isFoundingMember     Boolean   @default(false)
 
-  accounts       Account[]
-  clips          Clip[]
-  sessions       Session[]
-  uploadedFiles  UploadedFile[]
+  createdAt DateTime @default(now())
+
+  accounts      Account[]
+  clips         Clip[]
+  sessions      Session[]
+  uploadedFiles UploadedFile[]
 }
 
 model UploadedFile {
@@ -93,11 +95,10 @@ model Clip {
   uploadedFileId String?
   userId         String
   thumbnailKeys  Json?
-  clipTitle      String?       // LLM-generated hook title
-  viralityScore  Float?        // 0.0–10.0 viral potential rating
+  clipTitle      String? // LLM-generated hook title
+  viralityScore  Float? // 0.0–10.0 viral potential rating
   uploadedFile   UploadedFile? @relation(fields: [uploadedFileId], references: [id], onDelete: Cascade)
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
 
   @@unique([s3Key])
   @@index([userId])
