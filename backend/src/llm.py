@@ -80,13 +80,21 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     prompt = (
         "Analyze this transcript and extract exactly 3 clips optimized for maximum "
         "viral potential on short-form platforms (TikTok, YouTube Shorts, Instagram Reels).\n\n"
+        "## CRITICAL DURATION REQUIREMENTS\n"
+        "⚠️ THIS IS THE MOST IMPORTANT RULE — CLIPS THAT VIOLATE IT WILL BE REJECTED:\n"
+        "- The IDEAL clip length is 25 to 35 seconds. Aim for this range.\n"
+        "- The ABSOLUTE MINIMUM is 20 seconds. Any clip under 20 seconds WILL BE REJECTED.\n"
+        "- The ABSOLUTE MAXIMUM is 45 seconds.\n"
+        "- Before finalizing each clip, you MUST calculate: end_time - start_time = duration.\n"
+        "  If the duration is below 20 seconds, you MUST extend the end_time further into the "
+        "transcript to include more content until the clip reaches at least 25 seconds.\n\n"
         "## CLIP SELECTION RULES\n"
-        "1. Each clip MUST be between 15 and 45 seconds long.\n"
-        "2. Each clip MUST begin with a strong hook — a surprising statement, bold claim, "
+        "1. Each clip MUST begin with a strong hook — a surprising statement, bold claim, "
         "emotional moment, or curiosity-inducing question — within the first 3 seconds.\n"
-        "3. Each clip MUST end on a complete thought. Never cut mid-sentence or mid-idea.\n"
-        "4. Clips MUST NOT overlap with each other.\n"
-        "5. Spread clips across different sections of the video. Do NOT cluster them together.\n\n"
+        "2. Each clip MUST end on a complete thought. Never cut mid-sentence or mid-idea.\n"
+        "3. Clips MUST NOT overlap with each other.\n"
+        "4. Spread clips across different sections of the video. Do NOT cluster them together.\n"
+        "5. Include enough surrounding context so the clip is self-contained and compelling.\n\n"
         "## WHAT MAKES A CLIP VIRAL\n"
         "Prioritize moments that contain:\n"
         "- Controversial or counterintuitive opinions\n"
@@ -99,13 +107,15 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "- Generic introductions or 'welcome to the show' segments\n"
         "- Rambling or unfocused dialogue without a clear point\n"
         "- Segments that require prior context to understand\n"
-        "- Moments where the speaker trails off or loses energy\n\n"
+        "- Moments where the speaker trails off or loses energy\n"
+        "- SHORT CLIPS. Do NOT pick a single quote or one-liner. Always include the full "
+        "conversational context around the moment.\n\n"
         "## OUTPUT FORMAT\n"
         'Return ONLY this exact JSON structure:\n'
         '{"clips": ['
-        '{"duration_calculation": "45.6 - 12.3 = 33.3 seconds (Valid)", "start_time": 12.3, "end_time": 45.6, "title": "Short punchy hook title", "virality_score": 8.5}, '
-        '...]}\\n'
-        '- duration_calculation: string explaining the math to prove the clip is between 15 and 45 seconds\n'
+        '{"duration_check": "45.6 - 12.3 = 33.3s ✓ (≥20s)", "start_time": 12.3, "end_time": 45.6, "title": "Short punchy hook title", "virality_score": 8.5}, '
+        '...]}\n'
+        '- duration_check: REQUIRED — show the subtraction math and confirm ≥20 seconds\n'
         '- start_time/end_time: float in seconds\n'
         '- title: a short, attention-grabbing title (max 10 words) that could serve as a caption\n'
         '- virality_score: float from 0.0 to 10.0 representing viral potential\n\n'
@@ -124,8 +134,17 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return validated_clips
 
 
+# ── Minimum duration (seconds) that a clip must reach after auto-extension ──
+_MIN_CLIP_DURATION = 20.0
+
+
 def _validate_clips(raw_clips: list, words: list) -> list:
-    """Validate and filter clips for duration and timestamp bounds."""
+    """Validate and filter clips for duration and timestamp bounds.
+    
+    Clips shorter than _MIN_CLIP_DURATION are automatically extended toward
+    the end of the video (capped at video_end_s) so that borderline clips
+    produced by the LLM are rescued rather than discarded.
+    """
     video_end_s = words[-1]["end"] / 1000.0
     validated = []
     for clip in raw_clips:
@@ -137,9 +156,21 @@ def _validate_clips(raw_clips: list, words: list) -> list:
         if start < 0 or end <= start or start > video_end_s:
             logger.warning(f"Skipping invalid clip: start={start}, end={end}")
             continue
-        if duration < 10 or duration > 60:
-            logger.warning(f"Skipping clip with unusual duration ({duration:.1f}s)")
+        if duration > 60:
+            logger.warning(f"Skipping clip with excessive duration ({duration:.1f}s)")
             continue
+        # Auto-extend clips that are too short
+        if duration < _MIN_CLIP_DURATION:
+            new_end = min(start + _MIN_CLIP_DURATION, video_end_s)
+            new_duration = new_end - start
+            if new_duration < 10:
+                logger.warning(f"Skipping clip near end of video (cannot extend): start={start}")
+                continue
+            logger.info(
+                f"Auto-extending clip from {duration:.1f}s to {new_duration:.1f}s "
+                f"(end: {end:.1f} → {new_end:.1f})"
+            )
+            clip["end_time"] = new_end
         validated.append(clip)
     return validated
 
