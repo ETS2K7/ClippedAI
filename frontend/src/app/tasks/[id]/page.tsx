@@ -476,7 +476,7 @@ export default function TaskPage() {
               </span>
 
               <div className="ml-auto flex items-center gap-2">
-                {process.env.NODE_ENV === "development" && (
+                {(process.env.NODE_ENV === "development" || session?.user?.email === "admin@clippedai.app" || session?.user?.email === "contact@clipped.co.in") && (
                   <Button
                     size="sm"
                     variant="ghost"
@@ -485,7 +485,7 @@ export default function TaskPage() {
                     disabled={isRetrying}
                   >
                     {isRetrying ? <Clock className="h-3.5 w-3.5 animate-spin" /> : <Edit2 className="h-3.5 w-3.5" />}
-                    {isRetrying ? "Retrying..." : "Dev Force Retry"}
+                    {isRetrying ? "Retrying..." : "Admin Force Retry"}
                   </Button>
                 )}
                 <Button

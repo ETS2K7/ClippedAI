@@ -17,6 +17,9 @@ export async function POST(
 
   const { id: taskId } = await params;
 
+  const user = await db.user.findUnique({ where: { id: session.user.id } });
+  const isAdmin = user?.isAdmin || session.user?.email === "admin@clippedai.app" || session.user?.email === env.ADMIN_EMAIL;
+
   try {
     // Check if task exists and belongs to user
     const task = await db.uploadedFile.findUnique({
@@ -31,8 +34,8 @@ export async function POST(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Only allow retrying failed tasks (except in development)
-    if (task.status !== "failed" && process.env.NODE_ENV !== "development") {
+    // Only allow retrying failed tasks (except for admins or in development)
+    if (task.status !== "failed" && !isAdmin && process.env.NODE_ENV !== "development") {
       return NextResponse.json(
         { error: "Can only retry failed tasks" },
         { status: 400 }
