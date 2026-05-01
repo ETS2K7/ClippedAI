@@ -16,6 +16,11 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()],
 )
 
+# Silence excessively verbose third-party loggers
+logging.getLogger("hpack").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 def get_logger(name: str) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(LOG_LEVEL)
