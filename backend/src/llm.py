@@ -103,8 +103,9 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "## OUTPUT FORMAT\n"
         'Return ONLY this exact JSON structure:\n'
         '{"clips": ['
-        '{"start_time": 12.3, "end_time": 45.6, "title": "Short punchy hook title", "virality_score": 8.5}, '
+        '{"duration_calculation": "45.6 - 12.3 = 33.3 seconds (Valid)", "start_time": 12.3, "end_time": 45.6, "title": "Short punchy hook title", "virality_score": 8.5}, '
         '...]}\\n'
+        '- duration_calculation: string explaining the math to prove the clip is between 15 and 45 seconds\n'
         '- start_time/end_time: float in seconds\n'
         '- title: a short, attention-grabbing title (max 10 words) that could serve as a caption\n'
         '- virality_score: float from 0.0 to 10.0 representing viral potential\n\n'
