@@ -88,7 +88,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     logger.info(f"[LLM] 🔴 Cache miss (key={_cache_key[:8]}). Calling Groq...")
 
-    validated_clips = _call_groq(prompt, words)
+    validated_clips = _call_gemini(prompt, words)
 
     # Write to cache
     try:
