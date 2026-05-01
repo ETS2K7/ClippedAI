@@ -22,9 +22,7 @@ services:
         max-file: "3"
 
   app:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ghcr.io/ets2k7/clippedai-app:latest
     restart: always
     ports:
       - "127.0.0.1:3000:3000"
