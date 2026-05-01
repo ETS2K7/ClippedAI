@@ -889,7 +889,6 @@ def track_speaker_and_frame(
                 for s in range(4):
                     smooth_spk_cx[i:j, s] = smooth_spk_cx[j, s]
                     smooth_spk_cy[i:j, s] = smooth_spk_cy[j, s]
-                logger.debug(f"  [Step 8.5] RECURSIVE MERGE: Swallowed {duration}f flicker at frame {i}")
                 changed = True
                 break # Restart loop to re-evaluate
             i = j
