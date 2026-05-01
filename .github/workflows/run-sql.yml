@@ -1,0 +1,35 @@
+name: Run SQL Migration
+on:
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH agent
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -T 10 -H "${{ secrets.DO_SERVER_IP }}" >> ~/.ssh/known_hosts
+
+      - name: Run SQL on server
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.DO_SERVER_IP }} << 'EOF'
+          cd /opt/clippedai
+          docker compose exec -T db psql -U postgres -d clippedai -c "
+            UPDATE \"User\" 
+            SET \"isAdmin\" = true, \"createdAt\" = (SELECT \"createdAt\" FROM \"User\" WHERE email = 'admin@clippedai.app')
+            WHERE email = 'ebelthomasseiko@gmail.com';
+
+            UPDATE \"UploadedFile\"
+            SET \"userId\" = (SELECT id FROM \"User\" WHERE email = 'ebelthomasseiko@gmail.com')
+            WHERE \"userId\" = (SELECT id FROM \"User\" WHERE email = 'admin@clippedai.app');
+
+            UPDATE \"Clip\"
+            SET \"userId\" = (SELECT id FROM \"User\" WHERE email = 'ebelthomasseiko@gmail.com')
+            WHERE \"userId\" = (SELECT id FROM \"User\" WHERE email = 'admin@clippedai.app');
+
+            DELETE FROM \"User\" WHERE email = 'admin@clippedai.app';
+          "
+          EOF
