@@ -54,13 +54,11 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     transcript = "\n".join(sentences)
 
     prompt = (
-        "Extract exactly 3 viral clips from this transcript for TikTok, YouTube Shorts, and Instagram Reels.\n\n"
-        "Each clip must be 25–35 seconds long. No exceptions.\n"
-        "Clips must not overlap. Spread them across different parts of the video.\n"
+        "Extract up to 3 non-overlapping viral clips from this transcript for TikTok, YouTube Shorts, and Instagram Reels.\n"
+        "If the video is short, extract as many as mathematically possible.\n\n"
+        "Each clip MUST be between 15 and 45 seconds long. No exceptions.\n"
         "Start each clip on a hook (bold claim, surprising fact, emotional moment).\n"
         "End each clip on a complete thought — never mid-sentence.\n\n"
-        "Return ONLY this JSON:\n"
-        '{"clips": [{"start_time": 12.3, "end_time": 45.6, "title": "Punchy caption", "virality_score": 8.5}]}\n\n'
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -100,7 +98,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 # ── Minimum duration (seconds) that a clip must reach after auto-extension ──
-_MIN_CLIP_DURATION = 20.0
+_MIN_CLIP_DURATION = 15.0
 
 
 def _validate_clips(raw_clips: list, words: list) -> list:
@@ -121,7 +119,7 @@ def _validate_clips(raw_clips: list, words: list) -> list:
         if start < 0 or end <= start or start > video_end_s:
             logger.warning(f"Skipping invalid clip: start={start}, end={end}")
             continue
-        if duration > 60:
+        if duration > 45:
             logger.warning(f"Skipping clip with excessive duration ({duration:.1f}s)")
             continue
         # Auto-extend clips that are too short
@@ -180,6 +178,26 @@ def _call_gemini(prompt: str, words: list) -> list:
                         "for TikTok, YouTube Shorts, and Instagram Reels. Return only valid JSON."
                     ),
                     response_mime_type="application/json",
+                    response_schema={
+                        "type": "OBJECT",
+                        "properties": {
+                            "clips": {
+                                "type": "ARRAY",
+                                "items": {
+                                    "type": "OBJECT",
+                                    "properties": {
+                                        "reasoning": {"type": "STRING", "description": "Why this clip is highly engaging and viral."},
+                                        "title": {"type": "STRING", "description": "A punchy, viral caption."},
+                                        "start_time": {"type": "NUMBER"},
+                                        "end_time": {"type": "NUMBER"},
+                                        "virality_score": {"type": "NUMBER"}
+                                    },
+                                    "required": ["reasoning", "title", "start_time", "end_time", "virality_score"]
+                                }
+                            }
+                        },
+                        "required": ["clips"]
+                    },
                     temperature=0.2,
                 ),
             )
