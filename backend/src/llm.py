@@ -1,8 +1,6 @@
 """
 Module for LLM-powered viral clip selection.
-Primary: Gemini 2.5-flash (Google AI Studio API key)
-Fallback 1: Groq (llama-3.3-70b-versatile)
-Fallback 2: OpenRouter (meta-llama/llama-3.3-70b-instruct)
+Primary: Gemini 2.5-flash via Google Cloud Vertex AI
 """
 
 import hashlib
@@ -87,7 +85,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         except Exception as _ce:
             logger.warning(f"[LLM] Cache read failed ({_ce}), re-running selection.")
 
-    logger.info(f"[LLM] 🔴 Cache miss (key={_cache_key[:8]}). Calling Groq...")
+    logger.info(f"[LLM] 🔴 Cache miss (key={_cache_key[:8]}). Calling Gemini...")
 
     validated_clips = _call_gemini(prompt, words)
 
@@ -156,8 +154,7 @@ def _call_gemini(prompt: str, words: list) -> list:
             json.loads(gcp_json)
         ).with_scopes(["https://www.googleapis.com/auth/cloud-platform"])
     elif not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-        logger.warning("[LLM] GCP credentials not set, trying Groq.")
-        return _call_groq(prompt, words)
+        raise RuntimeError("GCP credentials not set. Cannot call Vertex AI.")
 
     logger.info("[LLM] Calling Vertex AI (gemini-2.5-flash)...")
     MAX_RETRIES = 3
@@ -206,52 +203,7 @@ def _call_gemini(prompt: str, words: list) -> list:
                     logger.debug(f"Gemini output: {response.text}")
                 time.sleep(wait)
             else:
-                logger.warning(f"[LLM Fallback] Vertex AI failed after {MAX_RETRIES} attempts: {e}. Trying Groq...")
-                return _call_groq(prompt, words)
+                raise RuntimeError(f"Vertex AI failed after {MAX_RETRIES} attempts: {e}")
 
 
-def _call_groq(prompt: str, words: list) -> list:
-    """Fallback 1: Groq (llama-3.3-70b-versatile) — fastest inference available."""
-    groq_key = os.environ.get("GROQ_KEY")
-    if not groq_key:
-        raise RuntimeError("GROQ_KEY not set and all LLM fallbacks have been exhausted.")
 
-    logger.info("[LLM] Calling Groq (llama-3.3-70b-versatile)...")
-    MAX_RETRIES = 3
-
-    for attempt in range(MAX_RETRIES):
-        try:
-            resp = requests.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {groq_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.2,
-                    "response_format": {"type": "json_object"},
-                },
-                timeout=60,
-            )
-            resp.raise_for_status()
-            data = json.loads(resp.json()["choices"][0]["message"]["content"])
-            raw_clips = data.get("clips") if isinstance(data.get("clips"), list) else []
-            if not raw_clips:
-                raise ValueError(f"Groq returned unexpected JSON keys: {list(data.keys())}")
-
-            validated = _validate_clips(raw_clips, words)
-            if len(validated) < 1:
-                raise ValueError(f"No valid clips after validation.")
-
-            logger.info(f"[LLM] ✓ Groq selected {len(validated)} clips.")
-            return validated[:3]
-
-        except Exception as e:
-            wait = 2 ** (attempt + 1)
-            if attempt < MAX_RETRIES - 1:
-                logger.warning(f"[LLM] Groq attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {wait}s...")
-                time.sleep(wait)
-            else:
-                raise RuntimeError(f"Groq failed after {MAX_RETRIES} attempts: {e}. All LLM providers exhausted.")
