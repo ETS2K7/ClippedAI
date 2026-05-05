@@ -10,7 +10,6 @@ graph TB
         UI[Dashboard UI]
         Auth[NextAuth v5]
         Prisma[Prisma ORM]
-        Inngest[Inngest Jobs]
         S3Upload[S3 Upload]
     end
 
@@ -30,7 +29,7 @@ graph TB
 
     UI --> Auth
     UI --> S3Upload --> S3
-    UI --> Inngest --> API
+    UI --> API
     API --> Transcribe
     API --> LLM
     API --> VideoProc
@@ -52,8 +51,8 @@ graph TB
 | Storage | AWS S3 |
 | Backend | Python 3.10 on Modal (serverless GPU) |
 | Transcription | AssemblyAI |
-| AI Clip Selection | Groq (Llama 3.3 70B) |
-| Video Processing | OpenCV, FFmpeg, scipy, scenedetect |
+| AI Clip Selection | Gemini 2.5 Flash (via GCP Vertex AI) |
+| Video Processing | OpenCV, FFmpeg, scipy, scenedetect, Fast-ASD |
 | Deployment | Docker Compose on DigitalOcean, Nginx, Let's Encrypt |
 
 ## Local Development
@@ -110,7 +109,9 @@ modal deploy main.py
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `ASSEMBLYAI_KEY` | ✅ | AssemblyAI API key |
-| `GEMINI_KEY` | ✅ | Google Gemini API key |
+| `GOOGLE_CLOUD_PROJECT` | ✅ | GCP Project ID for Vertex AI (Gemini) |
+| `GCP_SERVICE_ACCOUNT_JSON` | ❌ | GCP Credentials JSON (if not using ADC) |
+| `APIFY_TOKEN` | ✅ | Apify token for YouTube downloads |
 | `S3_BUCKET_NAME` | ✅ | S3 bucket name |
 | `AWS_ACCESS_KEY_ID` | ✅ | AWS credentials |
 | `AWS_SECRET_ACCESS_KEY` | ✅ | AWS credentials |
