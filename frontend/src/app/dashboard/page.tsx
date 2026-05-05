@@ -129,7 +129,7 @@ export default function Home() {
   const { data: session, isPending } = useSession();
   const isAdminSession = Boolean(session?.user?.isAdmin);
 
-  const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
+  const [fontFamily, setFontFamily] = useState("Komika Axis");
   const [fontSize, setFontSize] = useState(24);
   const [fontColor, setFontColor] = useState("#FFFFFF");
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(true);
@@ -188,7 +188,9 @@ export default function Home() {
   // On preferences loaded, set initial local values
   useEffect(() => {
     if (prefsData) {
-      if (prefsData.fontFamily) setFontFamily(prefsData.fontFamily);
+      // Fall back to Komika Axis if the stored preference is the old TikTokSans default
+      const storedFont = prefsData.fontFamily;
+      setFontFamily(storedFont && storedFont !== "TikTokSans-Regular" ? storedFont : "Komika Axis");
       if (prefsData.fontSize) setFontSize(prefsData.fontSize);
       if (prefsData.fontColor) setFontColor(prefsData.fontColor);
     }

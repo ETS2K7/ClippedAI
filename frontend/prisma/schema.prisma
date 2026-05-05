@@ -46,7 +46,7 @@ model User {
   /// Grants access to admin-only routes and the /admin dashboard
   isAdmin        Boolean   @default(false)
   /// Caption / font preferences — persisted by PATCH /api/preferences
-  prefFontFamily String    @default("TikTokSans-Regular")
+  prefFontFamily String    @default("Komika Axis")
   prefFontSize   Int       @default(24)
   prefFontColor  String    @default("#FFFFFF")
 
