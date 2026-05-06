@@ -188,6 +188,8 @@ export default function TaskPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const finalElapsedRef = useRef<number>(0);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
   const hasTriggeredAutoRefresh = useRef(false);
 
@@ -320,6 +322,32 @@ export default function TaskPage() {
 
     return () => clearInterval(interval);
   }, [task?.status, fetchTaskStatus, triggerAutoRefresh]);
+
+  // Live processing timer — ticks every second while task is active
+  useEffect(() => {
+    const isActive =
+      task?.status === "processing" ||
+      task?.status === "queued" ||
+      task?.status === "generating_clips";
+
+    if (!isActive || !task?.created_at) return;
+
+    const startMs = new Date(task.created_at).getTime();
+    const tick = () => {
+      const s = Math.floor((Date.now() - startMs) / 1000);
+      setElapsedSeconds(s);
+      finalElapsedRef.current = s;
+    };
+    tick(); // immediate first tick
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [task?.status, task?.created_at]);
+
+  const formatElapsed = (s: number) => {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  };
 
   /** Optimistic title update. */
   const handleEditTitle = () => {
@@ -475,6 +503,16 @@ export default function TaskPage() {
                 {task.status}
               </span>
 
+              {/* Live timer — shown while processing, final time when done */}
+              {(task.status === "processing" ||
+                task.status === "queued" ||
+                task.status === "generating_clips") && (
+                <span className="flex items-center gap-1 font-mono text-[10px] font-bold tabular-nums tracking-widest text-white/40">
+                  <Clock className="h-3 w-3" />
+                  {formatElapsed(elapsedSeconds)}
+                </span>
+              )}
+
               <div className="ml-auto flex items-center gap-2">
                 {(process.env.NODE_ENV === "development" || session?.user?.email === "ebelthomasseiko@gmail.com") && (
                   <Button
@@ -520,7 +558,14 @@ export default function TaskPage() {
               <p className="font-mono text-sm tracking-wide text-white/40 uppercase">
                 {task.status === "queued" ? "Queued" : "Processing"}
               </p>
-              <p className="mt-2 text-[10px] font-bold tracking-widest text-white/20 uppercase">
+              {/* Live elapsed timer */}
+              <div className="mt-4 flex items-center gap-2 rounded-md border border-white/10 px-4 py-2">
+                <Clock className="h-3.5 w-3.5 text-white/30" />
+                <span className="font-mono text-2xl font-black tabular-nums tracking-widest text-white">
+                  {formatElapsed(elapsedSeconds)}
+                </span>
+              </div>
+              <p className="mt-3 text-[10px] font-bold tracking-widest text-white/20 uppercase">
                 AUTO-REFRESHING...
               </p>
             </div>
