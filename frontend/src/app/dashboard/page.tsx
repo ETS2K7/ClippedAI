@@ -668,6 +668,25 @@ export default function Home() {
 
 
 
+
+                {/* Style & Captions — read-only info card */}
+                <div className="brutal-card space-y-3 p-3 sm:p-4">
+                  <div className="flex items-center gap-2 font-mono text-sm font-bold tracking-widest text-white uppercase">
+                    <Sparkles className="h-4 w-4 text-white" />
+                    STYLE &amp; CAPTIONS
+                  </div>
+                  <div className="border-l-2 border-white/20 pl-3 space-y-3">
+                    <div>
+                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Font Family</p>
+                      <p className="font-mono text-sm font-bold text-white tracking-wide">Komika Axis</p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Caption Style</p>
+                      <p className="font-mono text-sm font-bold text-white tracking-wide">Default</p>
+                    </div>
+                  </div>
+                </div>
+
                 {isLoading && (
                   <div className="space-y-4">
                     <div className="space-y-2">
