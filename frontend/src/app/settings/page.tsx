@@ -26,7 +26,7 @@ import { fetcher } from "~/lib/fetcher";
 
 export default function SettingsPage() {
   const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
-  const [fontSize, setFontSize] = useState(24);
+  const [fontSize, setFontSize] = useState(75);
   const [fontColor, setFontColor] = useState("#FFFFFF");
   const [completionEmails, setCompletionEmails] = useState(true);
   const [success, setSuccess] = useState(false);
@@ -55,7 +55,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (prefsData) {
       setFontFamily(prefsData.fontFamily || "TikTokSans-Regular");
-      setFontSize(prefsData.fontSize || 24);
+      setFontSize(prefsData.fontSize && prefsData.fontSize >= 50 ? prefsData.fontSize : 75);
       setFontColor(prefsData.fontColor || "#FFFFFF");
       setCompletionEmails(prefsData.notifyOnCompletion ?? true);
     }
@@ -241,22 +241,22 @@ export default function SettingsPage() {
               {/* Font Size Slider */}
               <div className="space-y-2">
                 <Label className="font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
-                  Font Size: {fontSize}px
+                  Font Size: {fontSize}pt
                 </Label>
                 <div className="px-1">
                   <Slider
                     value={[fontSize]}
-                    onValueChange={(value) => setFontSize(value[0])}
-                    max={48}
-                    min={12}
-                    step={2}
+                    onValueChange={(value) => setFontSize(value[0]!)}
+                    max={200}
+                    min={50}
+                    step={5}
                     disabled={isLoading}
                     className="w-full"
                   />
                 </div>
                 <div className="flex justify-between text-xs text-white/20">
-                  <span>12px</span>
-                  <span>48px</span>
+                  <span>50pt</span>
+                  <span>200pt</span>
                 </div>
               </div>
 
@@ -314,7 +314,7 @@ export default function SettingsPage() {
                   <p
                     style={{
                       color: fontColor,
-                      fontSize: `${Math.min(fontSize, 32)}px`,
+                    fontSize: `${Math.round(fontSize * 0.18)}px`,
                       fontFamily: `'${fontFamily}', system-ui, -apple-system, sans-serif`,
                       textAlign: "center",
                       lineHeight: "1.4",
