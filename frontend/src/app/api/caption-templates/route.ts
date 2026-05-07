@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "~/server/auth";
 
 // 1:1 copy of /backend/src/caption_templates.py — CAPTION_TEMPLATES dict
+// NOTE: font_size values are ASS pt units at PlayResY:1920, NOT CSS pixels.
+// A value of 75 renders ~75px tall on a 1920px-high video frame.
 const CAPTION_TEMPLATES = [
   {
     id: "default",
@@ -9,7 +11,7 @@ const CAPTION_TEMPLATES = [
     description: "Clean white text with black outline",
     animation: "none",
     font_family: "THEBOLDFONT",
-    font_size: 28,
+    font_size: 70,
     font_color: "#FFFFFF",
     highlight_color: "#FFD700",
     stroke_color: "#000000",
@@ -25,7 +27,7 @@ const CAPTION_TEMPLATES = [
     description: "Bold green highlights like Alex Hormozi's videos",
     animation: "karaoke",
     font_family: "THEBOLDFONT",
-    font_size: 36,
+    font_size: 75,
     font_color: "#FFFFFF",
     highlight_color: "#00FF00",
     stroke_color: "#000000",
@@ -41,7 +43,7 @@ const CAPTION_TEMPLATES = [
     description: "Large yellow text with red highlights",
     animation: "pop",
     font_family: "THEBOLDFONT",
-    font_size: 42,
+    font_size: 88,
     font_color: "#FFFF00",
     highlight_color: "#FF0000",
     stroke_color: "#000000",
@@ -57,7 +59,7 @@ const CAPTION_TEMPLATES = [
     description: "Clean, subtle captions with transparent background",
     animation: "fade",
     font_family: "TikTokSans-Regular",
-    font_size: 24,
+    font_size: 58,
     font_color: "#FFFFFF",
     highlight_color: "#CCCCCC",
     stroke_color: null,
@@ -73,7 +75,7 @@ const CAPTION_TEMPLATES = [
     description: "TikTok-style with pink highlights",
     animation: "karaoke",
     font_family: "TikTokSans-Regular",
-    font_size: 32,
+    font_size: 70,
     font_color: "#FFFFFF",
     highlight_color: "#FE2C55",
     stroke_color: "#000000",
@@ -89,7 +91,7 @@ const CAPTION_TEMPLATES = [
     description: "Glowing neon effect with cyan highlights",
     animation: "karaoke",
     font_family: "THEBOLDFONT",
-    font_size: 34,
+    font_size: 72,
     font_color: "#00FFFF",
     highlight_color: "#FF00FF",
     stroke_color: "#000066",
@@ -105,7 +107,7 @@ const CAPTION_TEMPLATES = [
     description: "Professional podcast-style captions",
     animation: "fade",
     font_family: "TikTokSans-Regular",
-    font_size: 26,
+    font_size: 62,
     font_color: "#FFFFFF",
     highlight_color: "#FFB800",
     stroke_color: "#333333",
