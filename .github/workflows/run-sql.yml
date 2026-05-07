@@ -18,18 +18,11 @@ jobs:
           ssh -i ~/.ssh/deploy_key root@${{ secrets.DO_SERVER_IP }} << 'EOF'
           cd /opt/clippedai
           docker compose exec -T db psql -U postgres -d clippedai -c "
-            UPDATE \"User\" 
-            SET \"isAdmin\" = true, \"createdAt\" = (SELECT \"createdAt\" FROM \"User\" WHERE email = 'admin@clippedai.app')
-            WHERE email = 'ebelthomasseiko@gmail.com';
-
-            UPDATE \"UploadedFile\"
-            SET \"userId\" = (SELECT id FROM \"User\" WHERE email = 'ebelthomasseiko@gmail.com')
-            WHERE \"userId\" = (SELECT id FROM \"User\" WHERE email = 'admin@clippedai.app');
-
-            UPDATE \"Clip\"
-            SET \"userId\" = (SELECT id FROM \"User\" WHERE email = 'ebelthomasseiko@gmail.com')
-            WHERE \"userId\" = (SELECT id FROM \"User\" WHERE email = 'admin@clippedai.app');
-
-            DELETE FROM \"User\" WHERE email = 'admin@clippedai.app';
+            DELETE FROM \"Clip\";
+            DELETE FROM \"UploadedFile\";
+            SELECT
+              (SELECT COUNT(*) FROM \"User\") AS users_intact,
+              (SELECT COUNT(*) FROM \"UploadedFile\") AS tasks_remaining,
+              (SELECT COUNT(*) FROM \"Clip\") AS clips_remaining;
           "
           EOF
