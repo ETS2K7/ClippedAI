@@ -2,22 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
-import { Separator } from "~/components/ui/separator";
 import { Alert, AlertDescription } from "~/components/ui/alert";
 import { Skeleton } from "~/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { Slider } from "~/components/ui/slider";
 import { Switch } from "~/components/ui/switch";
+import { Label } from "~/components/ui/label";
+import { Separator } from "~/components/ui/separator";
 import { useSession } from "~/lib/auth-client";
-import { track } from "~/lib/datafast";
 import Link from "next/link";
 import { CheckCircle, AlertCircle, ArrowLeft, Mail } from "lucide-react";
 import AppShell from "~/components/app-shell";
@@ -25,101 +15,46 @@ import useSWR from "swr";
 import { fetcher } from "~/lib/fetcher";
 
 export default function SettingsPage() {
-  const [fontFamily, setFontFamily] = useState("TikTokSans-Regular");
-  const [fontSize, setFontSize] = useState(75);
-  const [fontColor, setFontColor] = useState("#FFFFFF");
   const [completionEmails, setCompletionEmails] = useState(true);
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { data: session, isPending } = useSession();
 
-  // SWR: Global Data Fetching
   const swrOptions = { revalidateOnFocus: false };
-  const { data: fontsData } = useSWR(
-    session?.user ? "/api/fonts" : null,
-    fetcher,
-    swrOptions,
-  );
   const {
     data: prefsData,
     error: prefsError,
     mutate: mutatePrefs,
   } = useSWR(session?.user ? "/api/preferences" : null, fetcher, swrOptions);
 
-  const availableFonts: Array<{ name: string; display_name: string }> =
-    fontsData?.fonts || [];
   const isFetching = session?.user && !prefsData && !prefsError;
 
-  // On preferences loaded, set initial local values
   useEffect(() => {
     if (prefsData) {
-      setFontFamily(prefsData.fontFamily || "TikTokSans-Regular");
-      setFontSize(prefsData.fontSize && prefsData.fontSize >= 50 ? prefsData.fontSize : 75);
-      setFontColor(prefsData.fontColor || "#FFFFFF");
       setCompletionEmails(prefsData.notifyOnCompletion ?? true);
     }
   }, [prefsData]);
-
-  // Inject font-faces globally based on SWR fonts
-  useEffect(() => {
-    if (availableFonts.length > 0) {
-      const fontFaceStyles = availableFonts
-        .map((font) => {
-          return `
-          @font-face {
-            font-family: '${font.name}';
-            src: url('/api/fonts/${font.name}') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-          }
-        `;
-        })
-        .join("\n");
-
-      let styleElement = document.getElementById("custom-fonts");
-      if (!styleElement) {
-        styleElement = document.createElement("style");
-        styleElement.id = "custom-fonts";
-        document.head.appendChild(styleElement);
-      }
-      styleElement.innerHTML = fontFaceStyles;
-    }
-  }, [availableFonts]);
 
   const handleSavePreferences = async () => {
     setIsLoading(true);
     setError(null);
     setSuccess(false);
-
     try {
       const response = await fetch("/api/preferences", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fontFamily,
-          fontSize,
-          fontColor,
-          notifyOnCompletion: completionEmails,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notifyOnCompletion: completionEmails }),
       });
-
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || "Failed to save preferences");
       }
-
-      track("preferences_saved");
       setSuccess(true);
       mutatePrefs();
       setTimeout(() => setSuccess(false), 3000);
-    } catch (error) {
-      console.error("Error saving preferences:", error);
-      setError(
-        error instanceof Error ? error.message : "Failed to save preferences",
-      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save preferences");
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +66,6 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <Skeleton className="mx-auto h-4 w-32 rounded-md bg-white/[0.1]" />
           <Skeleton className="mx-auto h-4 w-48 rounded-md bg-white/[0.1]" />
-          <Skeleton className="mx-auto h-4 w-24 rounded-md bg-white/[0.1]" />
         </div>
       </div>
     );
@@ -184,7 +118,7 @@ export default function SettingsPage() {
               </h1>
             </div>
             <p className="mt-3 font-mono text-[10px] tracking-widest text-white/40 uppercase sm:mt-4 sm:text-xs">
-              Configure your default preferences for video clip generation.
+              Manage your account preferences.
             </p>
           </div>
         </div>
@@ -192,140 +126,6 @@ export default function SettingsPage() {
         {/* ── Main content ── */}
         <div className="relative mx-auto max-w-3xl px-4 py-8 sm:px-6">
           <div className="mx-auto max-w-xl space-y-6 sm:space-y-8">
-            {/* ── Font Preferences ── */}
-            <div className="brutal-card space-y-4 p-4 sm:space-y-6 sm:p-6">
-              <div>
-                <h3 className="mb-2 font-mono text-xs font-bold tracking-widest text-white uppercase sm:text-[14px]">
-                  DEFAULT FONT SETTINGS
-                </h3>
-                <p className="font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                  These settings will be applied to all new video processing
-                  tasks.
-                </p>
-              </div>
-
-              {/* Font Family Selector */}
-              <div className="space-y-2">
-                <Label className="font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
-                  Font Family
-                </Label>
-                <Select
-                  value={fontFamily}
-                  onValueChange={setFontFamily}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className="brutal-input w-full">
-                    <SelectValue placeholder="Select font" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableFonts.map((font) => (
-                      <SelectItem key={font.name} value={font.name}>
-                        <span
-                          style={{
-                            fontFamily: `'${font.name}', system-ui, sans-serif`,
-                          }}
-                        >
-                          {font.display_name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                    {availableFonts.length === 0 && (
-                      <SelectItem value="TikTokSans-Regular">
-                        TikTok Sans Regular
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Font Size Slider */}
-              <div className="space-y-2">
-                <Label className="font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
-                  Font Size: {fontSize}pt
-                </Label>
-                <div className="px-1">
-                  <Slider
-                    value={[fontSize]}
-                    onValueChange={(value) => setFontSize(value[0]!)}
-                    max={200}
-                    min={50}
-                    step={5}
-                    disabled={isLoading}
-                    className="w-full"
-                  />
-                </div>
-                <div className="flex justify-between text-xs text-white/20">
-                  <span>50pt</span>
-                  <span>200pt</span>
-                </div>
-              </div>
-
-              {/* Font Color Picker */}
-              <div className="space-y-2">
-                <Label className="font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
-                  Font Color
-                </Label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={fontColor}
-                    onChange={(e) => setFontColor(e.target.value)}
-                    disabled={isLoading}
-                    className="h-8 w-10 cursor-pointer rounded-md border border-white/10 bg-transparent disabled:cursor-not-allowed"
-                  />
-                  <Input
-                    type="text"
-                    value={fontColor}
-                    onChange={(e) => setFontColor(e.target.value)}
-                    disabled={isLoading}
-                    placeholder="#FFFFFF"
-                    className="brutal-input h-9 flex-1 font-mono uppercase"
-                    pattern="^#[0-9A-Fa-f]{6}$"
-                  />
-                </div>
-                <div className="mt-1 flex gap-1.5">
-                  {[
-                    "#FFFFFF",
-                    "#000000",
-                    "#FFD700",
-                    "#FF6B6B",
-                    "#4ECDC4",
-                    "#45B7D1",
-                  ].map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setFontColor(color)}
-                      disabled={isLoading}
-                      className="h-6 w-6 cursor-pointer rounded-full border-2 border-white/10 transition-all hover:scale-125 hover:border-white/30 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Preview */}
-              <div className="space-y-2">
-                <Label className="font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
-                  PREVIEW
-                </Label>
-                <div className="flex min-h-[100px] items-center justify-center border border-white/[0.1] bg-black p-6">
-                  <p
-                    style={{
-                      color: fontColor,
-                    fontSize: `${Math.round(fontSize * 0.18)}px`,
-                      fontFamily: `'${fontFamily}', system-ui, -apple-system, sans-serif`,
-                      textAlign: "center",
-                      lineHeight: "1.4",
-                    }}
-                    className="font-medium"
-                  >
-                    Your subtitle will look like this
-                  </p>
-                </div>
-              </div>
-            </div>
 
             {/* ── Notifications ── */}
             <div className="brutal-card space-y-5 p-4 sm:p-6">
@@ -364,7 +164,6 @@ export default function SettingsPage() {
 
             <Separator className="bg-white/[0.06]" />
 
-            {/* Success/Error Messages */}
             {success && (
               <Alert className="border-emerald-500/20 bg-emerald-500/5">
                 <CheckCircle className="h-4 w-4 text-emerald-400" />
@@ -383,7 +182,6 @@ export default function SettingsPage() {
               </Alert>
             )}
 
-            {/* Save Button */}
             <Button
               onClick={handleSavePreferences}
               disabled={isLoading}
