@@ -18,11 +18,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key root@${{ secrets.DO_SERVER_IP }} << 'EOF'
           cd /opt/clippedai
           docker compose exec -T db psql -U postgres -d clippedai -c "
-            DELETE FROM \"Clip\";
-            DELETE FROM \"UploadedFile\";
-            SELECT
-              (SELECT COUNT(*) FROM \"User\") AS users_intact,
-              (SELECT COUNT(*) FROM \"UploadedFile\") AS tasks_remaining,
-              (SELECT COUNT(*) FROM \"Clip\") AS clips_remaining;
+            UPDATE \"User\" SET \"fontSize\" = 75 WHERE \"fontSize\" IS NOT NULL AND \"fontSize\" < 50;
+            SELECT email, \"fontSize\" FROM \"User\" WHERE \"fontSize\" IS NOT NULL;
           "
           EOF
