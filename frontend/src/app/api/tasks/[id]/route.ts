@@ -110,6 +110,7 @@ export async function GET(
       source_type: getSourceType(file.s3Key),
       status: mapStatus(file.status),
       created_at: toISO(file.createdAt),
+      updated_at: toISO(file.updatedAt),
     },
     clips: clipsWithUrls,
   });

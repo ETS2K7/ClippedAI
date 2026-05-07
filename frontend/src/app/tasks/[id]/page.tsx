@@ -171,6 +171,7 @@ interface TaskDetails {
   source_type: "youtube" | "upload";
   status: string;
   created_at: string;
+  updated_at: string;
 }
 
 export default function TaskPage() {
@@ -349,6 +350,23 @@ export default function TaskPage() {
     return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   };
 
+  /** Total duration for a completed task derived from DB timestamps. */
+  const completedDuration =
+    task?.status === "completed" && task.created_at && task.updated_at
+      ? Math.max(
+          0,
+          Math.floor(
+            (new Date(task.updated_at).getTime() -
+              new Date(task.created_at).getTime()) /
+              1000,
+          ),
+        )
+      : null;
+
+  /** What to show in elapsed-time displays. */
+  const displayElapsed =
+    completedDuration !== null ? completedDuration : elapsedSeconds;
+
   /** Optimistic title update. */
   const handleEditTitle = () => {
     if (!editedTitle.trim() || !params.id) return;
@@ -509,7 +527,7 @@ export default function TaskPage() {
                 task.status === "generating_clips") && (
                 <span className="flex items-center gap-1 font-mono text-[10px] font-bold tabular-nums tracking-widest text-white/40">
                   <Clock className="h-3 w-3" />
-                  {formatElapsed(elapsedSeconds)}
+                  {formatElapsed(displayElapsed)}
                 </span>
               )}
 
@@ -562,7 +580,7 @@ export default function TaskPage() {
               <div className="mt-4 flex items-center gap-2 rounded-md border border-white/10 px-4 py-2">
                 <Clock className="h-3.5 w-3.5 text-white/30" />
                 <span className="font-mono text-2xl font-black tabular-nums tracking-widest text-white">
-                  {formatElapsed(elapsedSeconds)}
+                  {formatElapsed(displayElapsed)}
                 </span>
               </div>
               <p className="mt-3 text-[10px] font-bold tracking-widest text-white/20 uppercase">
