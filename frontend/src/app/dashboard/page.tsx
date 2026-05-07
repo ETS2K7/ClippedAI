@@ -129,32 +129,12 @@ export default function Home() {
   const { data: session, isPending } = useSession();
   const isAdminSession = Boolean(session?.user?.isAdmin);
 
-  const [fontFamily, setFontFamily] = useState("Komika Axis");
-  const [fontSize, setFontSize] = useState(75);
-  const [fontColor, setFontColor] = useState("#FFFFFF");
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(true);
-  const [fontSearch, setFontSearch] = useState("");
-  const [isUploadingFont, setIsUploadingFont] = useState(false);
-  const fontUploadInputRef = useRef<HTMLInputElement | null>(null);
+
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
 
   // SWR: Global Data Fetching (only enabled if signed in)
   const swrOptions = { revalidateOnFocus: false };
-  const {
-    data: fontsData,
-    error: fontError,
-    mutate: mutateFonts,
-  } = useSWR(session?.user ? "/api/fonts" : null, fetcher, swrOptions);
-  const { data: templatesData } = useSWR(
-    session?.user ? "/api/caption-templates" : null,
-    fetcher,
-    swrOptions,
-  );
-  const { data: brollData } = useSWR(
-    session?.user ? "/api/broll/status" : null,
-    fetcher,
-    swrOptions,
-  );
+
   const { data: prefsData } = useSWR(
     session?.user ? "/api/preferences" : null,
     fetcher,
@@ -167,65 +147,15 @@ export default function Home() {
   );
 
   // Derived application state
-  const availableFonts: FontOption[] = fontsData?.fonts || [];
   const isAdmin = prefsData?.isAdmin ?? isAdminSession;
-  const fontLoadError = fontError ? "Could not load fonts right now." : null;
-  const availableTemplates: CaptionTemplate[] = templatesData?.templates || [];
-  const brollAvailable = brollData?.configured || false;
   const latestTask: LatestTask | null = tasksData?.tasks?.[0] || null;
 
-  // Caption template state
-  const [captionTemplate, setCaptionTemplate] = useState("default");
-  const [includeBroll, setIncludeBroll] = useState(false);
-  const [outputFormat, setOutputFormat] = useState<"vertical" | "original">(
-    "vertical",
-  );
-  const [addSubtitles, setAddSubtitles] = useState(true);
+
 
   const youtubeThumbnailUrl =
     sourceType === "youtube" ? getYouTubeThumbnailUrl(url) : null;
 
-  // Font state is driven exclusively by caption template selection.
-  // Auto-apply the default template on first load so UI and submitted values match.
-  const [templateApplied, setTemplateApplied] = useState(false);
-  useEffect(() => {
-    if (!templateApplied && availableTemplates.length > 0) {
-      const def = availableTemplates.find((t) => t.id === "default");
-      if (def) {
-        if (def.font_family) setFontFamily(def.font_family);
-        if (typeof def.font_size === "number") setFontSize(def.font_size);
-        if (def.font_color) setFontColor(def.font_color);
-        setTemplateApplied(true);
-      }
-    }
-  }, [availableTemplates, templateApplied]);
 
-  // Inject required font-faces globally dynamically based on available SWR fonts
-  useEffect(() => {
-    if (availableFonts.length > 0) {
-      const fontFaceStyles = availableFonts
-        .map((font) => {
-          const format = font.format === "otf" ? "opentype" : "truetype";
-          return `
-          @font-face {
-            font-family: '${font.name}';
-            src: url('/api/fonts/${font.name}') format('${format}');
-            font-weight: normal;
-            font-style: normal;
-          }
-        `;
-        })
-        .join("\n");
-
-      let styleElement = document.getElementById("custom-fonts");
-      if (!styleElement) {
-        styleElement = document.createElement("style");
-        styleElement.id = "custom-fonts";
-        document.head.appendChild(styleElement);
-      }
-      styleElement.innerHTML = fontFaceStyles;
-    }
-  }, [availableFonts]);
 
   // Always treat file input as uncontrolled, and store file in a ref
   const fileRef = useRef<File | null>(null);
@@ -236,87 +166,7 @@ export default function Home() {
     setFileName(file ? file.name : null);
   };
 
-  const handleTemplateChange = (templateId: string) => {
-    setCaptionTemplate(templateId);
 
-    const selectedTemplate = availableTemplates.find(
-      (template) => template.id === templateId,
-    );
-    if (!selectedTemplate) {
-      return;
-    }
-
-    if (selectedTemplate.font_family) {
-      setFontFamily(selectedTemplate.font_family);
-    }
-    if (typeof selectedTemplate.font_size === "number") {
-      setFontSize(selectedTemplate.font_size);
-    }
-    if (selectedTemplate.font_color) {
-      setFontColor(selectedTemplate.font_color);
-    }
-  };
-
-  const handleFontUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
-
-    const isSupported =
-      file.name.toLowerCase().endsWith(".ttf") ||
-      file.name.toLowerCase().endsWith(".otf");
-    if (!isSupported) {
-      setError("Only .ttf and .otf files are supported for custom fonts.");
-      return;
-    }
-
-    try {
-      setIsUploadingFont(true);
-      setError(null);
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch("/api/fonts/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const parsed = await parseApiError(response, "Failed to upload font");
-        setError(formatSupportMessage(parsed));
-        return;
-      }
-
-      const data = await response.json();
-      if (data?.font?.name) {
-        setFontFamily(data.font.name);
-      }
-      await mutateFonts();
-    } catch (uploadError) {
-      console.error("Failed to upload font:", uploadError);
-      setError("Failed to upload font. Please try again.");
-    } finally {
-      setIsUploadingFont(false);
-    }
-  };
-
-  const filteredFonts = availableFonts.filter((font) => {
-    const keyword = fontSearch.toLowerCase().trim();
-    if (!keyword) {
-      return true;
-    }
-
-    return (
-      font.display_name.toLowerCase().includes(keyword) ||
-      font.name.toLowerCase().includes(keyword)
-    );
-  });
-
-  const canUploadCustomFonts = true;
 
   const getStepIcon = (step: string) => {
     const iconMap: Record<string, React.ReactElement> = {
@@ -367,10 +217,6 @@ export default function Home() {
     setCurrentStep("");
     setSourceTitle(null);
 
-    const normalizedColor = /^#[0-9A-Fa-f]{6}$/.test(fontColor)
-      ? fontColor
-      : "#FFFFFF";
-
     try {
       let videoUrl = url;
 
@@ -409,16 +255,9 @@ export default function Home() {
             url: videoUrl,
             title: null,
           },
-          font_options: {
-            font_family: fontFamily,
-            font_size: fontSize,
-            font_color: normalizedColor,
-          },
-          caption_template: captionTemplate,
-          include_broll: includeBroll,
           processing_mode: "fast",
-          output_format: outputFormat,
-          add_subtitles: addSubtitles,
+          output_format: "vertical",
+          add_subtitles: true,
         }),
       });
 
@@ -440,14 +279,7 @@ export default function Home() {
 
       const startResult = await startResponse.json();
       const taskIdFromStart = startResult.task_id;
-      track("task_created", {
-        source_type: sourceType,
-        caption_template: captionTemplate,
-        include_broll: includeBroll,
-        output_format: outputFormat,
-        add_subtitles: addSubtitles,
-        processing_mode: "fast",
-      });
+      track("task_created", { source_type: sourceType, processing_mode: "fast" });
       // Redirect immediately to the task page
       window.location.href = `/tasks/${taskIdFromStart}`;
     } catch (error) {
@@ -833,92 +665,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Caption & Style Section */}
-                <div className="brutal-card space-y-3 p-3 sm:p-4">
-                  <div className="flex items-center gap-2 font-mono text-sm font-bold tracking-widest text-white uppercase">
-                    <Sparkles className="h-4 w-4 text-white" />
-                    STYLE & CAPTIONS
-                  </div>
-                  <div className="border-l-2 border-white/20 pl-3 space-y-3">
-                    <div>
-                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Font Family</p>
-                      <p className="font-mono text-sm font-bold text-white tracking-wide">Komika Axis</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Caption Style</p>
-                      <p className="font-mono text-sm font-bold text-white tracking-wide">MrBeast</p>
-                    </div>
-                  </div>
 
-
-                  {/* B-Roll Toggle */}
-                  {brollAvailable && (
-                    <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
-                      <div className="flex items-start gap-3 sm:items-center">
-                        <Film className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
-                        <div>
-                          <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
-                            AI B-ROLL
-                          </span>
-                          <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                            Auto-add stock footage from Pexels
-                          </p>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={includeBroll}
-                        onCheckedChange={setIncludeBroll}
-                        disabled={isLoading}
-                        aria-label="Toggle AI B-Roll: auto-add stock footage from Pexels"
-                      />
-                    </div>
-                  )}
-
-                  {/* Output format */}
-                  <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
-                    <div className="flex items-start gap-3 sm:items-center">
-                      <Monitor className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
-                      <div>
-                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
-                          WIDE FORMAT
-                        </span>
-                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                          Keep original aspect ratio instead of 9:16 vertical
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={outputFormat === "original"}
-                      onCheckedChange={(checked) =>
-                        setOutputFormat(checked ? "original" : "vertical")
-                      }
-                      disabled={isLoading}
-                      aria-label="Toggle wide format: keep original aspect ratio instead of 9:16 vertical"
-                    />
-                  </div>
-
-                  {/* Add subtitles */}
-                  <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
-                    <div className="flex items-start gap-3 sm:items-center">
-                      <Type className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
-                      <div>
-                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
-                          ADD SUBTITLES
-                        </span>
-                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                          Burn captions onto clips (disable for faster
-                          processing)
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={addSubtitles}
-                      onCheckedChange={setAddSubtitles}
-                      disabled={isLoading}
-                      aria-label="Toggle add subtitles: burn captions onto clips"
-                    />
-                  </div>
-                </div>
 
 
                 {isLoading && (
