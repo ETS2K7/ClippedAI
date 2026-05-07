@@ -18,7 +18,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key root@${{ secrets.DO_SERVER_IP }} << 'EOF'
           cd /opt/clippedai
           docker compose exec -T db psql -U postgres -d clippedai -c "
-            UPDATE \"User\" SET \"fontSize\" = 75 WHERE \"fontSize\" IS NOT NULL AND \"fontSize\" < 50;
-            SELECT email, \"fontSize\" FROM \"User\" WHERE \"fontSize\" IS NOT NULL;
+            UPDATE \"User\" SET \"prefFontSize\" = 75 WHERE \"prefFontSize\" < 50;
+            SELECT email, \"prefFontSize\" FROM \"User\";
           "
           EOF

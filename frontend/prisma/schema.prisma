@@ -47,7 +47,7 @@ model User {
   isAdmin        Boolean   @default(false)
   /// Caption / font preferences — persisted by PATCH /api/preferences
   prefFontFamily String    @default("Komika Axis")
-  prefFontSize   Int       @default(24)
+  prefFontSize   Int       @default(75)
   prefFontColor  String    @default("#FFFFFF")
 
   /// Dodo Payments (Hybrid model)
