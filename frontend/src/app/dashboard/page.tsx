@@ -186,7 +186,19 @@ export default function Home() {
     sourceType === "youtube" ? getYouTubeThumbnailUrl(url) : null;
 
   // Font state is driven exclusively by caption template selection.
-  // prefsData is fetched only for the isAdmin flag.
+  // Auto-apply the default template on first load so UI and submitted values match.
+  const [templateApplied, setTemplateApplied] = useState(false);
+  useEffect(() => {
+    if (!templateApplied && availableTemplates.length > 0) {
+      const def = availableTemplates.find((t) => t.id === "default");
+      if (def) {
+        if (def.font_family) setFontFamily(def.font_family);
+        if (typeof def.font_size === "number") setFontSize(def.font_size);
+        if (def.font_color) setFontColor(def.font_color);
+        setTemplateApplied(true);
+      }
+    }
+  }, [availableTemplates, templateApplied]);
 
   // Inject required font-faces globally dynamically based on available SWR fonts
   useEffect(() => {
