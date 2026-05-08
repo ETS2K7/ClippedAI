@@ -56,9 +56,12 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     prompt = (
         "Extract up to 3 non-overlapping viral clips from this transcript for TikTok, YouTube Shorts, and Instagram Reels.\n"
         "If the video is short, extract as many as mathematically possible.\n\n"
-        "Each clip MUST be between 15 and 45 seconds long. No exceptions.\n"
-        "Start each clip on a hook (bold claim, surprising fact, emotional moment).\n"
-        "End each clip on a complete thought — never mid-sentence.\n\n"
+        "Each clip MUST be between 15 and 60 seconds long. No exceptions.\n"
+        "1. Start each clip on a hook (bold claim, surprising fact, emotional moment).\n"
+        "2. End each clip on a complete thought — never mid-sentence.\n"
+        "3. 100% SELF-CONTAINED: The clip MUST make complete sense to a viewer who has never seen the original video.\n"
+        "4. NO UNRESOLVED PRONOUNS: The clip CANNOT start with words like 'He', 'This', 'That', or 'It' unless the subject is immediately clarified.\n"
+        "5. FULL NARRATIVE ARC: The clip must have a clear setup, escalation, and payoff within its timeframe.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
