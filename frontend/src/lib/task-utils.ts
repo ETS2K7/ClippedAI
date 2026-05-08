@@ -28,7 +28,7 @@ export function getSourceTitle(file: {
   if (file.displayName) return file.displayName;
   // YouTube keys look like: youtube-downloads/<userId>-<ts>/<videoId>/original.mp4
   const parts = file.s3Key.split("/");
-  if (parts[0] === "youtube-downloads" && parts[2]) return parts[2]; // videoId
+  if (parts[0] === "youtube-downloads" && parts[1]) return parts[1]; // videoId is now at index 1
   // Uploaded files: <uuid>/original.mp4 — fall back to folder name
   return parts[0] ?? "Video";
 }

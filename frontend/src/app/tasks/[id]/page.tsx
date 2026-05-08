@@ -345,15 +345,18 @@ export default function TaskPage() {
   }, [task?.status, task?.created_at]);
 
   const formatElapsed = (s: number) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
+    const totalSeconds = Math.round(s);
+    const m = Math.floor(totalSeconds / 60);
+    const sec = totalSeconds % 60;
     return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   };
 
   /** What to show in elapsed-time displays. */
   const displayElapsed =
     task?.status === "completed" 
-      ? ((task as any).processing_time ?? elapsedSeconds)
+      ? (task.updated_at && task.created_at
+          ? (new Date(task.updated_at).getTime() - new Date(task.created_at).getTime()) / 1000
+          : ((task as any).processing_time ?? elapsedSeconds))
       : elapsedSeconds;
 
   /** Optimistic title update. */

@@ -52,7 +52,11 @@ export async function POST(
         if (!newDisplayName || newDisplayName.toUpperCase() === videoId.toUpperCase()) {
           try {
             const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
-            const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${canonicalUrl}&format=json`);
+            const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${canonicalUrl}&format=json`, {
+              headers: {
+                "User-Agent": "ClippedAI/1.0 (+https://clippedai.app)",
+              },
+            });
             if (oembedRes.ok) {
               const oembedData = await oembedRes.json();
               if (oembedData.title) {

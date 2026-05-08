@@ -109,13 +109,29 @@ export async function POST(req: Request) {
       }
 
       const canonicalYoutubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-      const generatedS3Key = `youtube-downloads/${session.user.id}-${Date.now()}/${videoId}/original.mp4`;
+      const generatedS3Key = `youtube-downloads/${videoId}/original.mp4`;
+      
+      let videoTitle = null;
+      try {
+        const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${canonicalYoutubeUrl}&format=json`, {
+          headers: {
+            "User-Agent": "ClippedAI/1.0 (+https://clippedai.app)",
+          },
+        });
+        if (oembedRes.ok) {
+          const oembedData = await oembedRes.json();
+          videoTitle = oembedData.title;
+        }
+      } catch (e) {
+        console.warn("Failed to fetch YouTube title:", e);
+      }
 
       try {
         const newFile = await db.uploadedFile.create({
           data: {
             userId: session.user.id,
             s3Key: generatedS3Key,
+            displayName: videoTitle,
             status: "processing",
             uploaded: true,
           },
