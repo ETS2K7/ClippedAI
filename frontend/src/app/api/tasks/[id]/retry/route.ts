@@ -42,11 +42,36 @@ export async function POST(
       );
     }
 
-    // Reset task to queued status
+    let newDisplayName = task.displayName;
+
+    // If it's a YouTube download and the display name is just the video ID or null, try fetching the real title
+    if (task.s3Key.startsWith("youtube-downloads/")) {
+      const parts = task.s3Key.split("/");
+      if (parts.length >= 2) {
+        const videoId = parts[1];
+        if (!newDisplayName || newDisplayName.toUpperCase() === videoId.toUpperCase()) {
+          try {
+            const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
+            const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${canonicalUrl}&format=json`);
+            if (oembedRes.ok) {
+              const oembedData = await oembedRes.json();
+              if (oembedData.title) {
+                newDisplayName = oembedData.title;
+              }
+            }
+          } catch (e) {
+            console.error("[retry] Failed to fetch oembed title", e);
+          }
+        }
+      }
+    }
+
+    // Reset task to queued status and update title if found
     const updated = await db.uploadedFile.update({
       where: { id: taskId },
       data: {
         status: "queued",
+        displayName: newDisplayName,
         clips: {
           deleteMany: {}, // Remove old clips if any
         },
