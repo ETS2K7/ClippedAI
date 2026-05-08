@@ -141,7 +141,26 @@ export async function DELETE(
   if (!file) return new NextResponse(null, { status: 404 });
 
   // Gather all S3 keys to delete
-  const keysToDelete = [file.s3Key];
+  const keysToDelete: string[] = [];
+
+  // Safe-Delete Check: Only delete the source video from S3 if NO other tasks are using it.
+  // This prevents breaking generations for other users who processed the same YouTube video.
+  const otherTasksUsingSource = await db.uploadedFile.count({
+    where: {
+      s3Key: file.s3Key,
+      id: { not: id },
+    },
+  });
+
+  if (otherTasksUsingSource === 0) {
+    keysToDelete.push(file.s3Key);
+  } else {
+    console.log(
+      `[tasks/DELETE] Keeping source video ${file.s3Key} in S3 - used by ${otherTasksUsingSource} other tasks.`,
+    );
+  }
+
+  // Clips and thumbnails are unique to this task and can always be cleaned up.
   for (const clip of file.clips) {
     if (clip.s3Key) keysToDelete.push(clip.s3Key);
     if (clip.thumbnailKey) keysToDelete.push(clip.thumbnailKey);
