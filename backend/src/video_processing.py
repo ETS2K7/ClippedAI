@@ -39,7 +39,7 @@ CROP_W_4          = 540  # 4-speaker grid (540×960 each)
 CROP_H_HALF = int(round(CROP_W_1 * (OUT_H // 2) / OUT_W))  # = 541
 
 # Gaussian smoothing frames (0 = Hard cuts, no sliding)
-SIGMA = 12  
+SIGMA = 0  
 
 # Stabilisation thresholds (entry = min frames before mode activates,
 # gap = min gap frames before mode drops — prevents rapid re-entry)
