@@ -524,10 +524,11 @@ export default function TaskPage() {
               {/* Live timer — shown while processing, final time when done */}
               {(task.status === "processing" ||
                 task.status === "queued" ||
-                task.status === "generating_clips") && (
+                task.status === "generating_clips" ||
+                task.status === "completed") && (
                 <span className="flex items-center gap-1 font-mono text-[10px] font-bold tabular-nums tracking-widest text-white/40">
                   <Clock className="h-3 w-3" />
-                  {formatElapsed(displayElapsed)}
+                  {formatElapsed(displayElapsed ?? 0)}
                 </span>
               )}
 
