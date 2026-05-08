@@ -155,11 +155,6 @@ export default function Home() {
   const [outputFormat, setOutputFormat] = useState<"vertical" | "original">("vertical");
   const [addSubtitles, setAddSubtitles] = useState(true);
 
-  const youtubeThumbnailUrl =
-    sourceType === "youtube" ? getYouTubeThumbnailUrl(url) : null;
-
-
-
   // Always treat file input as uncontrolled, and store file in a ref
   const fileRef = useRef<File | null>(null);
 
@@ -1016,19 +1011,11 @@ export default function Home() {
 
                             {/* Best Frame display */}
                             <div className="absolute inset-0 bg-black cursor-pointer">
-                              {youtubeThumbnailUrl ? (
-                                <img
-                                  src={youtubeThumbnailUrl}
-                                  alt="Video preview"
-                                  className="h-full w-full object-cover transition-opacity duration-300"
-                                />
-                              ) : (
                                 <img
                                   src="/images/mobile-fallback.png"
                                   alt="Default preview"
                                   className="h-full w-full object-cover transition-opacity duration-300"
                                 />
-                              )}
                             </div>
 
                             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
