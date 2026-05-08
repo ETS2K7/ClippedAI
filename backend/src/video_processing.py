@@ -196,6 +196,13 @@ def _face_cy(face: Dict) -> float:
 def _face_score(face: Dict) -> float:
     return face.get("raw_score", 0.0)
 
+def _face_area(face: Dict) -> float:
+    """Bounding-box area — used to pick the most prominent face when nobody is
+    actively speaking.  TalkNet raw_score is a speaking-confidence signal and
+    is unreliable (negative) for silent frames; the largest face in frame is a
+    far better proxy for 'the main subject' in that case."""
+    return (face["x2"] - face["x1"]) * (face["y2"] - face["y1"])
+
 
 def get_centered_crop(
     frame_img: np.ndarray,
@@ -462,29 +469,61 @@ def track_speaker_and_frame(
     )
 
     # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
-    # Check file size before loading into memory to prevent memory exhaustion
-    file_size_mb = os.path.getsize(clip_file) / (1024 * 1024)
-    MAX_VIDEO_SIZE_MB = 500
-    if file_size_mb > MAX_VIDEO_SIZE_MB:
-        logger.warning(
-            f"Video file is large ({file_size_mb:.1f}MB). "
-            f"Loading into memory may cause issues. Consider using shorter clips."
-        )
-
-    with open(clip_file, "rb") as vf:
-        video_bytes = vf.read()
-
     try:
         if tracker is not None:
-            # Local dev path — call TalkNet directly, no Modal
-            logger.info("[local] Calling LocalFastASDTracker…")
-            result_json = tracker.process_video(video_bytes)
+            logger.info("Calling local Fast-ASD tracker...")
+            _, s, DET = tracker
+            
+            import threading
+            import shutil
+            import sys
+            import importlib.util
+            
+            tid = threading.get_ident()
+            module_name = f"demoTalkNet_{tid}"
+            new_path = f"/fast-asd/talknet/{module_name}.py"
+            save_dir = f"/tmp/talknet_save_{tid}/"
+            
+            # 1. Dynamically copy and patch the TalkNet source code for this specific thread
+            shutil.copy("/fast-asd/talknet/demoTalkNet.py", new_path)
+            with open(new_path, "r") as f:
+                content = f.read()
+            
+            # Rewrite the hardcoded global directory to a thread-specific directory
+            content = content.replace('save_path = "save/"', f'save_path = "{save_dir}"')
+            
+            with open(new_path, "w") as f:
+                f.write(content)
+                
+            # 2. Import the isolated module
+            spec = importlib.util.spec_from_file_location(module_name, new_path)
+            local_demoTalkNet = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(local_demoTalkNet)
+            sys.modules[module_name] = local_demoTalkNet
+            
+            try:
+                # 3. Execute TalkNet in the isolated thread context
+                tracking_data = local_demoTalkNet.main(
+                    s=s,
+                    DET=DET,
+                    video_path=clip_file,
+                    start_seconds=0,
+                    end_seconds=-1,
+                    return_visualization=False,
+                    in_memory_threshold=0,
+                )
+            finally:
+                # 4. Garbage Collection: Prevent resource leaks by deleting the clone and its temp files
+                logger.info(f"Cleaning up TalkNet clone for thread {tid}")
+                if module_name in sys.modules:
+                    del sys.modules[module_name]
+                if os.path.exists(new_path):
+                    os.remove(new_path)
+                if os.path.exists(save_dir):
+                    shutil.rmtree(save_dir, ignore_errors=True)
         else:
-            # Production path — call Modal remote
-            logger.info("Calling Modal Fast-ASD tracker...")
-            Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-            result_json = Tracker().process_video.remote(video_bytes)
-        tracking_data = json.loads(result_json)
+            logger.error("Fast-ASD tracker not initialized")
+            raise RuntimeError("Fast-ASD tracker not initialized")
     except Exception as e:
         logger.error(f"Fast-ASD tracker failed: {e}")
         raise RuntimeError(f"ASD tracking failed: {e}") from e
@@ -646,6 +685,9 @@ def track_speaker_and_frame(
     def _norm_x(f): return ((f["x1"] + f["x2"]) / 2.0) / w
     def _norm_y(f): return ((f["y1"] + f["y2"]) / 2.0) / h
 
+    # Per-path frame counters — logged per scene to diagnose framing issues
+    path_counts = {"A": 0, "B": 0, "C": 0, "C5": 0, "D": 0, "NOFACE": 0}
+
     for fi in range(frames_count):
         faces    = frame_faces.get(fi, [])
         speaking = [f for f in faces if f.get("speaking", False)]
@@ -660,6 +702,7 @@ def track_speaker_and_frame(
             for i, f in enumerate(by_x):
                 raw_spk_cx[fi, i] = _norm_x(f)
                 raw_spk_cy[fi, i] = _norm_y(f)
+            path_counts["A"] += 1
             continue
 
         # —— B) Visual presence
@@ -713,6 +756,7 @@ def track_speaker_and_frame(
             raw_n_spk[fi] = 1
             raw_spk_cx[fi, 0] = _norm_x(speaking[0])
             raw_spk_cy[fi, 0] = _norm_y(speaking[0])
+            path_counts["C"] += 1
             continue
 
         # —— C.5) Diarization-anchored fallback
@@ -724,23 +768,35 @@ def track_speaker_and_frame(
             spk_positions = scene_spk_x_map.get(scene_s, {})
             if spk in spk_positions:
                 target_x = spk_positions[spk]
-                best = min(faces, key=lambda f: abs(_face_cx(f) - target_x))
+                closest = min(faces, key=lambda f: abs(_face_cx(f) - target_x))
+                largest = max(faces, key=_face_area)
+                # If the speaker's face is much smaller than the dominant face,
+                # the camera is framing a different subject (reaction/cutaway shot).
+                # In that case prefer the most prominent face over positional anchor.
+                if _face_area(closest) < 0.35 * _face_area(largest):
+                    best = largest
+                else:
+                    best = closest
             elif spk in clip_side_map:
-                best = sorted(faces, key=lambda f: f["x1"])[clip_side_map[spk]]
+                faces_by_x = sorted(faces, key=lambda f: f["x1"])
+                best = faces_by_x[min(clip_side_map[spk], len(faces_by_x) - 1)]
             else:
-                best = max(faces, key=_face_score)
+                best = max(faces, key=_face_area)
             
             raw_n_spk[fi] = 1
             raw_spk_cx[fi, 0] = _norm_x(best)
             raw_spk_cy[fi, 0] = _norm_y(best)
+            path_counts["C5"] += 1
             continue
 
-        # —— D) Best-scoring detected face (last resort fallback)
         if faces:
-            best = max(faces, key=_face_score)
+            best = max(faces, key=_face_area)
             raw_n_spk[fi] = 1
             raw_spk_cx[fi, 0] = _norm_x(best)
             raw_spk_cy[fi, 0] = _norm_y(best)
+            path_counts["D"] += 1
+        else:
+            path_counts["NOFACE"] += 1
 
     # ── 7. Stabilise each speaker-count level independently ──────────────────
     #
@@ -817,18 +873,32 @@ def track_speaker_and_frame(
                 out[:first_v] = arr[first_v]
             return out
 
-        for slot in range(4):
-            col = raw_spk_cx[:, slot]
-            valid_mask = col != -1
-            if np.any(valid_mask):
-                valid_idx = np.where(valid_mask)[0]
-                all_idx = np.arange(len(col))
-                raw_spk_cx[:, slot] = _hold_fill(col, valid_idx, all_idx)
+        logger.info(
+            f"  [Path usage] A={path_counts['A']} B={path_counts['B']} "
+            f"C={path_counts['C']} C5={path_counts['C5']} "
+            f"D={path_counts['D']} NOFACE={path_counts['NOFACE']} "
+            f"(total={frames_count})"
+        )
 
-                col_y = raw_spk_cy[:, slot]
-                valid_y = np.where(col_y != -1)[0]
-                if len(valid_y) > 0:
-                    raw_spk_cy[:, slot] = _hold_fill(col_y, valid_y, all_idx)
+        for slot in range(4):
+            for seg_start, seg_end in zip(scene_boundaries[:-1], scene_boundaries[1:]):
+                seg = slice(seg_start, seg_end)
+                
+                # X coordinate hold-fill
+                col_x = raw_spk_cx[seg, slot]
+                valid_x = col_x != -1
+                if np.any(valid_x):
+                    valid_idx = np.where(valid_x)[0]
+                    all_idx = np.arange(len(col_x))
+                    raw_spk_cx[seg, slot] = _hold_fill(col_x, valid_idx, all_idx)
+
+                # Y coordinate hold-fill
+                col_y = raw_spk_cy[seg, slot]
+                valid_y = col_y != -1
+                if np.any(valid_y):
+                    valid_y_idx = np.where(valid_y)[0]
+                    all_y_idx = np.arange(len(col_y))
+                    raw_spk_cy[seg, slot] = _hold_fill(col_y, valid_y_idx, all_y_idx)
 
     # ── 7d. Scene-boundary layout snapping ────────────────────────────────────
     # If a layout change (n=1 -> n=2) happens within 50 frames of a scene cut,
