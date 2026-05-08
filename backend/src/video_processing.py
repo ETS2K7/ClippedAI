@@ -938,16 +938,23 @@ def track_speaker_and_frame(
     cx_defaults = [0.5, 0.25, 0.75, 0.5]
     cy_defaults = [0.35] * 4
 
+    from scipy.signal import medfilt
     for slot in range(4):
         raw_cx_col = raw_spk_cx[:, slot].copy()
         raw_cy_col = raw_spk_cy[:, slot].copy()
         for seg_start, seg_end in zip(scene_boundaries[:-1], scene_boundaries[1:]):
             seg = slice(seg_start, seg_end)
+            
+            # Pre-filter with median to remove single-frame detection noise (spikes)
+            # This ensures 'LOCKED' mode is even more stable.
+            raw_cx_seg = medfilt(raw_cx_col[seg], kernel_size=5)
+            raw_cy_seg = medfilt(raw_cy_col[seg], kernel_size=5)
+            
             smooth_spk_cx[seg_start:seg_end, slot] = _smooth_segment(
-                raw_cx_col[seg].copy(), cx_defaults[slot], SIGMA
+                raw_cx_seg, cx_defaults[slot], SIGMA
             )
             smooth_spk_cy[seg_start:seg_end, slot] = _smooth_segment(
-                raw_cy_col[seg].copy(), cy_defaults[slot], SIGMA
+                raw_cy_seg, cy_defaults[slot], SIGMA
             )
 
     logger.info("Rendering adaptive multi-speaker reframing...")

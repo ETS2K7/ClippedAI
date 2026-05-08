@@ -12,13 +12,13 @@ import scipy.ndimage as ndimage
 _logger = logging.getLogger(__name__)
 
 # Face-detection bounding boxes jitter by ~0.02-0.06 in normalised coords even for
-# perfectly stationary speakers.  A speaker genuinely walking across frame produces
-# std > 0.15.  0.094 safely separates "detection noise" from "real movement".
-STATIONARY_STD_THRESHOLD = 0.094
+# 0.04 safely separates "detection noise" from "real movement".
+STATIONARY_STD_THRESHOLD = 0.04
 
 # When the ASD model alternates between two stationary faces in a wide shot,
-# the positions cluster into groups.
-CLUSTER_GAP = 0.078
+# the positions cluster into groups. Reduced to 0.025 to distinguish between
+# speakers sitting close to each other in interviews.
+CLUSTER_GAP = 0.025
 
 
 def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
@@ -46,16 +46,29 @@ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
         end = int(boundaries[i + 1]) + 1
         clusters.append(sorted_pts[start:end])
 
-    # ── 2. Determine if the scene is stationary ────────────────────────────
-    # A scene is stationary if the largest cluster is stable.
-    largest_cluster = max(clusters, key=len)
-    is_stationary = float(np.std(largest_cluster)) < STATIONARY_STD_THRESHOLD
+    # Robust outlier rejection for precision: strip anything outside 1.5 * IQR
+    if len(largest_cluster) > 5:
+        q25, q75 = np.percentile(largest_cluster, [25, 75])
+        iqr = q75 - q25
+        robust_pts = largest_cluster[(largest_cluster >= q25 - 1.5*iqr) & (largest_cluster <= q75 + 1.5*iqr)]
+    else:
+        robust_pts = largest_cluster
+        
+    is_stationary = float(np.std(robust_pts)) < STATIONARY_STD_THRESHOLD
 
     if is_stationary:
         # LOCKED MODE: No micro-movements.
-        # We assign each frame to its nearest cluster center to handle 
-        # speaker-switches (snap-cuts) while remaining perfectly stationary.
-        cluster_centers = [float(np.median(c)) for c in clusters]
+        # Robust Center: use the median of the robust points for each cluster
+        cluster_centers = []
+        for c in clusters:
+            if len(c) > 5:
+                q25, q75 = np.percentile(c, [25, 75])
+                iqr = q75 - q25
+                rc = c[(c >= q25 - 1.5*iqr) & (c <= q75 + 1.5*iqr)]
+                cluster_centers.append(float(np.median(rc)))
+            else:
+                cluster_centers.append(float(np.median(c)))
+                
         out = np.full(seg_len, default)
         
         # Initial position from first valid
