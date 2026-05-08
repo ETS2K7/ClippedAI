@@ -117,7 +117,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
           {/* Virality score */}
           {clip.virality_score !== null && clip.virality_score !== undefined && (
             <div className="mb-4 flex items-center gap-2">
-              <span className="font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase">Virality</span>
+              <span className="shrink-0 font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase">Virality</span>
               <div className="flex flex-1 items-center gap-1.5">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
                   <div
@@ -125,7 +125,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
                     style={{ width: `${(clip.virality_score / 10) * 100}%` }}
                   />
                 </div>
-                <span className="font-mono text-[10px] font-black tabular-nums text-white">
+                <span className="shrink-0 font-mono text-[10px] font-black tabular-nums text-white">
                   {clip.virality_score.toFixed(1)}
                 </span>
               </div>

@@ -697,14 +697,17 @@ export default function Home() {
                         </p>
                       </div>
                     </div>
-                    <Switch
-                      checked={outputFormat === "original"}
-                      onCheckedChange={(checked) =>
-                        setOutputFormat(checked ? "original" : "vertical")
-                      }
-                      disabled={isLoading}
-                      aria-label="Toggle wide format: keep original aspect ratio instead of 9:16 vertical"
-                    />
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="h-5 rounded-md border-white/20 bg-white/5 px-2 font-mono text-[8px] font-bold tracking-[0.2em] text-white/40 uppercase">
+                        COMING SOON
+                      </Badge>
+                      <Switch
+                        checked={false}
+                        disabled={true}
+                        onCheckedChange={() => {}}
+                        aria-label="Wide format is currently disabled"
+                      />
+                    </div>
                   </div>
 
                   {/* Add subtitles */}
