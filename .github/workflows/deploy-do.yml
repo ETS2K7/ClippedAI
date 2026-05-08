@@ -171,8 +171,19 @@ jobs:
             root@${{ secrets.DO_SERVER_IP }} \
             "bash /tmp/server-deploy.sh"
 
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id E3P8ZFU3ABE014 \
+            --paths "/favicon.ico" "/favicon.png" "/logo.png" "/icon.png" "/images/og-image.png"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+
       - name: Verify deployment
         run: |
+
           echo "==> Verifying app health directly on server (bypasses Cloudflare bot protection)..."
           for i in $(seq 1 12); do
             HEALTH=$(ssh -i ~/.ssh/deploy_key \
