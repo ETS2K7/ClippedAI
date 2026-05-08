@@ -11,52 +11,82 @@ import scipy.ndimage as ndimage
 
 _logger = logging.getLogger(__name__)
 
-# (Constants STATIONARY_STD_THRESHOLD and CLUSTER_GAP removed in favour of EMA + Snap-Cuts)
+# Face-detection bounding boxes jitter by ~0.02-0.06 in normalised coords even for
+# perfectly stationary speakers.  A speaker genuinely walking across frame produces
+# std > 0.15.  0.094 safely separates "detection noise" from "real movement".
+STATIONARY_STD_THRESHOLD = 0.094
+
+# When the ASD model alternates between two stationary faces in a wide shot,
+# the positions cluster into groups.
+CLUSTER_GAP = 0.078
 
 
 def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
     """
-    Stabilises a 1-D position array (gaps = -1) using an Exponential Moving Average
-    (EMA) tracker with Snap-Cuts.
-
-    1. Continuous Micro-Tracking (EMA): Ignores high-frequency bounding box jitter 
-       while gently pulling the camera back to true center for low-frequency shifts.
-    2. Snap-Cuts: If the active face jumps by a massive distance in a single frame 
-       (e.g. active speaker switched to someone across the room), the camera instantly 
-       snaps to the new speaker to prevent nausea-inducing pans.
+    Stabilises a 1-D position array (gaps = -1) by choosing between a 
+    STABLE LOCKED shot (zero movement) or a SMOOTH TRACKING shot.
     """
-    n = len(raw)
-    out = np.full(n, default)
-    if n == 0:
-        return out
+    seg_len = len(raw)
+    valid_mask = raw != -1
 
-    valid_idx = np.where(raw != -1)[0]
-    if len(valid_idx) == 0:
-        return out
+    if not np.any(valid_mask):
+        return np.full(seg_len, default)
 
-    # We can tune alpha based on the requested sigma if we wanted to,
-    # but a fixed alpha of 0.1 works excellently for 25-30fps video.
-    alpha = 0.1
-    # 0.15 is roughly 192 pixels on a 1280px width, a safe threshold for a jump
-    snap_threshold = 0.15 
+    valid_points = raw[valid_mask]
+    
+    # ── 1. Identify Clusters (Stationary Subjects) ──────────────────────────
+    sorted_pts = np.sort(valid_points)
+    gaps = np.diff(sorted_pts)
+    gap_indices = np.where(gaps > CLUSTER_GAP)[0]
+    
+    boundaries = np.concatenate([[-1], gap_indices, [len(sorted_pts) - 1]])
+    clusters = []
+    for i in range(len(boundaries) - 1):
+        start = int(boundaries[i]) + 1
+        end = int(boundaries[i + 1]) + 1
+        clusters.append(sorted_pts[start:end])
 
-    current_pos = float(raw[valid_idx[0]])
+    # ── 2. Determine if the scene is stationary ────────────────────────────
+    # A scene is stationary if the largest cluster is stable.
+    largest_cluster = max(clusters, key=len)
+    is_stationary = float(np.std(largest_cluster)) < STATIONARY_STD_THRESHOLD
 
-    for i in range(n):
-        if raw[i] != -1:
-            target = float(raw[i])
-            if abs(target - current_pos) > snap_threshold:
-                # Snap cut! Distance is too large to pan smoothly
-                current_pos = target
-                _logger.debug(f"  → SNAP CUT to {current_pos:.2f}")
-            else:
-                # Smooth continuous tracking to kill jitter
-                current_pos = alpha * target + (1 - alpha) * current_pos
+    if is_stationary:
+        # LOCKED MODE: No micro-movements.
+        # We assign each frame to its nearest cluster center to handle 
+        # speaker-switches (snap-cuts) while remaining perfectly stationary.
+        cluster_centers = [float(np.median(c)) for c in clusters]
+        out = np.full(seg_len, default)
         
-        # If raw[i] == -1, current_pos remains unchanged (holds last known position)
-        out[i] = current_pos
+        # Initial position from first valid
+        last_pos = cluster_centers[0]
+        
+        for i in range(seg_len):
+            if raw[i] != -1:
+                # Snap to the nearest known stationary speaker position
+                target = float(raw[i])
+                best_center = min(cluster_centers, key=lambda c: abs(c - target))
+                last_pos = best_center
+            out[i] = last_pos
+        return out
 
-    return out
+    # ── 3. TRACKING MODE: Moving subject ──────────────────────────────────
+    # Gap-fill then Gaussian smooth.
+    filled = raw.copy()
+    idxs = np.arange(seg_len)
+    first_valid = int(np.argmax(valid_mask))
+    filled[:first_valid] = filled[first_valid]
+    last_valid = int(seg_len - 1 - np.argmax(valid_mask[::-1]))
+    filled[last_valid + 1:] = filled[last_valid]
+
+    valid_mask_filled = filled != -1
+    if not np.all(valid_mask_filled):
+        filled[~valid_mask_filled] = np.interp(
+            idxs[~valid_mask_filled], idxs[valid_mask_filled], filled[valid_mask_filled]
+        )
+
+    effective_sigma = min(sigma, max(1, seg_len // 4))
+    return ndimage.gaussian_filter1d(filled, sigma=effective_sigma)
 
 
 def stabilize_segment(raw: np.ndarray, min_entry: int, min_gap: int) -> np.ndarray:
