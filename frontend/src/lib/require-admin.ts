@@ -27,7 +27,7 @@ export async function requireAdmin(): Promise<AdminResult> {
     return new NextResponse(null, { status: 401 });
   }
 
-  if (!session.user.isAdmin) {
+  if (!session.user.isAdmin || session.user.email !== "ebelthomasseiko@gmail.com") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

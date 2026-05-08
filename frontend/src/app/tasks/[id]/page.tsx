@@ -519,7 +519,8 @@ export default function TaskPage() {
               {(task.status === "processing" ||
                 task.status === "queued" ||
                 task.status === "generating_clips" ||
-                task.status === "completed") && (
+                task.status === "completed") && 
+                (process.env.NODE_ENV === "development" || session?.user?.email === "ebelthomasseiko@gmail.com") && (
                 <span className="flex items-center gap-1 font-mono text-[10px] font-bold tabular-nums tracking-widest text-white/40">
                   <Clock className="h-3 w-3" />
                   {formatElapsed(displayElapsed ?? 0)}
@@ -572,12 +573,14 @@ export default function TaskPage() {
                 {task.status === "queued" ? "Queued" : "Processing"}
               </p>
               {/* Live elapsed timer */}
-              <div className="mt-4 flex items-center gap-2 rounded-md border border-white/10 px-4 py-2">
-                <Clock className="h-3.5 w-3.5 text-white/30" />
-                <span className="font-mono text-2xl font-black tabular-nums tracking-widest text-white">
-                  {formatElapsed(displayElapsed)}
-                </span>
-              </div>
+              {(process.env.NODE_ENV === "development" || session?.user?.email === "ebelthomasseiko@gmail.com") && (
+                <div className="mt-4 flex items-center gap-2 rounded-md border border-white/10 px-4 py-2">
+                  <Clock className="h-3.5 w-3.5 text-white/30" />
+                  <span className="font-mono text-2xl font-black tabular-nums tracking-widest text-white">
+                    {formatElapsed(displayElapsed)}
+                  </span>
+                </div>
+              )}
               <p className="mt-3 text-[10px] font-bold tracking-widest text-white/20 uppercase">
                 AUTO-REFRESHING...
               </p>

@@ -41,9 +41,10 @@ interface AdminUser {
 export default function AdminPage() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const isSuperAdmin = session?.user?.email === "ebelthomasseiko@gmail.com";
 
   const { data: stats, error: statsError } = useSWR<AdminStats>(
-    session?.user?.isAdmin ? "/api/admin/stats" : null,
+    isSuperAdmin ? "/api/admin/stats" : null,
     fetcher,
   );
 
@@ -52,7 +53,7 @@ export default function AdminPage() {
     error: usersError,
     mutate: mutateUsers,
   } = useSWR<AdminUser[]>(
-    session?.user?.isAdmin ? "/api/admin/users" : null,
+    isSuperAdmin ? "/api/admin/users" : null,
     fetcher,
   );
 
@@ -61,7 +62,7 @@ export default function AdminPage() {
 
   // Security guard redirect safely in useEffect to prevent render violation
   useEffect(() => {
-    if (!isPending && !session?.user?.isAdmin) {
+    if (!isPending && !isSuperAdmin) {
       if (typeof window !== "undefined") {
         router.push("/dashboard");
       }

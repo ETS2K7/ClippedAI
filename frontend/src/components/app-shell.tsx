@@ -13,6 +13,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isAdmin = Boolean(session?.user?.isAdmin);
+  const isSuperAdmin = session?.user?.email === "ebelthomasseiko@gmail.com";
 
   const handleSignOut = async () => {
     await signOut();
@@ -91,7 +92,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   SETTINGS
                 </Button>
               </Link>
-              {isAdmin && (
+              {isSuperAdmin && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -209,7 +210,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 <Tag className="h-4 w-4 text-white/30" />
                 Pricing
               </Link>
-              {isAdmin && (
+              {isSuperAdmin && (
                 <Link
                   href="/admin"
                   onClick={() => setMobileMenuOpen(false)}
