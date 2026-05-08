@@ -68,7 +68,6 @@ export async function POST(
             console.error("[retry] Failed to fetch oembed title", e);
           }
         }
-      }
     }
 
     // Reset task to queued status and update title if found
