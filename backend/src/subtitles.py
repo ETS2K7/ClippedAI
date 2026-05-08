@@ -69,7 +69,7 @@ def generate_subtitles(
     end_ms = clip["end_time"] * 1000
 
     resolved_family = resolve_font_family(font_family)
-    resolved_size = font_size if isinstance(font_size, int) and 8 <= font_size <= 144 else DEFAULT_FONT_SIZE
+    resolved_size = font_size if isinstance(font_size, int) and 50 <= font_size <= 200 else DEFAULT_FONT_SIZE
     resolved_ass_color = hex_to_ass_color(font_color)
 
     logger.info(
@@ -159,8 +159,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             layout = get_layout_for_time(w_start)
 
             text_parts = []
-            if layout == "SPLIT":
-                text_parts.append("{\\an5\\pos(540,960)}")
 
             for j, cw in enumerate(chunk):
                 # Escape ASS special syntax characters to prevent subtitle corruption
@@ -170,7 +168,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                     # Alternate highlight color between green and yellow based on word index
                     hl_color = "&H0000FFFF" if w_idx % 2 == 0 else "&H0000FF00"
                     text_parts.append(
-                        f"{{\\c{hl_color}&}}{clean_txt}{{\\c{resolved_ass_color}&}}"
+                        f"{{\\c{hl_color}}}{clean_txt}{{\\c{resolved_ass_color}}}"
                     )  # Karaoke highlight with exact MrBeast colors
                 else:
                     text_parts.append(clean_txt)
