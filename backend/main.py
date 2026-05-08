@@ -407,7 +407,7 @@ def _send_webhook(
 
 
 @app.cls(
-    gpu="T4",
+    gpu="L4",
     timeout=1200,
     scaledown_window=15,          # Aggressive idle shutdown to prevent credit leakage
     max_containers=10,            # Absolute upper bound on simultaneous tasks
