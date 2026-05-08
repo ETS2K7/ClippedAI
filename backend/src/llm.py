@@ -122,7 +122,7 @@ def _validate_clips(raw_clips: list, words: list) -> list:
         if start < 0 or end <= start or start > video_end_s:
             logger.warning(f"Skipping invalid clip: start={start}, end={end}")
             continue
-        if duration > 45:
+        if duration > 60:
             logger.warning(f"Skipping clip with excessive duration ({duration:.1f}s)")
             continue
         # Auto-extend clips that are too short
