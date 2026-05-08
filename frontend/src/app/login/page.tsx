@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LoginForm } from "~/components/login-form";
 import { auth } from "~/server/auth";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "Sign In — ClippedAI",
@@ -30,14 +31,13 @@ export default async function Page() {
           aria-label="Back to ClippedAI home"
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4 fill-white"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <polygon points="5,3 19,12 5,21" />
-            </svg>
+            <Image
+              src="/logo.png"
+              alt="ClippedAI"
+              width={20}
+              height={20}
+              className="rounded-sm"
+            />
           </div>
           <span className="font-syne text-xl font-black tracking-tight uppercase">
             CLIPPEDAI
