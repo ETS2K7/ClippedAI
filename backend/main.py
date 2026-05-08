@@ -120,10 +120,26 @@ class ProcessVideoRequest(BaseModel):
 image = (modal.Image.debian_slim(python_version="3.10")
     .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig"])
     .pip_install_from_requirements("requirements.txt")
-    .pip_install("apify-client")
+    .pip_install("apify-client", "torch==2.1.2", "torchvision==0.16.2", "torchaudio==2.1.2", "ffmpeg-python", "gdown", "python_speech_features", "pandas")
     .add_local_dir("src", remote_path="/root/src", copy=True)
     .add_local_dir("fonts", remote_path="/usr/share/fonts/truetype/custom", copy=True)
-    .run_commands(["fc-cache -fv"])
+    .run_commands([
+        "fc-cache -fv",
+        "git clone https://github.com/sieve-community/fast-asd.git /fast-asd",
+        "mkdir -p /root/.cache/models",
+        "mkdir -p /root/model/faceDetector/s3fd",
+        "gdown 1AbN9fCf9IexMxEKXLQY2KYBlb-IhSEea -O /root/.cache/models/pretrain_TalkSet.model",
+        "wget -O /root/model/faceDetector/s3fd/sfd_face.pth https://storage.googleapis.com/mango-public-models/sfd_face.pth",
+        "ln -s /fast-asd/talknet/model /root/model_symlink",
+        # Auto-patch legacy Numpy references to fix version collision
+        "find /fast-asd -type f -name '*.py' -exec sed -i 's/np\\.float/float/g' {} +",
+        "find /fast-asd -type f -name '*.py' -exec sed -i 's/np\\.bool/bool/g' {} +",
+        "find /fast-asd -type f -name '*.py' -exec sed -i 's/np\\.int/int/g' {} +",
+        
+        # Patch relative paths to absolute paths for thread-safety (no os.chdir needed)
+        "find /fast-asd -type f -name '*.py' -exec sed -i \"s|'./model|'/fast-asd/talknet/model|g\" {} +",
+        "find /fast-asd -type f -name '*.py' -exec sed -i 's|\"./model|\"/fast-asd/talknet/model|g' {} +"
+    ])
     .add_local_file("config.py", remote_path="/root/config.py", copy=True)
 )
 
@@ -192,6 +208,7 @@ def _process_single_clip(
     add_subtitles: bool = True,
     work_dir: str = "",
     use_gpu: bool = False,
+    tracker=None,
 ) -> dict:
     """
     Processes a single clip through the full sub-pipeline:
@@ -202,7 +219,7 @@ def _process_single_clip(
     """
     logger.info(f"--- Processing Clip {index + 1} (parallel) ---")
     ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=use_gpu)
-    trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir)
+    trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir, tracker=tracker)
     sub_file = None
     if add_subtitles:
         sub_file = generate_subtitles(
@@ -248,6 +265,7 @@ def _render_clips_pipeline(
     font_color: str | None = None,
     font_size: int | None = None,
     add_subtitles: bool = True,
+    tracker=None,
 ) -> dict:
     """
     Shared video processing pipeline used by both CLI and HTTP endpoints.
@@ -300,8 +318,8 @@ def _render_clips_pipeline(
         output_clips = [None] * len(clips)
         clip_errors = []
 
-        # Cap max_workers to prevent resource exhaustion with many clips
-        max_workers = min(len(clips), 2)
+        # Remove max_workers cap to process all clips concurrently for speed
+        max_workers = len(clips)
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_idx = {
                 executor.submit(
@@ -309,7 +327,7 @@ def _render_clips_pipeline(
                     str(video_path), clip, index, words,
                     s3_client, bucket, s3_key_dir,
                     font_family, font_color, font_size, add_subtitles,
-                    str(base_dir), has_nvenc,
+                    str(base_dir), has_nvenc, tracker,
                 ): index
                 for index, clip in enumerate(clips)
             }
@@ -358,6 +376,8 @@ def _send_webhook(
         "status": result.get("status", "failed"),
         "clips": result.get("clips", []),
     }
+    if "timing" in result:
+        payload["timing"] = result["timing"]
     
     # Serialize tightly so both server and client calculate matching digests
     payload_str = json.dumps(payload, separators=(',', ':'))
@@ -413,6 +433,19 @@ class ClippedAI:
         except Exception:
             self._has_nvenc = False
 
+        # Initialize TalkNet model for local tracking (avoids remote Modal calls)
+        import sys
+        if "/fast-asd/talknet" not in sys.path:
+            sys.path.append("/fast-asd/talknet")
+        try:
+            import demoTalkNet
+            self.talknet_s, self.talknet_DET = demoTalkNet.setup()
+            self.demoTalkNet = demoTalkNet
+            logger.info("TalkNet models loaded successfully.")
+        except Exception as e:
+            logger.error(f"Failed to initialize TalkNet: {e}")
+            self.demoTalkNet = None
+
         logger.info("Container warm and ready.")
 
     @modal.method()
@@ -429,6 +462,7 @@ class ClippedAI:
                 font_color=request.font_color,
                 font_size=request.font_size,
                 add_subtitles=request.add_subtitles,
+                tracker=(self.demoTalkNet, self.talknet_s, self.talknet_DET) if getattr(self, 'demoTalkNet', None) else None,
             )
         except RuntimeError as e:
             logger.error(f"Pipeline failed (RuntimeError): {e}")
@@ -496,11 +530,30 @@ def process_video_cpu_wrapper(request_dict: dict):
     try:
         timer.begin("cpu_ingestion")
         if request.youtube_url:
-            logger.info("Executing CPU-bound YouTube Apify download...")
-            _download_youtube(request.youtube_url, video_path)
-            
-            logger.info("Uploading ingestion artifact to S3...")
-            s3_client.upload_file(str(video_path), bucket, request.s3_key)
+            # ── S3 deduplication cache check ──────────────────────────────────
+            # Key is now youtube-downloads/{videoId}/original.mp4 (shared across users).
+            # If a previous run already downloaded this video, skip Apify entirely.
+            _already_in_s3 = False
+            try:
+                s3_client.head_object(Bucket=bucket, Key=request.s3_key)
+                _already_in_s3 = True
+                logger.info(
+                    f"[S3 Cache] 🟢 Hit — '{request.s3_key}' already exists. "
+                    "Skipping Apify download."
+                )
+            except Exception as _he:
+                # 404 / NoSuchKey means not cached yet — proceed with download
+                logger.info(f"[S3 Cache] 🔴 Miss — downloading via Apify.")
+
+            if _already_in_s3:
+                logger.info("Downloading cached video from S3 to CPU container...")
+                s3_client.download_file(bucket, request.s3_key, str(video_path))
+            else:
+                logger.info("Executing CPU-bound YouTube Apify download...")
+                _download_youtube(request.youtube_url, video_path)
+                logger.info("Uploading ingestion artifact to S3...")
+                s3_client.upload_file(str(video_path), bucket, request.s3_key)
+
             request_dict["youtube_url"] = None
         else:
             logger.info("Downloading from S3 to CPU container for transcription")
@@ -510,8 +563,9 @@ def process_video_cpu_wrapper(request_dict: dict):
                 err_str = str(e)
                 if "404" in err_str or "Not Found" in err_str or "NoSuchKey" in err_str:
                     parts = request.s3_key.split("/")
-                    if parts[0] == "youtube-downloads" and len(parts) >= 3:
-                        video_id = parts[2]
+                    # New flat key format: youtube-downloads/{videoId}/original.mp4 → parts[1] is videoId
+                    if parts[0] == "youtube-downloads" and len(parts) >= 2:
+                        video_id = parts[1]
                         reconstructed_url = f"https://www.youtube.com/watch?v={video_id}"
                         logger.warning(
                             f"S3 key {request.s3_key} returned 404. "
