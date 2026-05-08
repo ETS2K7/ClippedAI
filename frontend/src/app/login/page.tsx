@@ -39,7 +39,7 @@ export default async function Page() {
               className="rounded-sm"
             />
           </div>
-          <span className="font-syne text-xl font-black tracking-tight uppercase">
+          <span className="font-syne text-xl font-black tracking-tight uppercase leading-none mt-[1px]">
             CLIPPEDAI
           </span>
         </Link>
