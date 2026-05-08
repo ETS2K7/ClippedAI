@@ -528,7 +528,7 @@ export default function TaskPage() {
               )}
 
               <div className="ml-auto flex items-center gap-2">
-                {(process.env.NODE_ENV === "development" || session?.user?.email === "ebelthomasseiko@gmail.com") && (
+                {(process.env.NODE_ENV === "development" || session?.user?.isAdmin) && (
                   <Button
                     size="sm"
                     variant="ghost"
