@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 
 # ─── Default subtitle styling ─────────────────────────────────────────────────
 DEFAULT_FONT_FAMILY = "Komika Axis"
-DEFAULT_FONT_SIZE = 75
+DEFAULT_FONT_SIZE = 115
 DEFAULT_FONT_COLOR = "&H00FFFFFF"   # ASS format: white
 
 FONT_NAME_RE = re.compile(r"^[A-Za-z0-9 _.-]{1,128}$")
