@@ -350,22 +350,11 @@ export default function TaskPage() {
     return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
   };
 
-  /** Total duration for a completed task derived from DB timestamps. */
-  const completedDuration =
-    task?.status === "completed" && task.created_at && task.updated_at
-      ? Math.max(
-          0,
-          Math.floor(
-            (new Date(task.updated_at).getTime() -
-              new Date(task.created_at).getTime()) /
-              1000,
-          ),
-        )
-      : null;
-
   /** What to show in elapsed-time displays. */
   const displayElapsed =
-    completedDuration !== null ? completedDuration : elapsedSeconds;
+    task?.status === "completed" 
+      ? ((task as any).processing_time ?? elapsedSeconds)
+      : elapsedSeconds;
 
   /** Optimistic title update. */
   const handleEditTitle = () => {

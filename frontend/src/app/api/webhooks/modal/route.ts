@@ -15,6 +15,10 @@ interface ModalWebhookPayload {
     clipTitle?: string;
     viralityScore?: number;
   }[];
+  timing?: {
+    total_seconds: number;
+    phases: any;
+  };
 }
 
 /**
@@ -110,7 +114,10 @@ export async function POST(req: Request) {
         }),
         db.uploadedFile.update({
           where: { id: uploaded_file_id },
-          data: { status: "processed" },
+          data: { 
+            status: "processed",
+            processingTime: body.timing?.total_seconds ?? null
+          },
         }),
       ]);
 

@@ -111,6 +111,7 @@ export async function GET(
       status: mapStatus(file.status),
       created_at: toISO(file.createdAt),
       updated_at: toISO(file.updatedAt),
+      processing_time: (file as any).processingTime ?? null,
     },
     clips: clipsWithUrls,
   });

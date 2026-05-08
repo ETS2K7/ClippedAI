@@ -73,10 +73,11 @@ model UploadedFile {
   s3Key       String
   displayName String?
   uploaded    Boolean  @default(false)
-  status      String   @default("queued")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      String
+  status         String   @default("queued")
+  processingTime Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  userId         String
   clips       Clip[]
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
