@@ -147,8 +147,8 @@ app = modal.App("clippedai", image=image)
 
 auth_scheme = HTTPBearer()
 
-def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
-    """Download YouTube video using Apify API to bypass datacenter IP bans."""
+def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> str | None:
+    """Download YouTube video using Apify API. Returns the video title if found."""
     from apify_client import ApifyClient
 
     apify_token = os.environ.get("APIFY_TOKEN")
@@ -189,10 +189,11 @@ def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> None:
                     f.write(chunk)
             
         logger.info("Successfully fetched YouTube video via Apify")
+        return item.get("title")
         
     except Exception as e:
         logger.error(f"Apify download failed: {str(e)}")
-        raise RuntimeError(f"YouTube download failed via Apify: {str(e)}")
+        return None
 
 def _process_single_clip(
     video_path: str,
@@ -359,13 +360,13 @@ def _render_clips_pipeline(
             logger.info("Cleaning up temp directory")
             shutil.rmtree(base_dir, ignore_errors=True)
 
-
 def _send_webhook(
     webhook_url: str,
     webhook_secret: str,
     uploaded_file_id: str,
     user_id: str,
     result: dict,
+    video_title: str | None = None,
 ) -> None:
     """POST processing results back to the Next.js webhook endpoint with HMAC signature."""
     import hashlib
@@ -375,6 +376,7 @@ def _send_webhook(
         "user_id": user_id,
         "status": result.get("status", "failed"),
         "clips": result.get("clips", []),
+        "video_title": video_title,
     }
     if "timing" in result:
         payload["timing"] = result["timing"]
@@ -527,6 +529,7 @@ def process_video_cpu_wrapper(request_dict: dict):
     s3_client = _create_s3_client()
     bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
     
+    video_title = None
     try:
         timer.begin("cpu_ingestion")
         if request.youtube_url:
@@ -550,7 +553,9 @@ def process_video_cpu_wrapper(request_dict: dict):
                 s3_client.download_file(bucket, request.s3_key, str(video_path))
             else:
                 logger.info("Executing CPU-bound YouTube Apify download...")
-                _download_youtube(request.youtube_url, video_path)
+                video_title = _download_youtube(request.youtube_url, video_path)
+                if not video_title:
+                    logger.warning("Could not extract video title from Apify metadata.")
                 logger.info("Uploading ingestion artifact to S3...")
                 s3_client.upload_file(str(video_path), bucket, request.s3_key)
 
@@ -597,7 +602,8 @@ def process_video_cpu_wrapper(request_dict: dict):
             _send_webhook(
                 request.webhook_url, request.webhook_secret,
                 request.uploaded_file_id, request.user_id,
-                {"status": "failed", "clips": [], "error": f"CPU Pipeline error: {str(e)}"}
+                {"status": "failed", "clips": [], "error": f"CPU Pipeline error: {str(e)}"},
+                video_title
             )
         return
     finally:
@@ -619,6 +625,7 @@ def process_video_cpu_wrapper(request_dict: dict):
             request.uploaded_file_id,
             request.user_id,
             result,
+            video_title,
         )
 
 

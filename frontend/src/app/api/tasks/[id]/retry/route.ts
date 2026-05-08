@@ -47,9 +47,10 @@ export async function POST(
     // If it's a YouTube download and the display name is just the video ID or null, try fetching the real title
     if (task.s3Key.startsWith("youtube-downloads/")) {
       const parts = task.s3Key.split("/");
-      if (parts.length >= 2) {
-        const videoId = parts[1];
-        if (!newDisplayName || newDisplayName.toUpperCase() === videoId.toUpperCase()) {
+      const videoId = parts.find(p => p.length === 11);
+      
+      // If we found a valid ID, and the current name is missing or looks like an internal ID (long string)
+      if (videoId && (!newDisplayName || newDisplayName.length > 25 || newDisplayName.toUpperCase() === videoId.toUpperCase())) {
           try {
             const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
             const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${canonicalUrl}&format=json`, {

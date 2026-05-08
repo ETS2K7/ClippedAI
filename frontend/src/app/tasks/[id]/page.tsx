@@ -344,6 +344,7 @@ export default function TaskPage() {
     return () => clearInterval(id);
   }, [task?.status, task?.created_at]);
 
+  // v1.1.2 - Precision Hardening
   const formatElapsed = (s: number) => {
     const totalSeconds = Math.round(s);
     const m = Math.floor(totalSeconds / 60);
@@ -352,12 +353,13 @@ export default function TaskPage() {
   };
 
   /** What to show in elapsed-time displays. */
-  const displayElapsed =
+  const displayElapsed = Math.round(
     task?.status === "completed" 
       ? (task.updated_at && task.created_at
           ? (new Date(task.updated_at).getTime() - new Date(task.created_at).getTime()) / 1000
           : ((task as any).processing_time ?? elapsedSeconds))
-      : elapsedSeconds;
+      : elapsedSeconds
+  );
 
   /** Optimistic title update. */
   const handleEditTitle = () => {

@@ -116,7 +116,9 @@ export async function POST(req: Request) {
           where: { id: uploaded_file_id },
           data: { 
             status: "processed",
-            processingTime: body.timing?.total_seconds ?? null
+            processingTime: body.timing?.total_seconds ?? null,
+            // If the backend found a title and the frontend didn't, update it now.
+            displayName: (body as any).video_title || undefined
           },
         }),
       ]);
