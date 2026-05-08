@@ -479,7 +479,7 @@ export default function TaskPage() {
                         setIsEditing(true);
                       }}
                     >
-                      <h1 className="font-syne text-4xl leading-none font-black tracking-tighter text-white uppercase transition-colors group-hover:text-white/80 md:text-5xl">
+                      <h1 className="font-syne text-2xl leading-tight font-black tracking-tighter text-white uppercase transition-colors group-hover:text-white/80 md:text-3xl">
                         {task?.source_title ?? "GENERATION"}
                       </h1>
                       <Edit2 className="h-5 w-5 text-white/20 transition-colors group-hover:text-white" />
