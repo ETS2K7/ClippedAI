@@ -57,6 +57,7 @@ tsconfig.tsbuildinfo
 frontend/lh-report.json
 frontend/test-localstorage.js
 frontend/clip_*.mp4
+frontend/public/local-clips/
 
 # ─── Backend cache / debug ────────────────────────────────────────────────
 backend/assemblyai_diarized_cache_*.json

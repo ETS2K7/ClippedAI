@@ -23,7 +23,7 @@ graph TB
     subgraph Infra["Infrastructure"]
         DB[(PostgreSQL)]
         S3[(AWS S3)]
-        OCI[DigitalOcean]
+        DO[DigitalOcean]
         Nginx[Nginx + SSL]
     end
 
@@ -36,7 +36,7 @@ graph TB
     VideoProc --> S3
     Prisma --> DB
     Nginx --> UI
-    OCI --> Nginx
+    DO --> Nginx
 ```
 
 ## Tech Stack
