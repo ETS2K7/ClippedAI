@@ -32,7 +32,7 @@ export default async function Page() {
         >
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm">
             <Image
-              src="/logo.png?v=5"
+              src="/logo.png?v=6"
               alt="ClippedAI"
               width={20}
               height={20}

@@ -42,7 +42,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
             {/* Left: Logo + Brand */}
             <Link href="/dashboard" className="group flex items-center gap-2.5">
               <Image
-                src="/logo.png?v=5"
+                src="/logo.png?v=6"
                 alt="ClippedAI"
                 width={22}
                 height={22}

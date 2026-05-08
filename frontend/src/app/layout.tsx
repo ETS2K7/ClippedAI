@@ -76,9 +76,9 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/icon.png?v=5",
-    shortcut: "/favicon.ico?v=5",
-    apple: "/icon.png?v=5",
+    icon: "/icon.png?v=6",
+    shortcut: "/favicon.ico?v=6",
+    apple: "/icon.png?v=6",
   },
 };
 
