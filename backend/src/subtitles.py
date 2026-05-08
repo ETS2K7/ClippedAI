@@ -105,7 +105,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     lines = []
     chunks = []
     current_chunk = []
-    max_words_per_chunk = 3
+    max_words_per_chunk = 2
     max_pause_ms = 300
 
     # 1. Group words chunks dynamically based on pause timers + string punctuation max length breaks
@@ -159,6 +159,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             layout = get_layout_for_time(w_start)
 
             text_parts = []
+            
+            if layout == "SPLIT":
+                text_parts.append("{\\an5\\pos(540,960)}")
 
             for j, cw in enumerate(chunk):
                 # Escape ASS special syntax characters to prevent subtitle corruption
