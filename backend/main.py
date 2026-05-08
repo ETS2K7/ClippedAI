@@ -23,6 +23,9 @@ from src.subtitles import generate_subtitles
 
 logger = get_logger(__name__)
 
+# Distributed Caching
+transcript_cache = modal.Dict.from_name("clippedai-transcript-cache", create_if_missing=True)
+asd_cache = modal.Dict.from_name("clippedai-asd-cache", create_if_missing=True)
 # HTTP session with connection pooling for Modal API calls
 _http_session = None
 
@@ -220,7 +223,7 @@ def _process_single_clip(
     """
     logger.info(f"--- Processing Clip {index + 1} (parallel) ---")
     ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=use_gpu)
-    trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir, tracker=tracker)
+    trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir, tracker=tracker, remote_cache=asd_cache)
     sub_file = None
     if add_subtitles:
         sub_file = generate_subtitles(
@@ -588,7 +591,7 @@ def process_video_cpu_wrapper(request_dict: dict):
                     raise
             
         timer.begin("transcription")
-        words = transcribe(str(video_path), request.s3_key)
+        words = transcribe(str(video_path), request.s3_key, remote_cache=transcript_cache)
         
         timer.begin("clip_selection")
         clips = select_clips(words)

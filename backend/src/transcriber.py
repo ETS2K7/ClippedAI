@@ -53,7 +53,7 @@ def _extract_audio(video_path: str) -> str:
     return audio_path
 
 
-def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
+def transcribe(video_path: str, _video_url: str = "", remote_cache=None) -> List[Dict[str, Any]]:
     """
     Transcribes video using AssemblyAI with speaker diarization.
     Returns a list of word-level dicts with timestamps and speaker labels.
@@ -86,6 +86,10 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
         logger.warning(f"[Transcript] Could not hash video file ({_he}); cache disabled.")
         _tcache_file = None
         _video_hash = "<unknown>"
+
+    if remote_cache is not None and _video_hash in remote_cache:
+        logger.info(f"[Transcript] 🟢 Remote cache hit — skipping AssemblyAI (key={_video_hash[:8]})")
+        return remote_cache[_video_hash]
 
     if _tcache_file and _tcache_file.exists():
         try:
@@ -192,7 +196,14 @@ def transcribe(video_path: str, _video_url: str = "") -> List[Dict[str, Any]]:
                         f"[Transcript] Cached {len(words)} words to {_tcache_file.name}"
                     )
                 except Exception as _we:
-                    logger.warning(f"[Transcript] Cache write failed (non-fatal): {_we}")
+                    logger.warning(f"[Transcript] Local cache write failed (non-fatal): {_we}")
+
+            if remote_cache is not None:
+                try:
+                    remote_cache[_video_hash] = words
+                    logger.info(f"[Transcript] Cached {len(words)} words to remote Dict")
+                except Exception as _we:
+                    logger.warning(f"[Transcript] Remote cache write failed (non-fatal): {_we}")
 
             return words
         
