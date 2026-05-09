@@ -678,8 +678,8 @@ def track_speaker_and_frame(
     raw_spk_cx = np.full((frames_count, 4), -1.0)
     raw_spk_cy = np.full((frames_count, 4), -1.0) 
 
-    def _norm_x(f): return ((f["x1"] + f["x2"]) / 2.0) / w
-    def _norm_y(f): return ((f["y1"] + f["y2"]) / 2.0) / h
+    def _norm_x(f): return (f["x1"] + (f["x2"] - f["x1"]) * 0.52) / w
+    def _norm_y(f): return (f["y1"] + (f["y2"] - f["y1"]) * 0.42) / h
 
     # Per-path frame counters — logged per scene to diagnose framing issues
     path_counts = {"A": 0, "B": 0, "C": 0, "C5": 0, "D": 0, "NOFACE": 0}

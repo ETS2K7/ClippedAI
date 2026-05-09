@@ -13,12 +13,13 @@ _logger = logging.getLogger(__name__)
 
 # Face-detection bounding boxes jitter by ~0.02-0.06 in normalised coords even for
 # perfectly stationary speakers.  A speaker genuinely walking across frame produces
-# std > 0.15.  0.094 safely separates "detection noise" from "real movement".
-STATIONARY_STD_THRESHOLD = 0.094
+# std > 0.15.  Lowering this to 0.06 allows tracking to activate more willingly.
+STATIONARY_STD_THRESHOLD = 0.06
 
 # When the ASD model alternates between two stationary faces in a wide shot,
-# the positions cluster into groups.
-CLUSTER_GAP = 0.078
+# the positions cluster into groups. A reduced gap threshold avoids improperly
+# merging adjacent speakers.
+CLUSTER_GAP = 0.04
 
 
 def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
@@ -68,10 +69,20 @@ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
         
         for i in range(seg_len):
             if raw[i] != -1:
-                # Snap to the nearest known stationary speaker position
                 target = float(raw[i])
                 best_center = min(cluster_centers, key=lambda c: abs(c - target))
-                last_pos = best_center
+                
+                # Check if we are doing a snap-cut (speaker switch)
+                if abs(last_pos - best_center) > CLUSTER_GAP:
+                    # Snap immediately to the new speaker's approximate center
+                    last_pos = best_center
+                
+                # Live Micro-Correction (Dead-zone tracking)
+                # Ignore sub-1% jitter but soft-correct towards the live face center
+                delta = target - last_pos
+                if abs(delta) > 0.01:
+                    last_pos += delta * 0.08
+                    
             out[i] = last_pos
             
         # Enforce minimum shot duration (1.2 seconds = 30 frames @ 25fps)
