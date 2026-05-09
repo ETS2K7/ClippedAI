@@ -481,60 +481,21 @@ def track_speaker_and_frame(
         tracking_data = remote_cache[_video_hash]
     else:
         try:
+            with open(clip_file, "rb") as f:
+                video_bytes = f.read()
+
             if tracker is not None:
-                logger.info("Calling local Fast-ASD tracker...")
-                _, s, DET = tracker
-                
-                import threading
-                import shutil
-                import sys
-                import importlib.util
-                
-                tid = threading.get_ident()
-                module_name = f"demoTalkNet_{tid}"
-                new_path = f"/fast-asd/talknet/{module_name}.py"
-                save_dir = f"/tmp/talknet_save_{tid}/"
-                
-                # 1. Dynamically copy and patch the TalkNet source code for this specific thread
-                shutil.copy("/fast-asd/talknet/demoTalkNet.py", new_path)
-                with open(new_path, "r") as f:
-                    content = f.read()
-                
-                # Rewrite the hardcoded global directory to a thread-specific directory
-                content = content.replace('save_path = "save/"', f'save_path = "{save_dir}"')
-                
-                with open(new_path, "w") as f:
-                    f.write(content)
-                    
-                # 2. Import the isolated module
-                spec = importlib.util.spec_from_file_location(module_name, new_path)
-                local_demoTalkNet = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(local_demoTalkNet)
-                sys.modules[module_name] = local_demoTalkNet
-                
-                try:
-                    # 3. Execute TalkNet in the isolated thread context
-                    tracking_data = local_demoTalkNet.main(
-                        s=s,
-                        DET=DET,
-                        video_path=clip_file,
-                        start_seconds=0,
-                        end_seconds=-1,
-                        return_visualization=False,
-                        in_memory_threshold=0,
-                    )
-                finally:
-                    # 4. Garbage Collection: Prevent resource leaks by deleting the clone and its temp files
-                    logger.info(f"Cleaning up TalkNet clone for thread {tid}")
-                    if module_name in sys.modules:
-                        del sys.modules[module_name]
-                    if os.path.exists(new_path):
-                        os.remove(new_path)
-                    if os.path.exists(save_dir):
-                        shutil.rmtree(save_dir, ignore_errors=True)
+                logger.info("[local] Calling LocalFastASDTracker…")
+                result_json = tracker.process_video(video_bytes)
             else:
-                logger.error("Fast-ASD tracker not initialized")
-                raise RuntimeError("Fast-ASD tracker not initialized")
+                # Production path — call Modal remote
+                logger.info("Calling Modal Fast-ASD tracker...")
+                import modal
+                Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+                result_json = Tracker().process_video.remote(video_bytes)
+            
+            import json
+            tracking_data = json.loads(result_json)
                 
             if remote_cache is not None:
                 try:
