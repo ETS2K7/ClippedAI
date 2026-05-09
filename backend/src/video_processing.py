@@ -909,6 +909,32 @@ def track_speaker_and_frame(
                     all_y_idx = np.arange(len(col_y))
                     raw_spk_cy[seg, slot] = _hold_fill(col_y, valid_y_idx, all_y_idx)
 
+        # ── 7c. Scene face-sparsity center-fallback ────────────────────────────
+        # Overhead shots, B-roll, and wide establishing shots have no detectable
+        # faces (or only spurious hand/skin detections). In these scenes, the
+        # hold-fill above bleeds in the last face position from the previous scene
+        # (e.g. cx=0.25 for the left speaker), pulling the crop to an edge.
+        # Fix: if slot-0 had < 25% valid face frames in a scene, it's a no-face
+        # scene — reset to a centered crop (cx=0.5, cy=0.5) instead.
+        FACE_SPARSITY_THRESHOLD = 0.25
+        for seg_start, seg_end in zip(scene_boundaries[:-1], scene_boundaries[1:]):
+            seg = slice(seg_start, seg_end)
+            seg_len = seg_end - seg_start
+            if seg_len == 0:
+                continue
+            # Count frames in this scene that had a genuine face in slot 0
+            # (pre-fill, so check via raw_n_spk: if raw_n_spk was ever > 0 in this seg)
+            face_frames = np.sum(raw_n_spk[seg] > 0)
+            face_ratio = face_frames / seg_len
+            if face_ratio < FACE_SPARSITY_THRESHOLD:
+                # No meaningful face data for this scene — center the crop
+                raw_spk_cx[seg, 0] = 0.5
+                raw_spk_cy[seg, 0] = 0.5
+                logger.debug(
+                    f"  [face-sparsity] Scene [{seg_start}:{seg_end}] face_ratio={face_ratio:.2f} "
+                    f"→ forcing center crop"
+                )
+
     # ── 7d. Scene-boundary layout snapping ────────────────────────────────────
     # If a layout change (n=1 -> n=2) happens within 50 frames of a scene cut,
     # snap the layout change to the exact frame of the scene cut.
