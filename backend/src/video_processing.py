@@ -1061,6 +1061,30 @@ def track_speaker_and_frame(
             "med_x":       float(smooth_spk_cx[cur_start:frames_count, 0].mean()),
         })
 
+    # ── 9.5. Global Featured Speaker Ranking ──────────────────────────────────
+    # Calculate which spatial slot speaks the most across the entire clip.
+    # This maps the "main character" (e.g. the guest) to the top position.
+    slot_speaking_frames = {0: 0, 1: 0, 2: 0, 3: 0}
+    for fi in range(frames_count):
+        faces = frame_faces.get(fi, [])
+        speaking_faces = [f for f in faces if f.get("speaking", False)]
+        for f in speaking_faces:
+            cx_val = _norm_x(f)
+            best_slot = -1
+            best_dist = 999.0
+            for slot in range(4):
+                slot_cx = smooth_spk_cx[fi, slot]
+                if slot_cx != -1:
+                    dist = abs(slot_cx - cx_val)
+                    if dist < best_dist:
+                        best_dist = dist
+                        best_slot = slot
+            # If the speaking face maps closely to a tracked slot, credit that slot
+            if best_slot != -1 and best_dist < 0.1:
+                slot_speaking_frames[best_slot] += 1
+
+    logger.info(f"  [Featured Speaker] Slot speaking frame counts: {slot_speaking_frames}")
+
     # ── 10. Render ─────────────────────────────────────────────────────────────
     # Re-open capture to reliably restart from frame 0 (fixes OpenCV seek bug)
     cap.release()
@@ -1079,17 +1103,32 @@ def track_speaker_and_frame(
             cy = smooth_spk_cy[fidx]   # shape (4,) cy per speaker slot
 
             if n == 4:
+                # Top row gets the 2 most active speakers (sorted left-to-right spatially)
+                active_4 = sorted([0, 1, 2, 3], key=lambda s: slot_speaking_frames[s], reverse=True)
+                top_row = sorted(active_4[:2])
+                bot_row = sorted(active_4[2:])
                 out_frame = _render_split_4(
-                    frame, cx[0] * w, cx[1] * w, cx[2] * w, cx[3] * w,
-                    cy[0] * h, cy[1] * h, cy[2] * h, cy[3] * h,
+                    frame, cx[top_row[0]] * w, cx[top_row[1]] * w,
+                    cx[bot_row[0]] * w, cx[bot_row[1]] * w,
+                    cy[top_row[0]] * h, cy[top_row[1]] * h,
+                    cy[bot_row[0]] * h, cy[bot_row[1]] * h,
                 )
             elif n == 3:
+                # Top slot gets the most active speaker. Bottom row gets the other 2 (left-to-right).
+                active_3 = sorted([0, 1, 2], key=lambda s: slot_speaking_frames[s], reverse=True)
+                top_slot = active_3[0]
+                bot_row  = sorted([s for s in [0, 1, 2] if s != top_slot])
                 out_frame = _render_split_3(
-                    frame, cx[1] * w, cx[0] * w, cx[2] * w,
-                    cy[1] * h, cy[0] * h, cy[2] * h,
+                    frame, cx[top_slot] * w, cx[bot_row[0]] * w, cx[bot_row[1]] * w,
+                    cy[top_slot] * h, cy[bot_row[0]] * h, cy[bot_row[1]] * h,
                 )
             elif n == 2:
-                out_frame = _render_split_2(frame, cx[0] * w, cx[1] * w, cy[0] * h, cy[1] * h)
+                # Top slot gets the most active speaker. Bottom slot gets the other.
+                if slot_speaking_frames[1] > slot_speaking_frames[0]:
+                    top_slot, bot_slot = 1, 0
+                else:
+                    top_slot, bot_slot = 0, 1
+                out_frame = _render_split_2(frame, cx[top_slot] * w, cx[bot_slot] * w, cy[top_slot] * h, cy[bot_slot] * h)
             else:
                 out_frame = _cell_full(frame, cx[0] * w, cy[0] * h)
 
