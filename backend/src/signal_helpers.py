@@ -68,7 +68,24 @@ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
                 best_center = min(cluster_centers, key=lambda c: abs(c - target))
                 last_pos = best_center
             out[i] = last_pos
-        return out
+            
+        # Enforce minimum shot duration (1.2 seconds = 30 frames @ 25fps)
+        # Prevents seizure-inducing flickering when TalkNet rapidly alternates between speakers
+        MIN_SHOT = 30
+        stabilized = out.copy()
+        run_start = 0
+        for i in range(1, seg_len):
+            if out[i] != out[i-1]:
+                if (i - run_start) < MIN_SHOT and run_start > 0:
+                    # This shot was too short, revert it to the previous speaker
+                    stabilized[run_start:i] = stabilized[run_start-1]
+                run_start = i
+                
+        # Handle the final run
+        if (seg_len - run_start) < MIN_SHOT and run_start > 0:
+            stabilized[run_start:] = stabilized[run_start-1]
+            
+        return stabilized
 
     # ── 3. TRACKING MODE: Moving subject ──────────────────────────────────
     # Gap-fill then Gaussian smooth.
