@@ -76,6 +76,7 @@ export async function POST(
       data: {
         status: "queued",
         displayName: newDisplayName,
+        createdAt: new Date(), // Reset creation time to fix UI timer and sorting
         clips: {
           deleteMany: {}, // Remove old clips if any
         },
