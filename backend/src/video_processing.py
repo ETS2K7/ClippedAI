@@ -752,6 +752,36 @@ def track_speaker_and_frame(
                     raw_spk_cx[fi, 1] = cxs[-1]
                     raw_spk_cy[fi, 0] = cys[0]
                     raw_spk_cy[fi, 1] = cys[-1]
+                    path_counts["B"] += 1
+                    continue
+
+        # —— B2) Visual presence — reaction / listening shot
+        # Fires when n_spk_scene < 2 (diarization says 1 speaker, e.g. background
+        # host) but two clearly separated, similarly-sized faces are both visible.
+        # Handles frames where Tom & Zendaya are both in shot but neither is
+        # speaking yet — without this, the frame defaults to a 1-person crop.
+        if len(faces) >= 2:
+            distinct_vis = _prominent_distinct_faces(faces, w)
+            if len(distinct_vis) >= 2:
+                f0, f1 = distinct_vis[0], distinct_vis[-1]
+                cxs = [_norm_x(f0), _norm_x(f1)]
+                cys = [_norm_y(f0), _norm_y(f1)]
+                clearly_left  = cxs[0]  < (0.5 - SPLIT_MARGIN)
+                clearly_right = cxs[-1] > (0.5 + SPLIT_MARGIN)
+                sep_thresh    = SPLIT_MIN_CX_SEP / w
+                separable     = (cxs[-1] - cxs[0]) >= sep_thresh
+                # Both faces must be similarly prominent — prevents a close-up
+                # subject + small background bystander from triggering a split.
+                area0, area1  = _face_area(f0), _face_area(f1)
+                similar_size  = min(area0, area1) >= 0.35 * max(area0, area1)
+
+                if clearly_left and clearly_right and separable and similar_size:
+                    raw_n_spk[fi] = 2
+                    raw_spk_cx[fi, 0] = cxs[0]
+                    raw_spk_cx[fi, 1] = cxs[-1]
+                    raw_spk_cy[fi, 0] = cys[0]
+                    raw_spk_cy[fi, 1] = cys[-1]
+                    path_counts["B"] += 1
                     continue
 
         # —— C) Single TalkNet confirmed
