@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import { Check, ArrowRight, Loader2, Coins, Zap, Star, Building2, ArrowLeft, Users } from "lucide-react";
 import AppShell from "~/components/app-shell";
@@ -98,7 +98,7 @@ interface FoundingSlots {
 }
 
 export default function UpgradeClient() {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -138,6 +138,14 @@ export default function UpgradeClient() {
   function getProEnvKey(plan: typeof PLANS[1]) {
     if (slots?.available && "foundingEnvKey" in plan && plan.foundingEnvKey) return plan.foundingEnvKey;
     return plan.envKey;
+  }
+
+  if (isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-black p-4">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+      </div>
+    );
   }
 
   return (
