@@ -309,16 +309,13 @@ def _stabilize_bool_state(
     min_gap: int,
 ) -> np.ndarray:
     """
-    Stabilizes a boolean signal (like 'is split-screen active').
-    
-    Previous version stabilized per-scene, which created 'dead zones'
-    at the end of scenes where a layout change would be suppressed if
-    it happened <min_entry frames before a cut.
-    
-    New version stabilizes GLOBALLY to allow layouts to transition 
-    cleanly across scene boundaries.
+    Stabilizes a boolean signal per-scene to prevent short reaction shots 
+    from being swallowed by the hysteresis filter (min_gap) from surrounding wide shots.
     """
-    return _stabilize_segment(raw, min_entry, min_gap)
+    result = np.zeros_like(raw)
+    for start_idx, end_idx in zip(scene_boundaries[:-1], scene_boundaries[1:]):
+        result[start_idx:end_idx] = _stabilize_segment(raw[start_idx:end_idx], min_entry, min_gap)
+    return result
 
 
 # ─── Per-layout frame renderers ───────────────────────────────────────────────

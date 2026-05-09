@@ -76,12 +76,6 @@ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
                 if abs(last_pos - best_center) > CLUSTER_GAP:
                     # Snap immediately to the new speaker's approximate center
                     last_pos = best_center
-                
-                # Live Micro-Correction (Dead-zone tracking)
-                # Ignore sub-1% jitter but soft-correct towards the live face center
-                delta = target - last_pos
-                if abs(delta) > 0.01:
-                    last_pos += delta * 0.08
                     
             out[i] = last_pos
             
