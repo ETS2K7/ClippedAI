@@ -690,9 +690,12 @@ def track_speaker_and_frame(
         scene_s  = int(frame_to_scene_start[fi])
         n_spk_scene = scene_speaker_count.get(scene_s, 1)
 
+        # Evaluate distinct speaking faces (filters out overlapping boxes for the same person)
+        distinct_speaking = _prominent_distinct_faces(speaking, w) if len(speaking) > 0 else []
+
         # —— A) TalkNet simultaneous
-        if len(speaking) >= 2:
-            by_x = sorted(speaking[:4], key=_face_cx)
+        if len(distinct_speaking) >= 2:
+            by_x = sorted(distinct_speaking[:4], key=_face_cx)
             n = len(by_x)
             raw_n_spk[fi] = n
             for i, f in enumerate(by_x):
@@ -748,10 +751,10 @@ def track_speaker_and_frame(
                     continue
 
         # —— C) Single TalkNet confirmed
-        if len(speaking) == 1:
+        if len(distinct_speaking) == 1:
             raw_n_spk[fi] = 1
-            raw_spk_cx[fi, 0] = _norm_x(speaking[0])
-            raw_spk_cy[fi, 0] = _norm_y(speaking[0])
+            raw_spk_cx[fi, 0] = _norm_x(distinct_speaking[0])
+            raw_spk_cy[fi, 0] = _norm_y(distinct_speaking[0])
             path_counts["C"] += 1
             continue
 
