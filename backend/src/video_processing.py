@@ -835,6 +835,25 @@ def track_speaker_and_frame(
                 f"(removed {raw_c - stable_c} flickering frames)"
             )
 
+    # ── 7b. Post-stabilization geometric deduplication ───────────────────────
+    # Even after the boolean stabilizer, a missed scene cut or a duplicate
+    # bounding box for the same person can leave stable_n=2 with both slots
+    # pointing to nearly identical cx positions. The result is the same face
+    # rendered in both the top and bottom panels.
+    # Fix: for any frame where n>=2, if slot-0 and slot-1 cx values are within
+    # 0.15 (normalized) of each other, they're the same person — collapse to n=1.
+    SAME_PERSON_CX_THRESHOLD = 0.15  # 192px / 1280 in normalized coords
+    collapsed = 0
+    for fi in range(frames_count):
+        if stable_n[fi] >= 2:
+            cx0 = raw_spk_cx[fi, 0]
+            cx1 = raw_spk_cx[fi, 1]
+            if cx0 != -1 and cx1 != -1 and abs(cx0 - cx1) < SAME_PERSON_CX_THRESHOLD:
+                stable_n[fi] = 1
+                collapsed += 1
+    if collapsed > 0:
+        logger.info(f"  [dedup] Collapsed {collapsed} duplicate split-screen frames to n=1")
+
     # ── 7c. Per-slot speaker-identity debounce ────────────────────────────────
     #
     # After the split-layout decision is stable, independently debounce each
