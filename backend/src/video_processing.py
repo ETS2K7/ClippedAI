@@ -46,11 +46,11 @@ SIGMA = 12
 # Stabilisation thresholds (entry = min frames before mode activates,
 # gap = min gap frames before mode drops — prevents rapid re-entry)
 MIN_SPLIT_2_ENTRY = 20   # ~0.8 s
-MIN_SPLIT_2_GAP   = 30   # increased to prevent flickering out
+MIN_SPLIT_2_GAP   = 125  # ~5.0 s (prevents mid-scene layout drop if speaker turns head/profile)
 MIN_SPLIT_3_ENTRY = 25   # ~1.0 s
-MIN_SPLIT_3_GAP   = 25
+MIN_SPLIT_3_GAP   = 125
 MIN_SPLIT_4_ENTRY = 30   # ~1.2 s
-MIN_SPLIT_4_GAP   = 30
+MIN_SPLIT_4_GAP   = 125
 
 # Minimum frames a new speaker/camera-angle position must be held before the
 # crop switches to follow it.  A scene cut to a different angle must persist
@@ -772,8 +772,10 @@ def track_speaker_and_frame(
                 separable     = (cxs[-1] - cxs[0]) >= sep_thresh
                 # Both faces must be similarly prominent — prevents a close-up
                 # subject + small background bystander from triggering a split.
+                # Relaxed to 15% to allow true profile faces (narrow bounding boxes)
+                # to trigger alongside front-facing subjects.
                 area0, area1  = _face_area(f0), _face_area(f1)
-                similar_size  = min(area0, area1) >= 0.35 * max(area0, area1)
+                similar_size  = min(area0, area1) >= 0.15 * max(area0, area1)
 
                 if clearly_left and clearly_right and separable and similar_size:
                     raw_n_spk[fi] = 2
@@ -971,27 +973,23 @@ def track_speaker_and_frame(
         # faces (or only spurious hand/skin detections). In these scenes, the
         # hold-fill above bleeds in the last face position from the previous scene
         # (e.g. cx=0.25 for the left speaker), pulling the crop to an edge.
-        # Fix: if slot-0 had < 25% TalkNet-confirmed face frames in a scene,
-        # it's an overhead/B-roll shot — reset to centered crop (cx=0.5, cy=0.5).
-        # IMPORTANT: use raw_talknet_confirmed (paths A & C only), NOT raw_n_spk.
-        # Paths D, C5, NOFACE can fire on hands/scalps in overhead shots, making
-        # raw_n_spk appear full when there are no real faces in frame.
+        # Fix: if slot-0 had < 25% valid face frames in a scene, it's an overhead/B-roll
+        # shot with no actual faces — reset to a centered crop (cx=0.5, cy=0.5).
         FACE_SPARSITY_THRESHOLD = 0.25
         for seg_start, seg_end in zip(scene_boundaries[:-1], scene_boundaries[1:]):
             seg = slice(seg_start, seg_end)
             seg_len = seg_end - seg_start
             if seg_len == 0:
                 continue
-            confirmed_frames = np.sum(raw_talknet_confirmed[seg])
-            face_ratio = confirmed_frames / seg_len
+            face_frames = np.sum(raw_n_spk[seg] > 0)
+            face_ratio = face_frames / seg_len
             if face_ratio < FACE_SPARSITY_THRESHOLD:
-                # No TalkNet-confirmed faces — center the crop and reset n to 1
                 raw_spk_cx[seg, 0] = 0.5
                 raw_spk_cy[seg, 0] = 0.5
-                raw_n_spk[seg] = np.where(raw_n_spk[seg] > 0, 1, raw_n_spk[seg])  # keep 0 as 0, collapse n>1 to 1
+                raw_n_spk[seg] = np.where(raw_n_spk[seg] > 0, 1, raw_n_spk[seg])
                 logger.info(
                     f"  [face-sparsity] Scene [{seg_start}:{seg_end}] "
-                    f"confirmed_ratio={face_ratio:.2f} → forcing center crop"
+                    f"face_ratio={face_ratio:.2f} → forcing center crop"
                 )
 
     # ── 7d. Scene-boundary layout snapping ────────────────────────────────────
