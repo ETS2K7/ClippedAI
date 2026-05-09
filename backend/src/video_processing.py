@@ -38,8 +38,10 @@ CROP_W_4          = 540  # 4-speaker grid (540×960 each)
 # Using 608×1080 → 1080×960 gives 1.776× vs 0.888× — 2× scale mismatch → distortion.
 CROP_H_HALF = int(round(CROP_W_1 * (OUT_H // 2) / OUT_W))  # = 541
 
-# Gaussian smoothing frames (0 = Hard cuts, no sliding)
-SIGMA = 0  
+# Gaussian smoothing frames for TRACKING mode speakers (~0.5 s at 25 fps).
+# Stationary speakers are handled by the cluster-lock in smooth_segment and
+# never reach the Gaussian step. Moving speakers need this to suppress jitter.
+SIGMA = 12
 
 # Stabilisation thresholds (entry = min frames before mode activates,
 # gap = min gap frames before mode drops — prevents rapid re-entry)
@@ -950,35 +952,6 @@ def track_speaker_and_frame(
                 raw_cy_col[seg].copy(), cy_defaults[slot], SIGMA
             )
 
-    logger.info("Rendering adaptive multi-speaker reframing...")
-
-    # ── 8.5. Final post-smoothing shot enforcement ────────────────────────────
-    # Enforces a strict 50-frame minimum by looking at the ACTUAL rendered
-    # parameters (layout + smoothed cx).
-    MIN_SHOT_FRAMES = 50
-    changed = True
-    while changed:
-        changed = False
-        i = 0
-        while i < frames_count:
-            val_n = stable_n[i]
-            val_cx = smooth_spk_cx[i, 0]
-            j = i
-            while j < frames_count:
-                if stable_n[j] != val_n: break
-                if abs(smooth_spk_cx[j, 0] - val_cx) > 0.023: break  # ~30px / 1280
-                j += 1
-            
-            duration = j - i
-            if duration < MIN_SHOT_FRAMES and j < frames_count:
-                # Swallow the flicker!
-                stable_n[i:j] = stable_n[j]
-                for s in range(4):
-                    smooth_spk_cx[i:j, s] = smooth_spk_cx[j, s]
-                    smooth_spk_cy[i:j, s] = smooth_spk_cy[j, s]
-                changed = True
-                break # Restart loop to re-evaluate
-            i = j
 
     # ── 9. Build chunk_meta for subtitle positioning ──────────────────────────
     chunk_meta: List[Dict[str, Any]] = []
