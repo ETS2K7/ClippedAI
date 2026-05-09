@@ -58,8 +58,13 @@ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
         cluster_centers = [float(np.median(c)) for c in clusters]
         out = np.full(seg_len, default)
         
-        # Initial position from first valid
-        last_pos = cluster_centers[0]
+        # Initial position from first valid target (not just the left-most person)
+        valid_idx = np.where(raw != -1)[0]
+        if len(valid_idx) > 0:
+            first_target = float(raw[valid_idx[0]])
+            last_pos = min(cluster_centers, key=lambda c: abs(c - first_target))
+        else:
+            last_pos = cluster_centers[0]
         
         for i in range(seg_len):
             if raw[i] != -1:
@@ -76,9 +81,13 @@ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
         run_start = 0
         for i in range(1, seg_len):
             if out[i] != out[i-1]:
-                if (i - run_start) < MIN_SHOT and run_start > 0:
-                    # This shot was too short, revert it to the previous speaker
-                    stabilized[run_start:i] = stabilized[run_start-1]
+                if (i - run_start) < MIN_SHOT:
+                    if run_start > 0:
+                        # This shot was too short, revert it to the previous speaker
+                        stabilized[run_start:i] = stabilized[run_start-1]
+                    else:
+                        # The very first shot was too short, overwrite it with the incoming speaker
+                        stabilized[run_start:i] = out[i]
                 run_start = i
                 
         # Handle the final run

@@ -443,6 +443,19 @@ def _prominent_distinct_faces(
 
 # ─── Phase 5 ──────────────────────────────────────────────────────────────────
 
+def _robust_median(xs: List[float]) -> float:
+    if not xs: return 0.5
+    s = np.sort(xs)
+    gaps = np.diff(s)
+    # Gap > 100px on 1280 wide video
+    gap_indices = np.where(gaps > 100)[0]
+    boundaries = np.concatenate([[-1], gap_indices, [len(s) - 1]])
+    clusters = []
+    for i in range(len(boundaries) - 1):
+        clusters.append(s[int(boundaries[i])+1 : int(boundaries[i+1])+1])
+    largest = max(clusters, key=len)
+    return float(np.median(largest))
+
 def track_speaker_and_frame(
     clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]], work_dir: str = "",
     tracker=None,
@@ -572,7 +585,7 @@ def track_speaker_and_frame(
         if len(speaking) == 1 and spk is not None:
             clip_spk_xs.setdefault(spk, []).append(_face_cx(speaking[0]))
     clip_side_map: Dict = {
-        spk: (1 if float(np.median(xs)) > w / 2 else 0)
+        spk: (1 if _robust_median(xs) > w / 2 else 0)
         for spk, xs in clip_spk_xs.items() if len(xs) >= 10
     }
 
@@ -587,7 +600,7 @@ def track_speaker_and_frame(
             if len(speaking) == 1 and spk is not None:
                 scene_spk_xs.setdefault(spk, []).append(_face_cx(speaking[0]))
         scene_x_map: Dict = {
-            spk: float(np.median(xs))
+            spk: _robust_median(xs)
             for spk, xs in scene_spk_xs.items() if len(xs) >= 5
         }
         if not scene_x_map:
@@ -644,7 +657,7 @@ def track_speaker_and_frame(
             if len(speaking) == 1 and spk is not None:
                 spk_xs.setdefault(spk, []).append(_face_cx(speaking[0]))
         scene_spk_x_map[seg_start] = {
-            spk: float(np.median(xs))
+            spk: _robust_median(xs)
             for spk, xs in spk_xs.items() if len(xs) >= 5
         }
 
@@ -785,7 +798,7 @@ def track_speaker_and_frame(
             # use their historical median position to hold the camera steady.
             spk = speaker_array[fi]
             if spk is not None and spk in clip_spk_xs:
-                historical_x = float(np.median(clip_spk_xs[spk])) / w
+                historical_x = _robust_median(clip_spk_xs[spk]) / w
                 raw_n_spk[fi] = 1
                 raw_spk_cx[fi, 0] = historical_x
                 raw_spk_cy[fi, 0] = 0.35
