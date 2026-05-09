@@ -138,7 +138,6 @@ def transcribe(video_path: str, _video_url: str = "", remote_cache=None) -> List
         "audio_url": upload_url,
         "speech_models": ["universal-2"],
         "speaker_labels": True,
-        "language_detection": True,
     }
 
     logger.info(f"Submitting actual payload to AAI: {json_payload}")
