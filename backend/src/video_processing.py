@@ -607,8 +607,9 @@ def track_speaker_and_frame(
     for fi in range(frames_count):
         faces = frame_faces.get(fi, [])
         spk   = speaker_array[fi]
-        if len(faces) == 1 and spk is not None:
-            clip_spk_xs.setdefault(spk, []).append(_face_cx(faces[0]))
+        speaking = [f for f in faces if f.get("speaking", False)]
+        if len(speaking) == 1 and spk is not None:
+            clip_spk_xs.setdefault(spk, []).append(_face_cx(speaking[0]))
     clip_side_map: Dict = {
         spk: (1 if float(np.median(xs)) > w / 2 else 0)
         for spk, xs in clip_spk_xs.items() if len(xs) >= 10
@@ -621,8 +622,9 @@ def track_speaker_and_frame(
         for fi in range(seg_start, seg_end):
             faces = frame_faces.get(fi, [])
             spk   = speaker_array[fi]
-            if len(faces) == 1 and spk is not None:
-                scene_spk_xs.setdefault(spk, []).append(_face_cx(faces[0]))
+            speaking = [f for f in faces if f.get("speaking", False)]
+            if len(speaking) == 1 and spk is not None:
+                scene_spk_xs.setdefault(spk, []).append(_face_cx(speaking[0]))
         scene_x_map: Dict = {
             spk: float(np.median(xs))
             for spk, xs in scene_spk_xs.items() if len(xs) >= 5
@@ -677,8 +679,9 @@ def track_speaker_and_frame(
         for fi in range(seg_start, seg_end):
             faces_in = frame_faces.get(fi, [])
             spk = speaker_array[fi]
-            if len(faces_in) == 1 and spk is not None:
-                spk_xs.setdefault(spk, []).append(_face_cx(faces_in[0]))
+            speaking = [f for f in faces_in if f.get("speaking", False)]
+            if len(speaking) == 1 and spk is not None:
+                spk_xs.setdefault(spk, []).append(_face_cx(speaking[0]))
         scene_spk_x_map[seg_start] = {
             spk: float(np.median(xs))
             for spk, xs in spk_xs.items() if len(xs) >= 5
