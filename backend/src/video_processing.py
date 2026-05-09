@@ -681,6 +681,12 @@ def track_speaker_and_frame(
     # Per-path frame counters — logged per scene to diagnose framing issues
     path_counts = {"A": 0, "B": 0, "C": 0, "C5": 0, "D": 0, "NOFACE": 0}
 
+    # Tracks frames where TalkNet itself confirmed a speaker (paths A & C).
+    # Used by the face-sparsity center-fallback to distinguish real face scenes
+    # from overhead/B-roll shots where only the face *detector* saw something
+    # (a hand, a scalp, skin) — paths D, C5, NOFACE are NOT counted here.
+    raw_talknet_confirmed = np.zeros(frames_count, dtype=bool)
+
     for fi in range(frames_count):
         faces    = frame_faces.get(fi, [])
         speaking = [f for f in faces if f.get("speaking", False)]
@@ -698,6 +704,7 @@ def track_speaker_and_frame(
             for i, f in enumerate(by_x):
                 raw_spk_cx[fi, i] = _norm_x(f)
                 raw_spk_cy[fi, i] = _norm_y(f)
+            raw_talknet_confirmed[fi] = True
             path_counts["A"] += 1
             continue
 
@@ -752,6 +759,7 @@ def track_speaker_and_frame(
             raw_n_spk[fi] = 1
             raw_spk_cx[fi, 0] = _norm_x(distinct_speaking[0])
             raw_spk_cy[fi, 0] = _norm_y(distinct_speaking[0])
+            raw_talknet_confirmed[fi] = True
             path_counts["C"] += 1
             continue
 
@@ -933,25 +941,27 @@ def track_speaker_and_frame(
         # faces (or only spurious hand/skin detections). In these scenes, the
         # hold-fill above bleeds in the last face position from the previous scene
         # (e.g. cx=0.25 for the left speaker), pulling the crop to an edge.
-        # Fix: if slot-0 had < 25% valid face frames in a scene, it's a no-face
-        # scene — reset to a centered crop (cx=0.5, cy=0.5) instead.
+        # Fix: if slot-0 had < 25% TalkNet-confirmed face frames in a scene,
+        # it's an overhead/B-roll shot — reset to centered crop (cx=0.5, cy=0.5).
+        # IMPORTANT: use raw_talknet_confirmed (paths A & C only), NOT raw_n_spk.
+        # Paths D, C5, NOFACE can fire on hands/scalps in overhead shots, making
+        # raw_n_spk appear full when there are no real faces in frame.
         FACE_SPARSITY_THRESHOLD = 0.25
         for seg_start, seg_end in zip(scene_boundaries[:-1], scene_boundaries[1:]):
             seg = slice(seg_start, seg_end)
             seg_len = seg_end - seg_start
             if seg_len == 0:
                 continue
-            # Count frames in this scene that had a genuine face in slot 0
-            # (pre-fill, so check via raw_n_spk: if raw_n_spk was ever > 0 in this seg)
-            face_frames = np.sum(raw_n_spk[seg] > 0)
-            face_ratio = face_frames / seg_len
+            confirmed_frames = np.sum(raw_talknet_confirmed[seg])
+            face_ratio = confirmed_frames / seg_len
             if face_ratio < FACE_SPARSITY_THRESHOLD:
-                # No meaningful face data for this scene — center the crop
+                # No TalkNet-confirmed faces — center the crop and reset n to 1
                 raw_spk_cx[seg, 0] = 0.5
                 raw_spk_cy[seg, 0] = 0.5
-                logger.debug(
-                    f"  [face-sparsity] Scene [{seg_start}:{seg_end}] face_ratio={face_ratio:.2f} "
-                    f"→ forcing center crop"
+                raw_n_spk[seg] = np.where(raw_n_spk[seg] > 0, 1, raw_n_spk[seg])  # keep 0 as 0, collapse n>1 to 1
+                logger.info(
+                    f"  [face-sparsity] Scene [{seg_start}:{seg_end}] "
+                    f"confirmed_ratio={face_ratio:.2f} → forcing center crop"
                 )
 
     # ── 7d. Scene-boundary layout snapping ────────────────────────────────────
