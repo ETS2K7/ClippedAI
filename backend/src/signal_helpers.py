@@ -13,8 +13,8 @@ _logger = logging.getLogger(__name__)
 
 # Face-detection bounding boxes jitter by ~0.02-0.06 in normalised coords even for
 # perfectly stationary speakers.  A speaker genuinely walking across frame produces
-# std > 0.15.  0.15 safely separates "detection noise" from "real movement".
-STATIONARY_STD_THRESHOLD = 0.15
+# std > 0.15.  0.094 safely separates "detection noise" from "real movement".
+STATIONARY_STD_THRESHOLD = 0.094
 
 # When the ASD model alternates between two stationary faces in a wide shot,
 # the positions cluster into groups.
