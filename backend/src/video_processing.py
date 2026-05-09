@@ -808,14 +808,27 @@ def track_speaker_and_frame(
             path_counts["C5"] += 1
             continue
 
-        if faces:
+        elif faces:
+            # —— D) Absolute fallback (largest face)
             best = max(faces, key=_face_area)
             raw_n_spk[fi] = 1
             raw_spk_cx[fi, 0] = _norm_x(best)
             raw_spk_cy[fi, 0] = _norm_y(best)
             path_counts["D"] += 1
         else:
-            path_counts["NOFACE"] += 1
+            # —— E) NOFACE Fallback with Diarization
+            # If face detector is completely blind but diarization knows who's talking,
+            # use their historical median position to hold the camera steady.
+            spk = speaker_array[fi]
+            if spk is not None and spk in clip_spk_xs:
+                historical_x = float(np.median(clip_spk_xs[spk])) / w
+                raw_n_spk[fi] = 1
+                raw_spk_cx[fi, 0] = historical_x
+                raw_spk_cy[fi, 0] = 0.35
+                path_counts["NOFACE"] += 1
+            else:
+                # Absolute blind fallback (triggers 0.5 drift if it persists)
+                path_counts["NOFACE"] += 1
 
     # ── 7. Stabilise each speaker-count level independently ──────────────────
     #
