@@ -63,7 +63,8 @@ MIN_FACE_W_RATIO  = 0.04  # Face must be ≥4% of frame width to count
 SPLIT_MARGIN      = 0.08  # 2-speaker: each face must be 8% past centre
 MIN_FACE_SEP      = 0.10  # 3/4-speaker: min separation between adjacent faces
 # Minimum cx distance before 608px crops stop overlapping (|cx_r - cx_l| < CROP_W_1)
-SPLIT_MIN_CX_SEP  = CROP_W_1  # 608px
+SPLIT_MIN_CX_SEP  = CROP_W_1  # 608px (for n=2)
+SPLIT_MIN_CX_SEP_MULTI = 200  # 200px (for n=3, n=4)
 
 
 # ─── FFmpeg Core Utilities ───────────────────────────────────────────────────
@@ -715,8 +716,7 @@ def track_speaker_and_frame(
             if len(distinct) >= 4 and n_spk_scene >= 4:
                 cxs = [_norm_x(f) for f in distinct[:4]]
                 cys = [_norm_y(f) for f in distinct[:4]]
-                # Geometric separation check (normalized: 608 / 1280 = 0.475)
-                sep_thresh = SPLIT_MIN_CX_SEP / w
+                sep_thresh = SPLIT_MIN_CX_SEP_MULTI / w
                 separable = all(cxs[i+1] - cxs[i] >= sep_thresh for i in range(3))
                 if separable:
                     raw_n_spk[fi] = 4
@@ -728,7 +728,7 @@ def track_speaker_and_frame(
             if len(distinct) >= 3 and n_spk_scene >= 3:
                 cxs = [_norm_x(f) for f in distinct[:3]]
                 cys = [_norm_y(f) for f in distinct[:3]]
-                sep_thresh = SPLIT_MIN_CX_SEP / w
+                sep_thresh = SPLIT_MIN_CX_SEP_MULTI / w
                 separable = all(cxs[i+1] - cxs[i] >= sep_thresh for i in range(2))
                 if separable:
                     raw_n_spk[fi] = 3
