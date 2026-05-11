@@ -123,6 +123,7 @@ class ProcessVideoRequest(BaseModel):
 image = (modal.Image.debian_slim(python_version="3.10")
     .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig"])
     .pip_install_from_requirements("requirements.txt")
+    .pip_install("apify-client")
     .add_local_dir("src", remote_path="/root/src", copy=True)
     .add_local_dir("fonts", remote_path="/usr/share/fonts/truetype/custom", copy=True)
     .run_commands(["fc-cache -fv"])
@@ -134,72 +135,52 @@ app = modal.App("clippedai", image=image)
 auth_scheme = HTTPBearer()
 
 def _download_youtube(youtube_url: str, video_path: pathlib.Path) -> str | None:
-    """Download YouTube video using RapidAPI. Returns the video title if found."""
-    import requests
-    import os
-    import re
+    """Download YouTube video using Apify API. Returns the video title if found."""
+    from apify_client import ApifyClient
 
-    rapidapi_key = os.environ.get("RAPIDAPI_KEY")
-    if not rapidapi_key:
-        raise RuntimeError("RAPIDAPI_KEY is missing from environment secrets.")
+    apify_token = os.environ.get("APIFY_TOKEN")
+    if not apify_token:
+        raise RuntimeError("APIFY_TOKEN is missing from environment secrets.")
 
-    # Extract video ID
-    video_id_match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11}).*", youtube_url)
-    if not video_id_match:
-        raise ValueError(f"Could not extract video ID from URL: {youtube_url}")
-    video_id = video_id_match.group(1)
+    logger.info(f"Starting Apify youtube downloader for {youtube_url}")
+    client = ApifyClient(apify_token)
 
-    logger.info(f"Starting RapidAPI youtube downloader for {video_id}")
-    
-    # Using 'YouTube Search and Download' API as a default
-    url = "https://youtube-search-and-download.p.rapidapi.com/video"
-    querystring = {"id": video_id}
-    headers = {
-        "X-RapidAPI-Key": rapidapi_key,
-        "X-RapidAPI-Host": "youtube-search-and-download.p.rapidapi.com"
+    run_input = {
+        "videos": [{"url": youtube_url}],
+        "preferQuality": "1080p",
+        "preferFormat": "mp4"
     }
 
     try:
-        response = requests.get(url, headers=headers, params=querystring)
-        response.raise_for_status()
-        data = response.json()
-        
-        streaming_data = data.get("streamingData", {})
-        formats = streaming_data.get("formats", [])
-        
-        # Look for 720p progressive (video + audio) format
-        target_format = next((f for f in formats if "720p" in f.get("qualityLabel", "")), None)
-        
-        if not target_format and formats:
-            # Fallback to the highest available progressive format (usually 360p or 720p)
-            target_format = formats[0]
-            
-        if not target_format:
-            # Fallback to adaptive formats if progressive is missing (requires ffmpeg merge, but let's try)
-            adaptive = streaming_data.get("adaptiveFormats", [])
-            target_format = next((f for f in adaptive if "720p" in f.get("qualityLabel", "") and "video" in f.get("mimeType", "")), None)
+        run = client.actor("streamers/youtube-video-downloader").call(run_input=run_input)
+        logger.info(f"Apify run finished with status: {run.get('status')}")
 
-        if not target_format:
-            raise RuntimeError("No suitable download format found via RapidAPI.")
+        dataset = client.dataset(run["defaultDatasetId"])
+        items = dataset.list_items().items
+        if not items:
+            raise RuntimeError("Apify actor did not return any dataset items (download failed)")
 
-        download_url = target_format.get("url")
+        item = items[0]
+        download_url = item.get("downloadedFileUrl") or item.get("downloadUrl")
+        
         if not download_url:
-            raise RuntimeError("Could not find direct download URL in API response. This video might be region-locked or age-restricted.")
+            raise RuntimeError(f"No download URL found in Apify output (Ensure the actor is configured to use KVS natively): {item}")
 
-        logger.info(f"Streaming video from proxied URL...")
+        logger.info(f"Streaming video directly from Apify KVS to Modal: {download_url}")
+
+        # Download the file directly from Apify KeyValueStore bypassing any AWS transmission
         with requests.get(download_url, stream=True, timeout=600) as r:
             r.raise_for_status()
             with open(str(video_path), 'wb') as f:
                 for chunk in r.iter_content(chunk_size=8192*4):
                     f.write(chunk)
             
-        title = data.get("videoDetails", {}).get("title", "Unknown Title")
-        logger.info(f"Successfully fetched YouTube video via RapidAPI: {title}")
-        return title
+        logger.info("Successfully fetched YouTube video via Apify")
+        return item.get("title")
         
     except Exception as e:
-        logger.error(f"RapidAPI download failed: {str(e)}")
-        raise
+        logger.error(f"Apify download failed: {str(e)}")
+        return None
 
 def _process_single_clip(
     video_path: str,
@@ -421,7 +402,6 @@ def _send_webhook(
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
         modal.Secret.from_name("my-gcp-secret"),
-        modal.Secret.from_name("rapidapi-secret"),
     ]
 )
 class ClippedAI:
@@ -503,7 +483,6 @@ class ClippedAI:
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
         modal.Secret.from_name("my-gcp-secret"),
-        modal.Secret.from_name("rapidapi-secret"),
     ]
 )
 def process_video_cpu_wrapper(request_dict: dict):
