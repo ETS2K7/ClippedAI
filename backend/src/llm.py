@@ -54,14 +54,14 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     transcript = "\n".join(sentences)
 
     prompt = (
-        "Extract up to 3 non-overlapping viral clips from this transcript for TikTok, YouTube Shorts, and Instagram Reels.\n"
+        "Extract up to 3 non-overlapping viral clips from this transcript.\n"
         "If the video is short, extract as many as mathematically possible.\n\n"
-        "Each clip MUST be between 15 and 60 seconds long. No exceptions.\n"
-        "1. Start each clip on a hook (bold claim, surprising fact, emotional moment).\n"
-        "2. End each clip on a complete thought — never mid-sentence.\n"
-        "3. 100% SELF-CONTAINED: The clip MUST make complete sense to a viewer who has never seen the original video.\n"
-        "4. NO UNRESOLVED PRONOUNS: The clip CANNOT start with words like 'He', 'This', 'That', or 'It' unless the subject is immediately clarified.\n"
-        "5. FULL NARRATIVE ARC: The clip must have a clear setup, escalation, and payoff within its timeframe.\n\n"
+        "Each clip MUST be between 30 and 90 seconds long. No exceptions.\n"
+        "1. PRIORITIZE DEPTH: Favor segments that allow for a complete explanation, deep insight, or full story. Do not aggressively trim for brevity.\n"
+        "2. 100% SELF-CONTAINED: The clip MUST make complete sense to a viewer who has never seen the original video.\n"
+        "3. NO UNRESOLVED PRONOUNS: The clip CANNOT start with words like 'He', 'This', 'That', or 'It' unless the subject is immediately clarified.\n"
+        "4. FULL NARRATIVE ARC: Every clip must have a clear setup, escalation, and payoff/insight.\n"
+        "5. PUNCHY TITLE: Create a viral, high-value title for each clip.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -79,7 +79,6 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                     f"[LLM] 🟢 Cache hit — returning cached clip selection "
                     f"(key={_cache_key[:8]})"
                 )
-                # Ensure previously cached short clips are still auto-extended
                 return _validate_clips(cached[:3], words)
             else:
                 logger.warning("[LLM] Cache entry invalid, re-running selection.")
@@ -100,17 +99,12 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return validated_clips
 
 
-# ── Minimum duration (seconds) that a clip must reach after auto-extension ──
-_MIN_CLIP_DURATION = 15.0
+# ── Minimum duration (seconds) ──
+_MIN_CLIP_DURATION = 30.0
 
 
 def _validate_clips(raw_clips: list, words: list) -> list:
-    """Validate and filter clips for duration and timestamp bounds.
-    
-    Clips shorter than _MIN_CLIP_DURATION are automatically extended toward
-    the end of the video (capped at video_end_s) so that borderline clips
-    produced by the LLM are rescued rather than discarded.
-    """
+    """Validate and filter clips for duration and timestamp bounds."""
     video_end_s = words[-1]["end"] / 1000.0
     validated = []
     for clip in raw_clips:
@@ -122,7 +116,7 @@ def _validate_clips(raw_clips: list, words: list) -> list:
         if start < 0 or end <= start or start > video_end_s:
             logger.warning(f"Skipping invalid clip: start={start}, end={end}")
             continue
-        if duration > 60:
+        if duration > 95:  # Allow slight buffer over 90s
             logger.warning(f"Skipping clip with excessive duration ({duration:.1f}s)")
             continue
         # Discard clips that are too short (strict enforcement)
