@@ -778,7 +778,10 @@ def track_speaker_and_frame(
                 sep_thresh    = SPLIT_MIN_CX_SEP / w
                 separable     = (cxs[-1] - cxs[0]) >= sep_thresh
 
-                if clearly_left and clearly_right and separable:
+                area0, area1  = _face_area(distinct[0]), _face_area(distinct[-1])
+                similar_size  = min(area0, area1) >= 0.45 * max(area0, area1)
+
+                if clearly_left and clearly_right and separable and similar_size:
                     raw_n_spk[fi] = 2
                     raw_spk_cx[fi, 0] = cxs[0]
                     raw_spk_cx[fi, 1] = cxs[-1]
@@ -804,10 +807,9 @@ def track_speaker_and_frame(
                 separable     = (cxs[-1] - cxs[0]) >= sep_thresh
                 # Both faces must be similarly prominent — prevents a close-up
                 # subject + small background bystander from triggering a split.
-                # Relaxed to 15% to allow true profile faces (narrow bounding boxes)
-                # to trigger alongside front-facing subjects.
+                # Raised to 45% to prevent 'Over the Shoulder' (back of head) triggers.
                 area0, area1  = _face_area(f0), _face_area(f1)
-                similar_size  = min(area0, area1) >= 0.15 * max(area0, area1)
+                similar_size  = min(area0, area1) >= 0.45 * max(area0, area1)
 
                 if clearly_left and clearly_right and separable and similar_size:
                     raw_n_spk[fi] = 2
