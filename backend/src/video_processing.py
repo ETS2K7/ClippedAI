@@ -347,6 +347,26 @@ def _cell_full(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(_ar_safe_crop(frame, cx, cy, OUT_W, OUT_H), (OUT_W, OUT_H))
 
 
+def _render_gaming_split(frame: np.ndarray, face_cx: float, face_cy: float) -> np.ndarray:
+    """
+    Gaming Mode: Stacks central gameplay on top of a tracked facecam.
+    Top (1080x1080): 1:1 crop of the center of the original frame.
+    Bottom (1080x840): Tracked crop of the facecam.
+    """
+    # 1. Top Cell: Gameplay (Always centered on original video)
+    top_h = 1080
+    # Use _ar_safe_crop with cx=0.5 to get the center action
+    top_crop = _ar_safe_crop(frame, 0.5, 0.5, OUT_W, top_h)
+    top_cell = cv2.resize(top_crop, (OUT_W, top_h))
+
+    # 2. Bottom Cell: Facecam (Tracks the player's head)
+    bot_h = OUT_H - top_h  # 840px
+    bot_crop = _ar_safe_crop(frame, face_cx, face_cy, OUT_W, bot_h)
+    bot_cell = cv2.resize(bot_crop, (OUT_W, bot_h))
+
+    return np.vstack([top_cell, bot_cell])
+
+
 def _cell_half(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     """2-speaker top/bottom cell: AR-safe crop → 1080×960."""
     return cv2.resize(
@@ -1164,7 +1184,15 @@ def track_speaker_and_frame(
                     top_slot, bot_slot = 0, 1
                 out_frame = _render_split_2(frame, cx[top_slot] * w, cx[bot_slot] * w, cy[top_slot] * h, cy[bot_slot] * h)
             else:
-                out_frame = _cell_full(frame, cx[0] * w, cy[0] * h)
+                # n=1 (Single Speaker)
+                cx_val = cx[0]
+                # Gaming Mode Detection: 
+                # If the face is significantly off-center (typical for facecams), 
+                # use the stacked gaming layout. Otherwise, use full-screen.
+                if abs(cx_val - 0.5) > 0.18:
+                    out_frame = _render_gaming_split(frame, cx_val * w, cy[0] * h)
+                else:
+                    out_frame = _cell_full(frame, cx_val * w, cy[0] * h)
 
             writer.write(out_frame)
     finally:
