@@ -310,12 +310,28 @@ def _stabilize_bool_state(
     min_gap: int,
 ) -> np.ndarray:
     """
-    Stabilizes a boolean signal per-scene to prevent short reaction shots 
-    from being swallowed by the hysteresis filter (min_gap) from surrounding wide shots.
+    Stabilizes a boolean signal per-scene using a two-pass 'Context-Aware' approach.
+    If a scene 'Qualifies' by having at least one layout segment that meets the
+    initial threshold, it unlocks a 'Fast Lane' (Entry=2, Gap=15) for the rest
+    of that scene to enable near-instant switching.
     """
     result = np.zeros_like(raw)
     for start_idx, end_idx in zip(scene_boundaries[:-1], scene_boundaries[1:]):
-        result[start_idx:end_idx] = _stabilize_segment(raw[start_idx:end_idx], min_entry, min_gap)
+        seg_raw = raw[start_idx:end_idx]
+        if len(seg_raw) == 0:
+            continue
+            
+        # Pass 1: The 'Proof' pass using standard thresholds
+        proof = _stabilize_segment(seg_raw, min_entry, min_gap)
+        
+        if np.any(proof):
+            # Threshold achieved! Scene is now 'Qualified' for the Fast Pass.
+            # We use a very low entry (2 frames) and a snappy gap (15 frames).
+            result[start_idx:end_idx] = _stabilize_segment(seg_raw, 2, 15)
+        else:
+            # Not qualified — stick to the safe/skeptical output
+            result[start_idx:end_idx] = proof
+            
     return result
 
 
@@ -564,6 +580,17 @@ def track_speaker_and_frame(
         if wd.get("end",   0) >= clip_start_ms - 2000
         and wd.get("start", 0) <= clip_end_ms   + 2000
     ]
+
+    # Pre-qualify speakers: any speaker with >15 frames (~0.6s) of total audio
+    # in this clip gets a 'Fast Pass' for instant switching.
+    spk_durations = {}
+    for wd in clip_words:
+        s = wd.get("speaker")
+        if s:
+            spk_durations[s] = spk_durations.get(s, 0) + (wd.get("end", 0) - wd.get("start", 0))
+    
+    qualified_speakers = {s for s, dur in spk_durations.items() if dur > 600} # >600ms = ~15 frames
+
     speaker_array: List[Any] = [None] * frames_count
     w_ptr = 0
     for fi in range(frames_count):
@@ -571,8 +598,13 @@ def track_speaker_and_frame(
         while w_ptr < len(clip_words) - 1 and ms > clip_words[w_ptr].get("end", 0):
             w_ptr += 1
         wd = clip_words[w_ptr] if w_ptr < len(clip_words) else None
-        if wd and wd.get("start", 0) - 200 <= ms <= wd.get("end", 0) + 200:
-            speaker_array[fi] = wd.get("speaker")
+        
+        if wd:
+            # If speaker is qualified, use 0ms padding for an exact 'Hard Cut'
+            # If not yet qualified, use 100ms padding to bridge noise
+            pad = 0 if wd.get("speaker") in qualified_speakers else 100
+            if wd.get("start", 0) - pad <= ms <= wd.get("end", 0) + pad:
+                speaker_array[fi] = wd.get("speaker")
 
     # Clip-level speaker→side map for fallback attribution
     clip_spk_xs: Dict = {}
