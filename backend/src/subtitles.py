@@ -96,8 +96,7 @@ WrapStyle: 1
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,4,2,2,10,10,550,1
-
+Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,110,100,0,0,1,6,0,2,10,10,450,1
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
@@ -170,9 +169,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 if j == w_idx:
                     # Alternate highlight color between green and yellow based on word index
                     hl_color = "&H0000FFFF" if w_idx % 2 == 0 else "&H0000FF00"
+                    # Add Neon Glow Effect (\4c for shadow color, \blur for soft aura)
                     text_parts.append(
-                        f"{{\\c{hl_color}}}{clean_txt}{{\\c{resolved_ass_color}}}"
-                    )  # Karaoke highlight with exact MrBeast colors
+                        f"{{\\c{hl_color}\\4c{hl_color}\\blur5}}{clean_txt}{{\\r}}"
+                    )
                 else:
                     text_parts.append(clean_txt)
 
