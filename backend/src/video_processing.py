@@ -45,12 +45,12 @@ SIGMA = 12
 
 # Stabilisation thresholds (entry = min frames before mode activates,
 # gap = min gap frames before mode drops — prevents rapid re-entry)
-MIN_SPLIT_2_ENTRY = 20   # ~0.8 s
-MIN_SPLIT_2_GAP   = 125  # ~5.0 s (prevents mid-scene layout drop if speaker turns head/profile)
-MIN_SPLIT_3_ENTRY = 25   # ~1.0 s
-MIN_SPLIT_3_GAP   = 125
-MIN_SPLIT_4_ENTRY = 30   # ~1.2 s
-MIN_SPLIT_4_GAP   = 125
+MIN_SPLIT_2_ENTRY = 10   # ~0.4 s
+MIN_SPLIT_2_GAP   = 40   # ~1.6 s
+MIN_SPLIT_3_ENTRY = 10
+MIN_SPLIT_3_GAP   = 40
+MIN_SPLIT_4_ENTRY = 15
+MIN_SPLIT_4_GAP   = 40
 
 # Minimum frames a new speaker/camera-angle position must be held before the
 # crop switches to follow it.  A scene cut to a different angle must persist
@@ -321,13 +321,13 @@ def _stabilize_bool_state(
         if len(seg_raw) == 0:
             continue
             
-        # Pass 1: The 'Proof' pass using standard thresholds
+        # Pass 1: The 'Proof' pass using standard thresholds (now snappier: 10 frames)
         proof = _stabilize_segment(seg_raw, min_entry, min_gap)
         
         if np.any(proof):
             # Threshold achieved! Scene is now 'Qualified' for the Fast Pass.
-            # We use a very low entry (2 frames) and a snappy gap (15 frames).
-            result[start_idx:end_idx] = _stabilize_segment(seg_raw, 2, 15)
+            # We use a near-instant entry (1 frame) and a tight gap (5 frames).
+            result[start_idx:end_idx] = _stabilize_segment(seg_raw, 1, 5)
         else:
             # Not qualified — stick to the safe/skeptical output
             result[start_idx:end_idx] = proof
@@ -581,7 +581,7 @@ def track_speaker_and_frame(
         and wd.get("start", 0) <= clip_end_ms   + 2000
     ]
 
-    # Pre-qualify speakers: any speaker with >15 frames (~0.6s) of total audio
+    # Pre-qualify speakers: any speaker with >10 frames (~0.4s) of total audio
     # in this clip gets a 'Fast Pass' for instant switching.
     spk_durations = {}
     for wd in clip_words:
@@ -589,7 +589,7 @@ def track_speaker_and_frame(
         if s:
             spk_durations[s] = spk_durations.get(s, 0) + (wd.get("end", 0) - wd.get("start", 0))
     
-    qualified_speakers = {s for s, dur in spk_durations.items() if dur > 600} # >600ms = ~15 frames
+    qualified_speakers = {s for s, dur in spk_durations.items() if dur > 400} # >400ms = ~10 frames
 
     speaker_array: List[Any] = [None] * frames_count
     w_ptr = 0
