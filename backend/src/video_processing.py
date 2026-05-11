@@ -343,37 +343,8 @@ def _stabilize_bool_state(
 # 4K, portrait, non-standard, etc.).
 
 def _cell_full(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
-    """
-    Single-speaker: High-quality 16:9 crop centered in a 9:16 blurred background.
-    This avoids the 'Digital Zoom' blur of stretching a 9:16 crop to full height.
-    """
-    h_orig, w_orig = frame.shape[:2]
-    canvas = np.zeros((OUT_H, OUT_W, 3), dtype=np.uint8)
-
-    # 1. Background: Full frame blurred and scaled to fill the 1920 height
-    # Scale: height=1920, width=1920*(w/h)
-    bg_scale = OUT_H / h_orig
-    bg_w = int(w_orig * bg_scale)
-    bg_full = cv2.resize(frame, (bg_w, OUT_H))
-    # Center-crop the background to 1080 width
-    bg_x = max(0, (bg_w - OUT_W) // 2)
-    bg_canvas = bg_full[:, bg_x : bg_x + OUT_W]
-    # Apply heavy cinematic blur
-    bg_canvas = cv2.GaussianBlur(bg_canvas, (51, 51), 0)
-    # Darken significantly for professional focus
-    canvas = (bg_canvas * 0.45).astype(np.uint8)
-
-    # 2. Foreground: 16:9 sharp crop of the subject
-    # Target cell is 1080 x 608 (approx 16:9)
-    fg_h = 608
-    crop = _ar_safe_crop(frame, cx, cy, OUT_W, fg_h)
-    sharp_cell = cv2.resize(crop, (OUT_W, fg_h))
-
-    # 3. Composite: Place sharp cell in the center (y=960)
-    y_start = (OUT_H - fg_h) // 2
-    canvas[y_start : y_start + fg_h, :] = sharp_cell
-
-    return canvas
+    """Single-speaker: AR-safe crop → 1080×1920."""
+    return cv2.resize(_ar_safe_crop(frame, cx, cy, OUT_W, OUT_H), (OUT_W, OUT_H))
 
 
 def _cell_half(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
