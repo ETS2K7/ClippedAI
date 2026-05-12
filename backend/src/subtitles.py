@@ -180,6 +180,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             line = f"Dialogue: 0,{ass_start},{ass_end},Hormozi,,0,0,0,,{full_text}"
             lines.append(line)
 
+    logger.info(f"Clip timing: {start_ms}ms to {end_ms}ms. Found {len(clip_words)} words in range.")
+    logger.info(f"Generated {len(lines)} subtitle lines.")
+
     with open(out, "w", encoding="utf-8") as f:
         f.write(header)
         for line in lines:
