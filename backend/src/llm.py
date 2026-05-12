@@ -63,9 +63,9 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "4. FULL NARRATIVE ARC: Every clip must have a clear setup, escalation, and payoff/insight.\n"
         "5. PUNCHY TITLE: Create a viral, high-value title for each clip.\n"
         "6. ROMANIZED HINDI: If the clip contains Hindi (Devanagari), you MUST transliterate it into Roman Hindi using the ENGLISH ALPHABET (Latin Script).\n"
-        "   Example Input: 'नमस्ते दोस्तों कैसे हैं आप'\n"
-        "   Example Output: ['Namaste|dosto', 'kaise|hain|aap']\n"
-        "   Requirement: The total word count MUST match the original. Use an array of strings, with words separated by pipes (|).\n\n"
+        "   Requirement: Every word MUST be a pair of 'RomanizedWord:OriginalHindiWord'.\n"
+        "   Example Output Segment: 'Namaste:नमस्ते|dosto:दोस्तों|kaise:कैसे'\n"
+        "   Format: Return an array of strings, where each string is a segment of piped pairs. The total word count MUST exactly match the transcript segment.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -187,7 +187,7 @@ def _call_gemini(prompt: str, words: list) -> list:
                                         "virality_score": {"type": "NUMBER"},
                                         "romanized_words": {
                                             "type": "ARRAY",
-                                            "description": "An array of Romanized word segments. Each segment can contain multiple words separated by pipes (|).",
+                                            "description": "An array of segments. Each segment contains 'Roman:Original' pairs separated by pipes (|). Example: ['Namaste:नमस्ते|dosto:दोस्तों']",
                                             "items": {"type": "STRING"}
                                         }
                                     },
