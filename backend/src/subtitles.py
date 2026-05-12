@@ -68,12 +68,12 @@ def generate_subtitles(
     start_ms = clip["start_time"] * 1000
     end_ms = clip["end_time"] * 1000
 
-    resolved_family = resolve_font_family(font_family)
+    resolved_family = "Liberation Sans" # Force system font for diagnostics
     resolved_size = font_size if isinstance(font_size, int) and 50 <= font_size <= 200 else DEFAULT_FONT_SIZE
     resolved_ass_color = hex_to_ass_color(font_color)
 
     logger.info(
-        f"Subtitle style locked: {resolved_family} / {resolved_size}pt / "
+        f"DIAGNOSTIC MODE: Forcing Liberation Sans / {resolved_size}pt / "
         f"color={resolved_ass_color}"
     )
 
@@ -181,9 +181,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     logger.info(f"Clip timing: {start_ms}ms to {end_ms}ms. Found {len(clip_words)} words in range.")
     logger.info(f"Generated {len(lines)} subtitle lines.")
 
+    ass_content = header + "\n".join(lines)
+    logger.info(f"ASS Sample (first 500 chars):\n{ass_content[:500]}")
+
     with open(out, "w", encoding="utf-8") as f:
-        f.write(header)
-        for line in lines:
-            f.write(line + "\n")
+        f.write(ass_content)
 
     return out
