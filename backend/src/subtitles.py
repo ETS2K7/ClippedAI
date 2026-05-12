@@ -96,7 +96,7 @@ WrapStyle: 1
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,110,100,0,0,1,6,0,2,10,10,450,1
+Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,110,100,0,0,1,3,2,2,10,10,280,1
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
@@ -167,8 +167,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 raw_txt = str(cw.get("text", "")).upper()
                 clean_txt = raw_txt.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
                 if j == w_idx:
-                    # Original stable highlight color (Yellow)
-                    text_parts.append(f"{{\\c&H0000FFFF}}{clean_txt}{{\\r}}")
+                    # Alternate highlight color between green and yellow
+                    hl_color = "&H0000FFFF" if w_idx % 2 == 0 else "&H0000FF00"
+                    # Apply Neon Glow (Shadow color \4c, Blur \blur5)
+                    text_parts.append(f"{{\\c{hl_color}\\4c{hl_color}\\blur5}}{clean_txt}{{\\r}}")
                 else:
                     text_parts.append(clean_txt)
 
