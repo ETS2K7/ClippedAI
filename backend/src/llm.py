@@ -62,8 +62,8 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "3. NO UNRESOLVED PRONOUNS: The clip CANNOT start with words like 'He', 'This', 'That', or 'It' unless the subject is immediately clarified.\n"
         "4. FULL NARRATIVE ARC: Every clip must have a clear setup, escalation, and payoff/insight.\n"
         "5. PUNCHY TITLE: Create a viral, high-value title for each clip.\n"
-        "6. ROMANIZED HINDI: If the clip contains Hindi (Devanagari script), you MUST provide a 'romanized_words' string. "
-        "Transliterate EVERY SINGLE word into Romanized Hindi (Latin script). Separate each word with a PIPE symbol (|). Do not omit any words. The number of piped words MUST exactly match the number of words in the provided transcript segment.\n\n"
+        "6. ROMANIZED HINDI: If the clip contains Hindi (Devanagari script), you MUST provide a 'romanized_words' ARRAY. "
+        "Transliterate EVERY SINGLE word into Romanized Hindi (Latin script). Split the words into an array of short segments (e.g. 5-10 words per segment). Inside each segment, separate words with a PIPE symbol (|). Do not omit any words. The total number of piped words across the array MUST exactly match the number of words in the provided transcript segment.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -184,8 +184,9 @@ def _call_gemini(prompt: str, words: list) -> list:
                                         "end_time": {"type": "NUMBER"},
                                         "virality_score": {"type": "NUMBER"},
                                         "romanized_words": {
-                                            "type": "STRING",
-                                            "description": "A pipe-separated (|) string of Romanized words. MUST have 1-to-1 parity with original words."
+                                            "type": "ARRAY",
+                                            "description": "An array of Romanized word segments. Each segment can contain multiple words separated by pipes (|).",
+                                            "items": {"type": "STRING"}
                                         }
                                     },
                                     "required": ["reasoning", "title", "start_time", "end_time", "virality_score"]

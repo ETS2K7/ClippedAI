@@ -87,14 +87,17 @@ def generate_subtitles(
         w for w in words if w.get("start", 0) >= start_ms and w.get("end", 0) <= end_ms
     ]
 
-    # —— Romanized Hindi Mapping Pass (V3: Pipe-Stream) ——
-    # If Gemini provided a pipe-separated stream, we split and swap.
-    rom_stream = clip.get("romanized_words")
-    if isinstance(rom_stream, str) and "|" in rom_stream:
-        rom_words = [w.strip() for w in rom_stream.split("|") if w.strip()]
-        logger.info(f"Applying Pipe-Stream Romanized mapping for clip {idx} ({len(rom_words)} words)")
-        for i in range(min(len(rom_words), len(clip_words))):
-            clip_words[i]["text"] = rom_words[i]
+    # —— Romanized Hindi Mapping Pass (V4: Segmented Array) ——
+    # If Gemini provided an array of pipe-separated segments, we join and swap.
+    rom_input = clip.get("romanized_words")
+    if isinstance(rom_input, (list, str)):
+        # Join if it's a list, otherwise use as is
+        full_stream = "|".join(rom_input) if isinstance(rom_input, list) else rom_input
+        if "|" in full_stream:
+            rom_words = [w.strip() for w in full_stream.split("|") if w.strip()]
+            logger.info(f"Applying Segmented Romanized mapping for clip {idx} ({len(rom_words)} words)")
+            for i in range(min(len(rom_words), len(clip_words))):
+                clip_words[i]["text"] = rom_words[i]
     elif clip.get("romanized_transcript"):
         # Fallback to V1 (Space-separated string) for backward compatibility with cached clips
         rom_words = str(clip["romanized_transcript"]).strip().split()
