@@ -150,6 +150,10 @@ jobs:
           echo "==> Deploy complete!"
           docker compose ps
 
+          echo "==> Cleaning up old images to save disk space..."
+          docker image prune -a -f
+          sudo journalctl --vacuum-time=3d
+
           # Ensure rate-limit zones (http-context) are always installed in conf.d
           sudo cp /opt/clippedai/nginx/conf.d/rate-limits.conf /etc/nginx/conf.d/rate-limits.conf
           if ! diff -q /opt/clippedai/nginx/clippedai.conf /etc/nginx/sites-available/clippedai > /dev/null 2>&1; then
