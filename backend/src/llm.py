@@ -52,15 +52,15 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 return cached
         except: pass
 
-    # Pass 1: Selection (Using Gemini 1.5 Pro for maximum reliability)
-    logger.info(f"[LLM] 🔴 Cache miss. Calling Gemini 1.5 Pro...")
+    # Pass 1: Selection (Using stable Flash model)
+    logger.info(f"[LLM] 🔴 Cache miss. Calling Gemini Flash...")
     validated_clips = _call_gemini_selection(prompt, words)
 
     if not validated_clips:
-        logger.error("[LLM] Selection Pass failed to produce clips.")
+        logger.error("[LLM] Selection Pass failed to produce clips. This might be due to a short transcript or strict viral criteria.")
         return []
 
-    # Pass 2: Transliterate (Using Flash for speed)
+    # Pass 2: Transliterate (Using focused Flash requests)
     for i, clip in enumerate(validated_clips):
         start, end = clip["start_time"], clip["end_time"]
         clip_words = [w["text"] for w in words if w["start"]/1000.0 >= start and w["end"]/1000.0 <= end]
@@ -80,6 +80,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def _validate_clips(raw_clips: list, words: list) -> list:
     """Validate and filter clips for duration and timestamp bounds."""
+    if not words: return []
     video_end_s = words[-1]["end"] / 1000.0
     validated = []
     for clip in raw_clips:
@@ -119,7 +120,7 @@ def _call_gemini_selection(prompt: str, words: list) -> list:
     for attempt in range(MAX_RETRIES):
         try:
             response = client.models.generate_content(
-                model="gemini-1.5-pro",
+                model="gemini-1.5-flash-002",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction="Select 3 viral segments (30-90s). Return JSON only.",
@@ -144,7 +145,7 @@ def _call_gemini_selection(prompt: str, words: list) -> list:
                         },
                         "required": ["clips"]
                     },
-                    temperature=0.4,
+                    temperature=0.7,
                 ),
             )
             data = json.loads(response.text)
@@ -166,7 +167,7 @@ def _call_gemini_transliterate(text: str) -> list:
     for attempt in range(2):
         try:
             response = client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-1.5-flash-002",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
