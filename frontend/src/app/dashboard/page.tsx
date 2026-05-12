@@ -154,6 +154,7 @@ export default function Home() {
 
   const [outputFormat, setOutputFormat] = useState<"vertical" | "original">("vertical");
   const [addSubtitles, setAddSubtitles] = useState(true);
+  const [captionTemplate, setCaptionTemplate] = useState<string>("hormozi");
 
   // Always treat file input as uncontrolled, and store file in a ref
   const fileRef = useRef<File | null>(null);
@@ -256,6 +257,7 @@ export default function Home() {
           processing_mode: "fast",
           output_format: outputFormat,
           add_subtitles: addSubtitles,
+          caption_template: captionTemplate,
         }),
       });
 
@@ -667,21 +669,154 @@ export default function Home() {
 
 
 
-                {/* Style & Captions — read-only info card */}
-                <div className="brutal-card space-y-3 p-3 sm:p-4">
+                {/* Style & Captions — interactive picker */}
+                <div className="brutal-card space-y-4 p-3 sm:p-4">
                   <div className="flex items-center gap-2 font-mono text-sm font-bold tracking-widest text-white uppercase">
                     <Sparkles className="h-4 w-4 text-white" />
                     STYLE &amp; CAPTIONS
                   </div>
-                  <div className="border-l-2 border-white/20 pl-3 space-y-3">
-                    <div>
-                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Font Family</p>
-                      <p className="font-mono text-sm font-bold text-white tracking-wide">Komika Axis</p>
-                    </div>
-                    <div>
-                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Caption Style</p>
-                      <p className="font-mono text-sm font-bold text-white tracking-wide">MrBeast</p>
-                    </div>
+
+                  {/* Caption style grid */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Hormozi */}
+                    <button
+                      type="button"
+                      id="caption-style-hormozi"
+                      onClick={() => setCaptionTemplate("hormozi")}
+                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                        captionTemplate === "hormozi"
+                          ? "border-white bg-white/10"
+                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      {/* Mini preview */}
+                      <div className="w-full rounded-lg bg-black/60 px-2 py-2 text-center">
+                        <span className="font-mono text-[10px] font-black tracking-wide text-white">HERE IS </span>
+                        <span className="font-mono text-[10px] font-black tracking-wide text-green-400">YOUR</span>
+                        <span className="font-mono text-[10px] font-black tracking-wide text-white"> TEXT</span>
+                      </div>
+                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">Hormozi</span>
+                      {captionTemplate === "hormozi" && (
+                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </button>
+
+                    {/* Pill */}
+                    <button
+                      type="button"
+                      id="caption-style-pill"
+                      onClick={() => setCaptionTemplate("pill")}
+                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                        captionTemplate === "pill"
+                          ? "border-white bg-white/10"
+                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      {/* Mini preview */}
+                      <div className="w-full rounded-lg bg-gradient-to-b from-neutral-700 to-neutral-900 px-2 py-2 text-center">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 shadow">
+                          <span className="font-sans text-[9px] font-bold text-neutral-800">HERE IS </span>
+                          <span className="font-sans text-[9px] font-bold" style={{ color: "#FF6B47" }}>YOUR</span>
+                          <span className="font-sans text-[9px] font-bold text-neutral-800"> TEXT</span>
+                        </span>
+                      </div>
+                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">Pill</span>
+                      {captionTemplate === "pill" && (
+                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </button>
+
+                    {/* MrBeast */}
+                    <button
+                      type="button"
+                      id="caption-style-mrbeast"
+                      onClick={() => setCaptionTemplate("mrbeast")}
+                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                        captionTemplate === "mrbeast"
+                          ? "border-white bg-white/10"
+                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      {/* Mini preview */}
+                      <div className="w-full rounded-lg bg-black/60 px-2 py-2 text-center">
+                        <span className="font-mono text-[10px] font-black tracking-wide text-yellow-300">HERE IS </span>
+                        <span className="font-mono text-[10px] font-black tracking-wide text-red-500">YOUR</span>
+                        <span className="font-mono text-[10px] font-black tracking-wide text-yellow-300"> TEXT</span>
+                      </div>
+                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">MrBeast</span>
+                      {captionTemplate === "mrbeast" && (
+                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </button>
+
+                    {/* Neon */}
+                    <button
+                      type="button"
+                      id="caption-style-neon"
+                      onClick={() => setCaptionTemplate("neon")}
+                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                        captionTemplate === "neon"
+                          ? "border-white bg-white/10"
+                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      {/* Mini preview */}
+                      <div className="w-full rounded-lg bg-black px-2 py-2 text-center">
+                        <span className="font-mono text-[10px] font-black tracking-wide text-cyan-400" style={{ textShadow: "0 0 8px #00ffff" }}>HERE IS </span>
+                        <span className="font-mono text-[10px] font-black tracking-wide text-fuchsia-400" style={{ textShadow: "0 0 8px #ff00ff" }}>YOUR</span>
+                        <span className="font-mono text-[10px] font-black tracking-wide text-cyan-400" style={{ textShadow: "0 0 8px #00ffff" }}> TEXT</span>
+                      </div>
+                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">Neon</span>
+                      {captionTemplate === "neon" && (
+                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </button>
+
+                    {/* Minimal */}
+                    <button
+                      type="button"
+                      id="caption-style-minimal"
+                      onClick={() => setCaptionTemplate("minimal")}
+                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                        captionTemplate === "minimal"
+                          ? "border-white bg-white/10"
+                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      {/* Mini preview */}
+                      <div className="w-full rounded-lg bg-black/40 px-2 py-2 text-center">
+                        <span className="font-mono text-[10px] font-medium tracking-wide text-white/90">HERE IS </span>
+                        <span className="font-mono text-[10px] font-medium tracking-wide text-white/50">YOUR</span>
+                        <span className="font-mono text-[10px] font-medium tracking-wide text-white/90"> TEXT</span>
+                      </div>
+                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">Minimal</span>
+                      {captionTemplate === "minimal" && (
+                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </button>
+
+                    {/* TikTok */}
+                    <button
+                      type="button"
+                      id="caption-style-tiktok"
+                      onClick={() => setCaptionTemplate("tiktok")}
+                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
+                        captionTemplate === "tiktok"
+                          ? "border-white bg-white/10"
+                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
+                      }`}
+                    >
+                      {/* Mini preview */}
+                      <div className="w-full rounded-lg bg-black/60 px-2 py-2 text-center">
+                        <span className="font-mono text-[10px] font-black tracking-wide text-white">HERE IS </span>
+                        <span className="font-mono text-[10px] font-black tracking-wide" style={{ color: "#FE2C55" }}>YOUR</span>
+                        <span className="font-mono text-[10px] font-black tracking-wide text-white"> TEXT</span>
+                      </div>
+                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">TikTok</span>
+                      {captionTemplate === "tiktok" && (
+                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
+                      )}
+                    </button>
                   </div>
 
                   {/* Output format */}
