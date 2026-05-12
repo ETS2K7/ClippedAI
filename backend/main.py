@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from config import get_logger, validate_required_env_vars
 import functools
 from src.transcriber import transcribe
-from src.llm import select_clips
+from src.llm import select_clips, transliterate_hinglish
 from src.video_processing import extract_segment, track_speaker_and_frame, merge_and_cleanup
 from src.subtitles import generate_subtitles
 
@@ -562,6 +562,9 @@ def process_video_cpu_wrapper(request_dict: dict):
             
         timer.begin("transcription")
         words = transcribe(str(video_path), request.s3_key, remote_cache=transcript_cache)
+        
+        timer.begin("hinglish_transliteration")
+        words = transliterate_hinglish(words)
         
         timer.begin("clip_selection")
         clips = select_clips(words)

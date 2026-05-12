@@ -10,7 +10,8 @@ import pathlib
 import requests
 import time
 from typing import List, Dict, Any
-from config import get_logger
+from config import get_logger, ASSEMBLYAI_KEY
+import re
 
 logger = get_logger(__name__)
 
@@ -215,3 +216,83 @@ def _call_gemini(prompt: str, words: list) -> list:
 
 
 
+def transliterate_hinglish(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Identifies Hindi (Devanagari) words and transliterates them to Romanized Hinglish
+    (English letters) while preserving original timestamps.
+    """
+    # 1. Quick check: Is there any non-ASCII (likely Hindi) text?
+    if not any(any(ord(c) > 127 for c in w["text"]) for w in words):
+        return words
+
+    logger.info("==================== PHASE 2.5: HINGLISH TRANSLITERATION ====================")
+    logger.info(f"Detected Hindi script. Transliterating {len(words)} words...")
+
+    # 2. Batch processing (Gemini handles ~100-200 words comfortably in one prompt)
+    batch_size = 150
+    batches = [words[i : i + batch_size] for i in range(0, len(words), batch_size)]
+    
+    transliterated_words = []
+    
+    for i, batch in enumerate(batches):
+        texts = [w["text"] for w in batch]
+        
+        prompt = (
+            "You are a transcription assistant specializing in Hinglish (Hindi + English).\n"
+            "INPUT: A JSON list of words from a transcript.\n"
+            "TASK: Transliterate any Hindi (Devanagari) words into Romanized Hinglish (English letters).\n"
+            "RULES:\n"
+            "1. KEEP English words EXACTLY as they are.\n"
+            "2. Convert Hindi words to their standard phonetically spelled English equivalents (e.g., 'आज' -> 'Aaj', 'वीडियो' -> 'video').\n"
+            "3. RETURN ONLY A JSON ARRAY of strings of the SAME LENGTH as the input.\n"
+            "4. DO NOT add punctuation that wasn't there.\n\n"
+            f"INPUT_WORDS: {json.dumps(texts)}"
+        )
+        
+        try:
+            # We use a smaller timeout for transliteration as it's a simpler task
+            raw_response = _call_gemini_raw(prompt)
+            # Find the JSON array in the response
+            match = re.search(r"\[.*\]", raw_response, re.DOTALL)
+            if match:
+                new_texts = json.loads(match.group())
+                if len(new_texts) == len(batch):
+                    for idx, w in enumerate(batch):
+                        new_w = w.copy()
+                        new_w["text"] = new_texts[idx]
+                        transliterated_words.append(new_w)
+                    continue
+            
+            logger.warning(f"Transliteration batch {i} failed (length mismatch or parse error). Falling back to original.")
+            transliterated_words.extend(batch)
+        except Exception as e:
+            logger.error(f"Transliteration batch {i} failed: {e}")
+            transliterated_words.extend(batch)
+
+    return transliterated_words
+
+
+def _call_gemini_raw(prompt: str) -> str:
+    """Raw wrapper for Gemini calls to handle text-in/text-out."""
+    from google import genai
+    from google.genai import types
+
+    credentials = None
+    gcp_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
+    if gcp_json:
+        from google.oauth2 import service_account
+        credentials = service_account.Credentials.from_service_account_info(
+            json.loads(gcp_json)
+        ).with_scopes(["https://www.googleapis.com/auth/cloud-platform"])
+
+    gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "clippedai-493912")
+    client = genai.Client(vertexai=True, project=gcp_project, location="us-central1", credentials=credentials)
+    
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.1,  # Low temperature for precise transliteration
+        )
+    )
+    return response.text
