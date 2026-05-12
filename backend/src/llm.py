@@ -183,7 +183,18 @@ def _call_gemini(prompt: str, words: list) -> list:
                                         "start_time": {"type": "NUMBER"},
                                         "end_time": {"type": "NUMBER"},
                                         "virality_score": {"type": "NUMBER"},
-                                        "romanized_transcript": {"type": "STRING", "description": "The full dialogue of the clip, with any Hindi script transliterated into Romanized Hindi (Latin script). Keep word count identical."}
+                                        "romanized_words": {
+                                            "type": "ARRAY",
+                                            "description": "List of word pairs for transliteration. MUST match original word order.",
+                                            "items": {
+                                                "type": "OBJECT",
+                                                "properties": {
+                                                    "original": {"type": "STRING"},
+                                                    "romanized": {"type": "STRING"}
+                                                },
+                                                "required": ["original", "romanized"]
+                                            }
+                                        }
                                     },
                                     "required": ["reasoning", "title", "start_time", "end_time", "virality_score"]
                                 }

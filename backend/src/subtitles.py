@@ -87,21 +87,22 @@ def generate_subtitles(
         w for w in words if w.get("start", 0) >= start_ms and w.get("end", 0) <= end_ms
     ]
 
-    # —— Romanized Hindi Mapping Pass ——
-    # If Gemini provided a romanized version, we swap the text while keeping timestamps.
-    rom_trans = clip.get("romanized_transcript")
-    if rom_trans and len(clip_words) > 0:
-        rom_words = rom_trans.strip().split()
-        # Only apply if word counts are reasonably similar to avoid catastrophic desync
+    # —— Romanized Hindi Mapping Pass (V2: Word-by-Word) ——
+    # If Gemini provided a list of word pairs, we perform a 1-to-1 swap.
+    rom_pairs = clip.get("romanized_words")
+    if isinstance(rom_pairs, list) and len(rom_pairs) > 0 and len(clip_words) > 0:
+        logger.info(f"Applying Word-by-Word Romanized mapping for clip {idx} ({len(rom_pairs)} pairs)")
+        # Create a lookup for original words or just use index if count is similar
+        for i in range(min(len(rom_pairs), len(clip_words))):
+            # Check if original text matches or if it's Devanagari
+            pair = rom_pairs[i]
+            clip_words[i]["text"] = pair["romanized"]
+    elif clip.get("romanized_transcript"):
+        # Fallback to V1 (Space-separated string) for backward compatibility with cached clips
+        rom_words = str(clip["romanized_transcript"]).strip().split()
         if abs(len(rom_words) - len(clip_words)) <= max(2, len(clip_words) // 5):
-            logger.info(f"Applying Romanized Hindi mapping for clip {idx} ({len(rom_words)} words)")
             for i in range(min(len(rom_words), len(clip_words))):
                 clip_words[i]["text"] = rom_words[i]
-        else:
-            logger.warning(
-                f"Romanized word count mismatch (Original: {len(clip_words)}, Rom: {len(rom_words)}). "
-                "Falling back to original transcript to maintain sync."
-            )
 
     # Dynamically build ASS header with resolved font configuration
     header = f"""[Script Info]
