@@ -87,17 +87,27 @@ def generate_subtitles(
         w for w in words if w.get("start", 0) >= start_ms and w.get("end", 0) <= end_ms
     ]
 
-    # —— Romanized Hindi Mapping Pass (V4: Segmented Array) ——
-    # If Gemini provided an array of pipe-separated segments, we join and swap.
+    # —— Romanized Hindi Mapping Pass (V5: Robust Alignment) ——
+    # If Gemini provided Romanized words, we map them onto the AssemblyAI timestamps.
     rom_input = clip.get("romanized_words")
-    if isinstance(rom_input, (list, str)):
-        # Join if it's a list, otherwise use as is
+    if isinstance(rom_input, (list, str)) and len(clip_words) > 0:
         full_stream = "|".join(rom_input) if isinstance(rom_input, list) else rom_input
         if "|" in full_stream:
             rom_words = [w.strip() for w in full_stream.split("|") if w.strip()]
-            logger.info(f"Applying Segmented Romanized mapping for clip {idx} ({len(rom_words)} words)")
-            for i in range(min(len(rom_words), len(clip_words))):
-                clip_words[i]["text"] = rom_words[i]
+            logger.info(f"Applying Robust mapping for clip {idx} (AAI: {len(clip_words)}, Rom: {len(rom_words)})")
+            
+            # If counts match perfectly, use 1-to-1 swap
+            if len(rom_words) == len(clip_words):
+                for i in range(len(clip_words)):
+                    clip_words[i]["text"] = rom_words[i]
+            else:
+                # If counts differ, use a linear stretch to prevent early 'cutoff'
+                # This ensures the Romanized text covers the entire clip duration.
+                for i in range(len(clip_words)):
+                    # Calculate the best-matching index in rom_words for the current AAI word
+                    rom_idx = int(round(i * (len(rom_words) - 1) / (len(clip_words) - 1))) if len(clip_words) > 1 else 0
+                    if rom_idx < len(rom_words):
+                        clip_words[i]["text"] = rom_words[rom_idx]
     elif clip.get("romanized_transcript"):
         # Fallback to V1 (Space-separated string) for backward compatibility with cached clips
         rom_words = str(clip["romanized_transcript"]).strip().split()
