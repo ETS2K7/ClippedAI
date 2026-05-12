@@ -238,15 +238,13 @@ def transliterate_hinglish(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         texts = [w["text"] for w in batch]
         
         prompt = (
-            "You are a transcription assistant specializing in Hinglish (Hindi + English).\n"
-            "INPUT: A JSON list of words from a transcript.\n"
-            "TASK: Transliterate any Hindi (Devanagari) words into Romanized Hinglish (English letters).\n"
-            "RULES:\n"
-            "1. KEEP English words EXACTLY as they are.\n"
-            "2. Convert Hindi words to their standard phonetically spelled English equivalents (e.g., 'आज' -> 'Aaj', 'वीडियो' -> 'video').\n"
-            "3. RETURN ONLY A JSON ARRAY of strings of the SAME LENGTH as the input.\n"
-            "4. DO NOT add punctuation that wasn't there.\n\n"
-            f"INPUT_WORDS: {json.dumps(texts)}"
+            "SYSTEM: You are a transliteration engine. Convert Hindi script to ROMANIZED HINGLISH (English letters).\n"
+            "CRITICAL RULES:\n"
+            "1. NO DEVANAGARI SCRIPT in output. Convert everything to English letters.\n"
+            "2. Keep existing English words as-is.\n"
+            "3. Phonetically spell Hindi words (e.g. 'aap', 'kaise', 'hain').\n"
+            f"4. RETURN ONLY a JSON array of strings of length {len(batch)}.\n\n"
+            f"INPUT: {json.dumps(texts, ensure_ascii=False)}"
         )
         
         try:
