@@ -1,0 +1,32 @@
+name: Manual Server Cleanup
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    name: Clean Disk Space
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH agent
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -T 10 -H "${{ secrets.DO_SERVER_IP }}" >> ~/.ssh/known_hosts
+
+      - name: Run Cleanup Commands
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.DO_SERVER_IP }} << 'EOF'
+          echo "==> Cleaning Docker system (images, containers, cache)..."
+          docker system prune -a -f
+          
+          echo "==> Cleaning Docker volumes..."
+          docker volume prune -f
+          
+          echo "==> Vacuuming system logs (older than 1 day)..."
+          sudo journalctl --vacuum-time=1d
+          
+          echo "==> Current Disk Usage:"
+          df -h
+          EOF
