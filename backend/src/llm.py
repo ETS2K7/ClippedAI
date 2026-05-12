@@ -61,11 +61,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "2. 100% SELF-CONTAINED: The clip MUST make complete sense to a viewer who has never seen the original video.\n"
         "3. NO UNRESOLVED PRONOUNS: The clip CANNOT start with words like 'He', 'This', 'That', or 'It' unless the subject is immediately clarified.\n"
         "4. FULL NARRATIVE ARC: Every clip must have a clear setup, escalation, and payoff/insight.\n"
-        "5. PUNCHY TITLE: Create a viral, high-value title for each clip.\n"
-        "6. ROMANIZED HINDI: If the clip contains Hindi (Devanagari), you MUST transliterate it into Roman Hindi using the ENGLISH ALPHABET (Latin Script).\n"
-        "   Requirement: Every word MUST be a pair of 'RomanizedWord:OriginalHindiWord'.\n"
-        "   Example Output Segment: 'Namaste:नमस्ते|dosto:दोस्तों|kaise:कैसे'\n"
-        "   Format: Return an array of strings, where each string is a segment of piped pairs. The total word count MUST exactly match the transcript segment.\n\n"
+        "5. PUNCHY TITLE: Create a viral, high-value title for each clip.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -89,9 +85,7 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         except Exception as _ce:
             logger.warning(f"[LLM] Cache read failed ({_ce}), re-running selection.")
 
-    logger.info(f"[LLM] 🔴 Cache miss (key={_cache_key[:8]}). Calling Gemini...")
-
-    validated_clips = _call_gemini(prompt, words)
+    validated_clips = _call_gemini_selection(prompt, words)
 
     # Write to cache
     try:
@@ -99,6 +93,20 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         logger.info(f"[LLM] Cached clip selection to {_cache_file.name}")
     except Exception as _we:
         logger.warning(f"[LLM] Cache write failed (non-fatal): {_we}")
+
+    # Pass 2: Transliterate each clip individually (The Sync Lock)
+    for i, clip in enumerate(validated_clips):
+        # Extract clip transcript
+        start, end = clip["start_time"], clip["end_time"]
+        clip_words = [w["text"] for w in words if w["start"]/1000.0 >= start and w["end"]/1000.0 <= end]
+        clip_text = " ".join(clip_words)
+        
+        # Only transliterate if Hindi is present
+        if any('\u0900' <= c <= '\u097f' for c in clip_text):
+            logger.info(f"[LLM] Transliterating Clip {i} ({len(clip_words)} words)...")
+            clip["romanized_words"] = _call_gemini_transliterate(clip_text)
+        else:
+            clip["romanized_words"] = []
 
     return validated_clips
 
@@ -132,10 +140,11 @@ def _validate_clips(raw_clips: list, words: list) -> list:
     return validated
 
 
-def _call_gemini(prompt: str, words: list) -> list:
-    """Primary: Gemini 2.5-flash via Google Cloud Vertex AI."""
+def _get_genai_client():
+    """Initializes and returns the Vertex AI GenAI client."""
     from google import genai
-    from google.genai import types
+    import os
+    import json
 
     credentials = None
     gcp_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
@@ -145,83 +154,98 @@ def _call_gemini(prompt: str, words: list) -> list:
         credentials = service_account.Credentials.from_service_account_info(
             json.loads(gcp_json)
         ).with_scopes(["https://www.googleapis.com/auth/cloud-platform"])
-    elif not os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-        raise RuntimeError("GCP credentials not set. Cannot call Vertex AI.")
-
-    logger.info("[LLM] Calling Vertex AI (gemini-2.5-flash)...")
-    MAX_RETRIES = 3
     
     gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "clippedai-493912")
     
-    # Initialize Vertex AI client with explicit credentials or fallback to ADC
     if credentials:
-        client = genai.Client(vertexai=True, project=gcp_project, location="us-central1", credentials=credentials)
+        return genai.Client(vertexai=True, project=gcp_project, location="us-central1", credentials=credentials)
     else:
-        client = genai.Client(vertexai=True, project=gcp_project, location="us-central1")
-        
-    response = None
+        return genai.Client(vertexai=True, project=gcp_project, location="us-central1")
 
-    for attempt in range(MAX_RETRIES):
-        try:
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    system_instruction=(
-                        "You are an expert short-form video editor specializing in creating viral clips "
-                        "for TikTok, YouTube Shorts, and Instagram Reels. Return only valid JSON."
-                    ),
-                    response_mime_type="application/json",
-                    response_schema={
-                        "type": "OBJECT",
-                        "properties": {
-                            "clips": {
-                                "type": "ARRAY",
-                                "items": {
-                                    "type": "OBJECT",
-                                    "properties": {
-                                        "reasoning": {"type": "STRING", "description": "Why this clip is highly engaging and viral."},
-                                        "title": {"type": "STRING", "description": "A punchy, viral caption."},
-                                        "start_time": {"type": "NUMBER"},
-                                        "end_time": {"type": "NUMBER"},
-                                        "virality_score": {"type": "NUMBER"},
-                                        "romanized_words": {
-                                            "type": "ARRAY",
-                                            "description": "An array of segments. Each segment contains 'Roman:Original' pairs separated by pipes (|). Example: ['Namaste:नमस्ते|dosto:दोस्तों']",
-                                            "items": {"type": "STRING"}
-                                        }
-                                    },
-                                    "required": ["reasoning", "title", "start_time", "end_time", "virality_score"]
-                                }
+def _call_gemini_selection(prompt: str, words: list) -> list:
+    """Pass 1: Select clips without transliteration to ensure stability."""
+    from google.genai import types
+    client = _get_genai_client()
+    
+    logger.info("[LLM] Calling Vertex AI (Selection Pass)...")
+    
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction="Select viral clips from the transcript. Return JSON.",
+                response_mime_type="application/json",
+                response_schema={
+                    "type": "OBJECT",
+                    "properties": {
+                        "clips": {
+                            "type": "ARRAY",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "reasoning": {"type": "STRING"},
+                                    "title": {"type": "STRING"},
+                                    "start_time": {"type": "NUMBER"},
+                                    "end_time": {"type": "NUMBER"},
+                                    "virality_score": {"type": "NUMBER"}
+                                },
+                                "required": ["reasoning", "title", "start_time", "end_time", "virality_score"]
                             }
-                        },
-                        "required": ["clips"]
+                        }
                     },
-                    temperature=0.2,
-                    max_output_tokens=8192,
-                ),
-            )
-            data = json.loads(response.text)
-            raw_clips = data.get("clips") if isinstance(data.get("clips"), list) else []
-            if not raw_clips:
-                raise ValueError(f"Gemini returned unexpected JSON keys: {list(data.keys())}")
+                    "required": ["clips"]
+                },
+                temperature=0.7,
+                max_output_tokens=2048,
+            ),
+        )
+        data = json.loads(response.text)
+        raw_clips = data.get("clips") if isinstance(data.get("clips"), list) else []
+        return _validate_clips(raw_clips, words)
+    except Exception as e:
+        logger.error(f"[LLM] Selection Pass failed: {e}")
+        return []
 
-            validated = _validate_clips(raw_clips, words)
-            if len(validated) < 1:
-                raise ValueError(f"No valid clips after validation.")
+def _call_gemini_transliterate(text: str) -> list:
+    """Pass 2: Transliterate a single segment into Romanized Hindi Anchor-Pairs."""
+    from google.genai import types
+    client = _get_genai_client()
+    
+    prompt = (
+        "Transliterate the following Hindi (Devanagari) text into Roman Hindi (Latin Script).\n"
+        "Requirement: Every word MUST be a pair of 'RomanizedWord:OriginalHindiWord'.\n"
+        "Format: Return an array of strings, where each string contains piped pairs.\n"
+        "Example: ['Namaste:नमस्ते|kaise:कैसे', 'hain:हैं|aap:आप']\n\n"
+        f"TEXT:\n{text}"
+    )
 
-            logger.info(f"[LLM] ✓ Gemini selected {len(validated)} clips.")
-            return validated[:3]
-
-        except Exception as e:
-            wait = min(2 ** (attempt + 1), 16)
-            if attempt < MAX_RETRIES - 1:
-                logger.warning(f"[LLM Fallback] Gemini attempt {attempt + 1}/{MAX_RETRIES} failed: {e}. Retrying in {wait}s...")
-                if response:
-                    logger.debug(f"Gemini output: {response.text}")
-                time.sleep(wait)
-            else:
-                raise RuntimeError(f"Vertex AI failed after {MAX_RETRIES} attempts: {e}")
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction="Transliterate Hindi to Romanized English pairs. Return JSON.",
+                response_mime_type="application/json",
+                response_schema={
+                    "type": "OBJECT",
+                    "properties": {
+                        "romanized_words": {
+                            "type": "ARRAY",
+                            "items": {"type": "STRING"}
+                        }
+                    },
+                    "required": ["romanized_words"]
+                },
+                temperature=0.1,
+                max_output_tokens=4096,
+            ),
+        )
+        data = json.loads(response.text)
+        return data.get("romanized_words", [])
+    except Exception as e:
+        logger.warning(f"[LLM] Transliteration Pass failed: {e}")
+        return []
 
 
 
