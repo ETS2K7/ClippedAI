@@ -156,6 +156,16 @@ export default function Home() {
   const [addSubtitles, setAddSubtitles] = useState(true);
   const [captionTemplate, setCaptionTemplate] = useState<string>("hormozi");
 
+  // Load/Save caption style preference
+  useEffect(() => {
+    const saved = localStorage.getItem("clippedai_caption_template");
+    if (saved) setCaptionTemplate(saved);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("clippedai_caption_template", captionTemplate);
+  }, [captionTemplate]);
+
   // Always treat file input as uncontrolled, and store file in a ref
   const fileRef = useRef<File | null>(null);
 

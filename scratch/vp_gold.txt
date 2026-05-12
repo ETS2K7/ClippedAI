@@ -1,0 +1,561 @@
+commit 08e9e8c75629be09c6d5e165f3e73f380c374dce
+Author: Ebel Thomas Seiko <ebelthomasseiko@gmail.com>
+Date:   Fri Apr 24 06:51:17 2026 +0530
+
+    feat: normalized framing pipeline, Gemini LLM, Dodo Payments, UX hardening
+    
+    Backend:
+    - Migrated LLM from Groq to Vertex AI Gemini 2.5 Flash
+    - Normalized framing pipeline to resolution-agnostic 0.0–1.0 coordinates
+    - Added scene-boundary layout snapping + recursive post-smoothing shot killer
+    - Added transcript and LLM caching (SHA-256 keyed)
+    - Fixed fonts_dir for subtitle rendering in production Modal image
+    
+    Frontend:
+    - Added Dodo Payments integration (checkout, webhooks, credits)
+    - Added forgot/reset password flows
+    - Added privacy policy, terms of service pages
+    - Added cookie consent, PostHog analytics provider
+    - Added middleware for auth protection
+    - Dashboard UX refinements
+
+diff --git a/backend/src/video_processing.py b/backend/src/video_processing.py
+index 1d7a9511..40b9fec7 100644
+--- a/backend/src/video_processing.py
++++ b/backend/src/video_processing.py
+@@ -6,7 +6,10 @@ import json
+ from typing import List, Dict, Any, Tuple
+ 
+ import cv2
+-import modal
++try:
++    import modal
++except ImportError:
++    modal = None
+ import numpy as np
+ from scenedetect import detect, ContentDetector
+ 
+@@ -35,18 +38,24 @@ CROP_W_4          = 540  # 4-speaker grid (540×960 each)
+ # Using 608×1080 → 1080×960 gives 1.776× vs 0.888× — 2× scale mismatch → distortion.
+ CROP_H_HALF = int(round(CROP_W_1 * (OUT_H // 2) / OUT_W))  # = 541
+ 
+-# Gaussian smoothing frames (~1 s at 25 fps)
+-SIGMA = 25  
++# Gaussian smoothing frames (0 = Hard cuts, no sliding)
++SIGMA = 0  
+ 
+ # Stabilisation thresholds (entry = min frames before mode activates,
+ # gap = min gap frames before mode drops — prevents rapid re-entry)
+ MIN_SPLIT_2_ENTRY = 20   # ~0.8 s
+-MIN_SPLIT_2_GAP   = 20
++MIN_SPLIT_2_GAP   = 30   # increased to prevent flickering out
+ MIN_SPLIT_3_ENTRY = 25   # ~1.0 s
+ MIN_SPLIT_3_GAP   = 25
+ MIN_SPLIT_4_ENTRY = 30   # ~1.2 s
+ MIN_SPLIT_4_GAP   = 30
+ 
++# Minimum frames a new speaker/camera-angle position must be held before the
++# crop switches to follow it.  A scene cut to a different angle must persist
++# for this many consecutive frames or the framing stays on the previous face.
++# 0 frames — reaction is instant. Stability is handled by Step 7d.
++MIN_SPEAKER_SWITCH_FRAMES = 0
++
+ # Detection thresholds
+ MIN_FACE_W_RATIO  = 0.04  # Face must be ≥4% of frame width to count
+ SPLIT_MARGIN      = 0.08  # 2-speaker: each face must be 8% past centre
+@@ -117,13 +126,15 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
+ 
+ # ─── Phase 7 ──────────────────────────────────────────────────────────────────
+ 
+-def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: int, work_dir: str = "", use_gpu: bool = False):
++def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: int, work_dir: str = "", use_gpu: bool = False, fonts_dir: str = ""):
+     """Merges subtitle-ass video with audio from original segment.
+ 
+     Uses FFmpeg to burn in ASS subtitles and copy audio from the extracted segment.
+     This ensures the output has both video (with subs) and audio in the correct format.
+     
+-    Optimized with NVENC GPU acceleration when available.
++    Args:
++        fonts_dir: Path to directory containing custom .ttf fonts (e.g. Komika Axis).
++                   Passed to libass via fontsdir= so it can resolve font families.
+     """
+     logger.info(
+         f"==================== PHASE 7: MERGE & CLEANUP (Clip {idx}) ===================="
+@@ -135,11 +146,19 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
+     # MJPG pixel format (yuvj420p) requires colour-range conversion that NVENC rejects.
+     # The ass= filter path must have colons escaped for FFmpeg's filter syntax on Linux.
+     safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
++
++    # Build the ass filter — include fontsdir if a custom font directory is provided
++    if fonts_dir:
++        safe_fonts = fonts_dir.replace("\\", "/").replace(":", "\\:")
++        ass_filter = f"ass={safe_sub}:fontsdir={safe_fonts}"
++    else:
++        ass_filter = f"ass={safe_sub}"
++
+     cmd = [
+         "ffmpeg", "-y",
+         "-i", tracked_vid,
+         "-i", extract_vid,
+-        "-vf", f"ass={safe_sub}",
++        "-vf", ass_filter,
+         "-c:v", "libx264",
+         "-pix_fmt", "yuv420p",
+         "-preset", "veryfast",
+@@ -260,19 +279,33 @@ def _stabilize_segment(raw: np.ndarray, min_entry: int, min_gap: int) -> np.ndar
+     return stabilize_segment(raw, min_entry, min_gap)
+ 
+ 
++def _stabilize_speaker_identity(
++    raw_cx: np.ndarray,
++    min_frames: int,
++    px_threshold: float,
++) -> np.ndarray:
++    """Thin wrapper — implementation lives in signal_helpers.py for testability."""
++    from src.signal_helpers import stabilize_speaker_identity
++    return stabilize_speaker_identity(raw_cx, min_frames, px_threshold)
++
++
+ def _stabilize_bool_state(
+     raw: np.ndarray,
+     scene_boundaries: List[int],
+     min_entry: int,
+     min_gap: int,
+ ) -> np.ndarray:
+-    """Applies _stabilize_segment per scene independently."""
+-    result = np.zeros(len(raw), dtype=bool)
+-    for seg_start, seg_end in zip(scene_boundaries[:-1], scene_boundaries[1:]):
+-        result[seg_start:seg_end] = _stabilize_segment(
+-            raw[seg_start:seg_end].copy(), min_entry, min_gap
+-        )
+-    return result
++    """
++    Stabilizes a boolean signal (like 'is split-screen active').
++    
++    Previous version stabilized per-scene, which created 'dead zones'
++    at the end of scenes where a layout change would be suppressed if
++    it happened <min_entry frames before a cut.
++    
++    New version stabilizes GLOBALLY to allow layouts to transition 
++    cleanly across scene boundaries.
++    """
++    return _stabilize_segment(raw, min_entry, min_gap)
+ 
+ 
+ # ─── Per-layout frame renderers ───────────────────────────────────────────────
+@@ -398,7 +431,8 @@ def _prominent_distinct_faces(
+ # ─── Phase 5 ──────────────────────────────────────────────────────────────────
+ 
+ def track_speaker_and_frame(
+-    clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]], work_dir: str = ""
++    clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]], work_dir: str = "",
++    tracker=None,
+ ) -> Tuple[str, List[Dict[str, Any]]]:
+     """
+     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
+@@ -412,31 +446,40 @@ def track_speaker_and_frame(
+     The 2-speaker path is pixel-identical to the previous implementation.
+     3/4-speaker modes use higher stabilisation thresholds so they only activate
+     in genuine panel/multi-host footage.
++
++    Args:
++        tracker: Optional pre-initialised LocalFastASDTracker. When None (default),
++                 the production Modal remote is used. Pass a LocalFastASDTracker
++                 instance for fully local processing without Modal.
+     """
+     logger.info(
+         f"==================== PHASE 5: SPEAKER TRACKING & FRAMING (Clip {idx}) "
+-        f"====================\n"
++        f"===================="
+     )
+ 
+     # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
+-    logger.info("Calling Modal Fast-ASD tracker...")
+-    Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+-    tracker = Tracker()
+-    
+     # Check file size before loading into memory to prevent memory exhaustion
+     file_size_mb = os.path.getsize(clip_file) / (1024 * 1024)
+-    MAX_VIDEO_SIZE_MB = 500  # 500MB limit for safety
+-    
++    MAX_VIDEO_SIZE_MB = 500
+     if file_size_mb > MAX_VIDEO_SIZE_MB:
+         logger.warning(
+             f"Video file is large ({file_size_mb:.1f}MB). "
+             f"Loading into memory may cause issues. Consider using shorter clips."
+         )
+-    
++
+     with open(clip_file, "rb") as vf:
+         video_bytes = vf.read()
++
+     try:
+-        result_json = tracker.process_video.remote(video_bytes)
++        if tracker is not None:
++            # Local dev path — call TalkNet directly, no Modal
++            logger.info("[local] Calling LocalFastASDTracker…")
++            result_json = tracker.process_video(video_bytes)
++        else:
++            # Production path — call Modal remote
++            logger.info("Calling Modal Fast-ASD tracker...")
++            Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
++            result_json = Tracker().process_video.remote(video_bytes)
+         tracking_data = json.loads(result_json)
+     except Exception as e:
+         logger.error(f"Fast-ASD tracker failed: {e}")
+@@ -562,20 +605,42 @@ def track_speaker_and_frame(
+         }
+         scene_speaker_count[seg_start] = len(speakers_in_scene)
+ 
++    # ── 5b. Precompute per-scene speaker → position maps ────────────────────
++    # Used by the diarization-anchored fallback (step C.5 below) to pick the
++    # correct face when TalkNet has no confident speaker but diarization does.
++    # Only built from frames with exactly 1 face (unambiguous face→speaker mapping).
++    scene_spk_x_map: Dict[int, Dict] = {}
++    for seg_start, seg_end in zip(scene_boundaries[:-1], scene_boundaries[1:]):
++        spk_xs: Dict = {}
++        for fi in range(seg_start, seg_end):
++            faces_in = frame_faces.get(fi, [])
++            spk = speaker_array[fi]
++            if len(faces_in) == 1 and spk is not None:
++                spk_xs.setdefault(spk, []).append(_face_cx(faces_in[0]))
++        scene_spk_x_map[seg_start] = {
++            spk: float(np.median(xs))
++            for spk, xs in spk_xs.items() if len(xs) >= 5
++        }
++
+     # ── 6. Build raw per-frame speaker arrays (N = 1..4) ─────────────────────
+     #
+     # raw_n_spk[fi]         = number of distinct speakers detected (1–4).
+-    # raw_spk_cx[fi, 0..3]  = their cx positions (left→right), -1 if absent.
++    # raw_spk_cx[fi, 0..3]  = their cx positions (NORMALIZED 0-1), -1 if absent.
+     #
+     # Detection hierarchy for frame fi:
+-    #   A) TalkNet simultaneous speaking (both marked speaking=True)    → highest confidence
+-    #   B) Visual: ≥2 prominent, well-separated faces in multi-spk scene → standard path
+-    #   C) Single TalkNet speaking face                                  → single speaker
+-    #   D) Best-scoring face (no confirmed speaker)                      → single speaker fallback
++    #   A)   TalkNet simultaneous speaking (both marked speaking=True)    → highest confidence
++    #   B)   Visual: ≥2 prominent, well-separated faces in multi-spk scene → standard path
++    #   C)   Single TalkNet speaking face                                  → single speaker
++    #   C.5) Diarization-anchored: no TalkNet speaker, but diarization     → picks closest face
++    #        knows who's talking — pick face nearest known position
++    #   D)   Best-scoring face (no confirmed speaker)                      → single speaker fallback
+     #
+     raw_n_spk  = np.ones(frames_count, dtype=int)
+     raw_spk_cx = np.full((frames_count, 4), -1.0)
+-    raw_spk_cy = np.full((frames_count, 4), -1.0)  # vertical face centres for crop positioning
++    raw_spk_cy = np.full((frames_count, 4), -1.0) 
++
++    def _norm_x(f): return ((f["x1"] + f["x2"]) / 2.0) / w
++    def _norm_y(f): return ((f["y1"] + f["y2"]) / 2.0) / h
+ 
+     for fi in range(frames_count):
+         faces    = frame_faces.get(fi, [])
+@@ -583,95 +648,95 @@ def track_speaker_and_frame(
+         scene_s  = int(frame_to_scene_start[fi])
+         n_spk_scene = scene_speaker_count.get(scene_s, 1)
+ 
+-        # —— A) TalkNet simultaneous (keeps backward compat, rarely fires but high confidence)
++        # —— A) TalkNet simultaneous
+         if len(speaking) >= 2:
+             by_x = sorted(speaking[:4], key=_face_cx)
+             n = len(by_x)
+             raw_n_spk[fi] = n
+             for i, f in enumerate(by_x):
+-                raw_spk_cx[fi, i] = _face_cx(f)
+-                raw_spk_cy[fi, i] = _face_cy(f)
++                raw_spk_cx[fi, i] = _norm_x(f)
++                raw_spk_cy[fi, i] = _norm_y(f)
+             continue
+ 
+-        # —— B) Visual presence (active-speaker only, geometrically deduplicated)
+-        #
+-        # Rules enforced here:
+-        #   1. Only active-speaker scenes trigger split (diarization gate maintained).
+-        #      Non-speakers are never assigned their own cell.
+-        #   2. Each participant appears in exactly ONE cell. This is guaranteed by
+-        #      the cx-separation guard: two 608px crops centred ≥608px apart are
+-        #      non-overlapping by geometry, so neither speaker can appear in the
+-        #      other's cell.
+-        #   3. 3/4-speaker layouts require stronger diarization confirmation.
++        # —— B) Visual presence
+         if len(faces) >= 2 and n_spk_scene >= 2:
+             distinct = _prominent_distinct_faces(faces, w)
+ 
+             if len(distinct) >= 4 and n_spk_scene >= 4:
+-                # Four-speaker layout candidate — verify all adjacent pairs are
+-                # geometrically separable (non-overlapping 608px crops).
+-                cxs = [_face_cx(f) for f in distinct[:4]]
+-                cys = [_face_cy(f) for f in distinct[:4]]
+-                separable = all(
+-                    cxs[i + 1] - cxs[i] >= SPLIT_MIN_CX_SEP
+-                    for i in range(len(cxs) - 1)
+-                )
++                cxs = [_norm_x(f) for f in distinct[:4]]
++                cys = [_norm_y(f) for f in distinct[:4]]
++                # Geometric separation check (normalized: 608 / 1280 = 0.475)
++                sep_thresh = SPLIT_MIN_CX_SEP / w
++                separable = all(cxs[i+1] - cxs[i] >= sep_thresh for i in range(3))
+                 if separable:
+                     raw_n_spk[fi] = 4
+-                    for i, (cx_v, cy_v) in enumerate(zip(cxs, cys)):
+-                        raw_spk_cx[fi, i] = cx_v
+-                        raw_spk_cy[fi, i] = cy_v
++                    for i in range(4):
++                        raw_spk_cx[fi, i] = cxs[i]
++                        raw_spk_cy[fi, i] = cys[i]
+                     continue
+ 
+             if len(distinct) >= 3 and n_spk_scene >= 3:
+-                cxs = [_face_cx(f) for f in distinct[:3]]
+-                cys = [_face_cy(f) for f in distinct[:3]]
+-                separable = all(
+-                    cxs[i + 1] - cxs[i] >= SPLIT_MIN_CX_SEP
+-                    for i in range(len(cxs) - 1)
+-                )
++                cxs = [_norm_x(f) for f in distinct[:3]]
++                cys = [_norm_y(f) for f in distinct[:3]]
++                sep_thresh = SPLIT_MIN_CX_SEP / w
++                separable = all(cxs[i+1] - cxs[i] >= sep_thresh for i in range(2))
+                 if separable:
+                     raw_n_spk[fi] = 3
+-                    for i, (cx_v, cy_v) in enumerate(zip(cxs, cys)):
+-                        raw_spk_cx[fi, i] = cx_v
+-                        raw_spk_cy[fi, i] = cy_v
++                    for i in range(3):
++                        raw_spk_cx[fi, i] = cxs[i]
++                        raw_spk_cy[fi, i] = cys[i]
+                     continue
+ 
+             if len(distinct) >= 2:
+-                left_cx  = _face_cx(distinct[0])
+-                right_cx = _face_cx(distinct[-1])
+-
+-                # Diarization gate: scene has confirmed ≥2 active speakers AND
+-                # each face is clearly anchored in its own half of the frame.
+-                clearly_left  = left_cx  < w * (0.5 - SPLIT_MARGIN)
+-                clearly_right = right_cx > w * (0.5 + SPLIT_MARGIN)
+-                diarization_ok = clearly_left and clearly_right
+-
+-                # Geometric uniqueness guard: crops must be non-overlapping.
+-                # Two 608px crops centred on left_cx and right_cx overlap iff
+-                # right_cx - left_cx < 608.  Reject the split if too close.
+-                geometrically_separable = (right_cx - left_cx) >= SPLIT_MIN_CX_SEP
+-
+-                if diarization_ok and geometrically_separable:
++                # Diarization gate: each face clearly in its own half
++                cxs = [_norm_x(f) for f in distinct]
++                cys = [_norm_y(f) for f in distinct]
++                clearly_left  = cxs[0]  < (0.5 - SPLIT_MARGIN)
++                clearly_right = cxs[-1] > (0.5 + SPLIT_MARGIN)
++                sep_thresh    = SPLIT_MIN_CX_SEP / w
++                separable     = (cxs[-1] - cxs[0]) >= sep_thresh
++
++                if clearly_left and clearly_right and separable:
+                     raw_n_spk[fi] = 2
+-                    raw_spk_cx[fi, 0] = left_cx
+-                    raw_spk_cx[fi, 1] = right_cx
+-                    raw_spk_cy[fi, 0] = _face_cy(distinct[0])
+-                    raw_spk_cy[fi, 1] = _face_cy(distinct[-1])
++                    raw_spk_cx[fi, 0] = cxs[0]
++                    raw_spk_cx[fi, 1] = cxs[-1]
++                    raw_spk_cy[fi, 0] = cys[0]
++                    raw_spk_cy[fi, 1] = cys[-1]
+                     continue
+ 
+-        # —— C) Single TalkNet-confirmed speaker
++        # —— C) Single TalkNet confirmed
+         if len(speaking) == 1:
+             raw_n_spk[fi] = 1
+-            raw_spk_cx[fi, 0] = _face_cx(speaking[0])
+-            raw_spk_cy[fi, 0] = _face_cy(speaking[0])
++            raw_spk_cx[fi, 0] = _norm_x(speaking[0])
++            raw_spk_cy[fi, 0] = _norm_y(speaking[0])
+             continue
+ 
+-        # —— D) Best-scoring detected face (fallback)
++        # —— C.5) Diarization-anchored fallback
++        # TalkNet has no confident speaker, but diarization knows who's talking.
++        # Pick the detected face closest to that speaker's known position.
++        spk = speaker_array[fi]
++        if faces and spk is not None:
++            scene_s = int(frame_to_scene_start[fi])
++            spk_positions = scene_spk_x_map.get(scene_s, {})
++            if spk in spk_positions:
++                target_x = spk_positions[spk]
++                best = min(faces, key=lambda f: abs(_face_cx(f) - target_x))
++            elif spk in clip_side_map:
++                best = sorted(faces, key=lambda f: f["x1"])[clip_side_map[spk]]
++            else:
++                best = max(faces, key=_face_score)
++            
++            raw_n_spk[fi] = 1
++            raw_spk_cx[fi, 0] = _norm_x(best)
++            raw_spk_cy[fi, 0] = _norm_y(best)
++            continue
++
++        # —— D) Best-scoring detected face (last resort fallback)
+         if faces:
+             best = max(faces, key=_face_score)
+             raw_n_spk[fi] = 1
+-            raw_spk_cx[fi, 0] = _face_cx(best)
+-            raw_spk_cy[fi, 0] = _face_cy(best)
++            raw_spk_cx[fi, 0] = _norm_x(best)
++            raw_spk_cy[fi, 0] = _norm_y(best)
+ 
+     # ── 7. Stabilise each speaker-count level independently ──────────────────
+     #
+@@ -701,14 +766,64 @@ def track_speaker_and_frame(
+                 f"(removed {raw_c - stable_c} flickering frames)"
+             )
+ 
++    # ── 7c. Per-slot speaker-identity debounce ────────────────────────────────
++    #
++    # After the split-layout decision is stable, independently debounce each
++    # speaker slot's cx position.  If TalkNet suddenly assigns speaking=True to
++    # a face at a very different x position (camera angle cut), require that
++    # new position to persist for MIN_SPEAKER_SWITCH_FRAMES consecutive frames
++    # before the framing commits.  Until then, the last known position is held.
++    #
++    # This runs across the FULL clip (not per-scene) so that a scene boundary
++    # does not reset the debounce counter mid-cut — the whole-clip view ensures
++    # a brief reaction-shot scene is correctly suppressed.
++    #
++    # ── 7c. Per-slot speaker-identity debounce ────────────────────────────────
++    IDENTITY_PX_THRESHOLD = 0.238  # 304px / 1280 — normalised coords
++    if MIN_SPEAKER_SWITCH_FRAMES > 0:
++        for slot in range(4):
++            col = raw_spk_cx[:, slot].copy()
++            if np.any(col != -1):
++                raw_spk_cx[:, slot] = _stabilize_speaker_identity(
++                    col, MIN_SPEAKER_SWITCH_FRAMES, IDENTITY_PX_THRESHOLD
++                )
++    else:
++        # Instant tracking mode: just fill gaps with the nearest valid detection
++        # to prevent snapping to 640px default during transient dropouts.
++        for slot in range(4):
++            col = raw_spk_cx[:, slot]
++            valid_mask = col != -1
++            if np.any(valid_mask):
++                valid_idx = np.where(valid_mask)[0]
++                all_idx = np.arange(len(col))
++                # Fill gaps using nearest-neighbor (no smoothing)
++                raw_spk_cx[:, slot] = np.interp(all_idx, valid_idx, col[valid_idx])
++                
++                col_y = raw_spk_cy[:, slot]
++                valid_y = np.where(col_y != -1)[0]
++                if len(valid_y) > 0:
++                    raw_spk_cy[:, slot] = np.interp(all_idx, valid_y, col_y[valid_y])
++
++    # ── 7d. Scene-boundary layout snapping ────────────────────────────────────
++    # If a layout change (n=1 -> n=2) happens within 50 frames of a scene cut,
++    # snap the layout change to the exact frame of the scene cut.
++    for cut in scene_boundaries:
++        # Look forward/backward 50 frames
++        window = range(max(0, cut - 50), min(frames_count, cut + 50))
++        for f in window:
++            if f > 0 and stable_n[f] != stable_n[f-1]:
++                # Snap!
++                stable_n[min(f, cut):max(f, cut)] = stable_n[f]
++                break
++
+     # ── 8. Scene-segmented per-speaker smoothing ──────────────────────────────
+     #
+     # Both cx and cy are smoothed independently per scene per slot.
+     smooth_spk_cx = np.full((frames_count, 4), -1.0)
+     smooth_spk_cy = np.full((frames_count, 4), -1.0)
+ 
+-    cx_defaults = [w / 2.0, w * 0.25, w * 0.75, w / 2.0]
+-    cy_defaults = [h * 0.35] * 4   # faces sit in the upper portion of talking-head footage
++    cx_defaults = [0.5, 0.25, 0.75, 0.5]
++    cy_defaults = [0.35] * 4
+ 
+     for slot in range(4):
+         raw_cx_col = raw_spk_cx[:, slot].copy()
+@@ -724,6 +839,35 @@ def track_speaker_and_frame(
+ 
+     logger.info("Rendering adaptive multi-speaker reframing...")
+ 
++    # ── 8.5. Final post-smoothing shot enforcement ────────────────────────────
++    # Enforces a strict 50-frame minimum by looking at the ACTUAL rendered
++    # parameters (layout + smoothed cx).
++    MIN_SHOT_FRAMES = 50
++    changed = True
++    while changed:
++        changed = False
++        i = 0
++        while i < frames_count:
++            val_n = stable_n[i]
++            val_cx = smooth_spk_cx[i, 0]
++            j = i
++            while j < frames_count:
++                if stable_n[j] != val_n: break
++                if abs(smooth_spk_cx[j, 0] - val_cx) > 0.023: break  # ~30px / 1280
++                j += 1
++            
++            duration = j - i
++            if duration < MIN_SHOT_FRAMES and j < frames_count:
++                # Swallow the flicker!
++                stable_n[i:j] = stable_n[j]
++                for s in range(4):
++                    smooth_spk_cx[i:j, s] = smooth_spk_cx[j, s]
++                    smooth_spk_cy[i:j, s] = smooth_spk_cy[j, s]
++                logger.debug(f"  [Step 8.5] RECURSIVE MERGE: Swallowed {duration}f flicker at frame {i}")
++                changed = True
++                break # Restart loop to re-evaluate
++            i = j
++
+     # ── 9. Build chunk_meta for subtitle positioning ──────────────────────────
+     chunk_meta: List[Dict[str, Any]] = []
+     if frames_count > 0:
+@@ -733,6 +877,7 @@ def track_speaker_and_frame(
+ 
+         cur_flag  = _flag(stable_n[0])
+         cur_start = 0
++
+         for fi in range(1, frames_count):
+             flag = _flag(stable_n[fi])
+             if flag != cur_flag:
+@@ -747,6 +892,7 @@ def track_speaker_and_frame(
+                 })
+                 cur_flag  = flag
+                 cur_start = fi
++        
+         chunk_meta.append({
+             "start_frame": cur_start,
+             "end_frame":   frames_count - 1,
+@@ -775,27 +921,19 @@ def track_speaker_and_frame(
+             cy = smooth_spk_cy[fidx]   # shape (4,) cy per speaker slot
+ 
+             if n == 4:
+-                # 2×2 grid: AR-safe crop per speaker → 540×960 cells
+                 out_frame = _render_split_4(
+-                    frame, cx[0], cx[1], cx[2], cx[3],
+-                    cy[0], cy[1], cy[2], cy[3],
++                    frame, cx[0] * w, cx[1] * w, cx[2] * w, cx[3] * w,
++                    cy[0] * h, cy[1] * h, cy[2] * h, cy[3] * h,
+                 )
+-
+             elif n == 3:
+-                # 1 + 2: top cell face-centred, bottom cells face-centred
+-                # cx[0]=leftmost, cx[1]=middle (featured top), cx[2]=rightmost
+                 out_frame = _render_split_3(
+-                    frame, cx[1], cx[0], cx[2],
+-                    cy[1], cy[0], cy[2],
++                    frame, cx[1] * w, cx[0] * w, cx[2] * w,
++                    cy[1] * h, cy[0] * h, cy[2] * h,
+                 )
+-
+             elif n == 2:
+-                # Vertical stack: AR-safe crop per speaker → 1080×960 cells
+-                out_frame = _render_split_2(frame, cx[0], cx[1], cy[0], cy[1])
+-
++                out_frame = _render_split_2(frame, cx[0] * w, cx[1] * w, cy[0] * h, cy[1] * h)
+             else:
+-                # Single speaker: AR-safe 9:16 crop → 1080×1920
+-                out_frame = _cell_full(frame, cx[0], cy[0])
++                out_frame = _cell_full(frame, cx[0] * w, cy[0] * h)
+ 
+             writer.write(out_frame)
+     finally:

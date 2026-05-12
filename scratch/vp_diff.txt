@@ -1,0 +1,357 @@
+diff --git a/backend/src/video_processing.py b/backend/src/video_processing.py
+index 40b9fec7..8bb98433 100644
+--- a/backend/src/video_processing.py
++++ b/backend/src/video_processing.py
+@@ -106,8 +106,8 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
+     # Base command
+     cmd = [
+         "ffmpeg", "-y",
+-        "-ss", str(start),
+         "-i", input_file,
++        "-ss", str(start),
+         "-t", str(dur),
+     ]
+     
+@@ -126,7 +126,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
+ 
+ # ─── Phase 7 ──────────────────────────────────────────────────────────────────
+ 
+-def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: int, work_dir: str = "", use_gpu: bool = False, fonts_dir: str = ""):
++def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str | None, idx: int, work_dir: str = "", use_gpu: bool = False, fonts_dir: str = ""):
+     """Merges subtitle-ass video with audio from original segment.
+ 
+     Uses FFmpeg to burn in ASS subtitles and copy audio from the extracted segment.
+@@ -141,24 +141,26 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
+     )
+     out_file = f"{work_dir}/clip_{idx}.mp4" if work_dir else f"output/clip_{idx}.mp4"
+ 
+-    # Re-encode tracked .avi (MJPG) to H.264, burn in ASS subtitles, and mux audio.
++    # Re-encode tracked .avi (MJPG) to H.264, optionally burn in ASS subtitles, and mux audio.
+     # -c:v libx264 is always available; we intentionally do NOT use NVENC here because
+     # MJPG pixel format (yuvj420p) requires colour-range conversion that NVENC rejects.
+     # The ass= filter path must have colons escaped for FFmpeg's filter syntax on Linux.
+-    safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
+-
+-    # Build the ass filter — include fontsdir if a custom font directory is provided
+-    if fonts_dir:
+-        safe_fonts = fonts_dir.replace("\\", "/").replace(":", "\\:")
+-        ass_filter = f"ass={safe_sub}:fontsdir={safe_fonts}"
+-    else:
+-        ass_filter = f"ass={safe_sub}"
+-
+     cmd = [
+         "ffmpeg", "-y",
+         "-i", tracked_vid,
+         "-i", extract_vid,
+-        "-vf", ass_filter,
++    ]
++
++    if sub_file:
++        safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
++        if fonts_dir:
++            safe_fonts = fonts_dir.replace("\\", "/").replace(":", "\\:")
++            ass_filter = f"ass={safe_sub}:fontsdir={safe_fonts}"
++        else:
++            ass_filter = f"ass={safe_sub}"
++        cmd.extend(["-vf", ass_filter])
++
++    cmd.extend([
+         "-c:v", "libx264",
+         "-pix_fmt", "yuv420p",
+         "-preset", "veryfast",
+@@ -166,9 +168,10 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
+         "-c:a", "aac",
+         "-map", "0:v:0",
+         "-map", "1:a:0?",
++        "-movflags", "+faststart",
+         "-shortest",
+         out_file,
+-    ]
++    ])
+ 
+     _run_ffmpeg(cmd, f"merge for clip {idx}")
+ 
+@@ -176,7 +179,8 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str, idx: in
+     try:
+         os.remove(tracked_vid)
+         os.remove(extract_vid)
+-        os.remove(sub_file)
++        if sub_file:
++            os.remove(sub_file)
+     except OSError as e:
+         logger.warning(f"Failed to clean up temporary files for clip {idx}: {e}")
+ 
+@@ -192,6 +196,13 @@ def _face_cy(face: Dict) -> float:
+ def _face_score(face: Dict) -> float:
+     return face.get("raw_score", 0.0)
+ 
++def _face_area(face: Dict) -> float:
++    """Bounding-box area — used to pick the most prominent face when nobody is
++    actively speaking.  TalkNet raw_score is a speaking-confidence signal and
++    is unreliable (negative) for silent frames; the largest face in frame is a
++    far better proxy for 'the main subject' in that case."""
++    return (face["x2"] - face["x1"]) * (face["y2"] - face["y1"])
++
+ 
+ def get_centered_crop(
+     frame_img: np.ndarray,
+@@ -433,6 +444,7 @@ def _prominent_distinct_faces(
+ def track_speaker_and_frame(
+     clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]], work_dir: str = "",
+     tracker=None,
++    remote_cache=None,
+ ) -> Tuple[str, List[Dict[str, Any]]]:
+     """
+     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
+@@ -458,32 +470,80 @@ def track_speaker_and_frame(
+     )
+ 
+     # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
+-    # Check file size before loading into memory to prevent memory exhaustion
+-    file_size_mb = os.path.getsize(clip_file) / (1024 * 1024)
+-    MAX_VIDEO_SIZE_MB = 500
+-    if file_size_mb > MAX_VIDEO_SIZE_MB:
+-        logger.warning(
+-            f"Video file is large ({file_size_mb:.1f}MB). "
+-            f"Loading into memory may cause issues. Consider using shorter clips."
+-        )
+-
+-    with open(clip_file, "rb") as vf:
+-        video_bytes = vf.read()
++    import hashlib
++    with open(clip_file, "rb") as f:
++        _video_hash = hashlib.sha256(f.read()).hexdigest()
+ 
+-    try:
+-        if tracker is not None:
+-            # Local dev path — call TalkNet directly, no Modal
+-            logger.info("[local] Calling LocalFastASDTracker…")
+-            result_json = tracker.process_video(video_bytes)
+-        else:
+-            # Production path — call Modal remote
+-            logger.info("Calling Modal Fast-ASD tracker...")
+-            Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+-            result_json = Tracker().process_video.remote(video_bytes)
+-        tracking_data = json.loads(result_json)
+-    except Exception as e:
+-        logger.error(f"Fast-ASD tracker failed: {e}")
+-        raise RuntimeError(f"ASD tracking failed: {e}") from e
++    if remote_cache is not None and _video_hash in remote_cache:
++        logger.info(f"[FastASD] 🟢 Remote cache hit — skipping TalkNet (key={_video_hash[:8]})")
++        tracking_data = remote_cache[_video_hash]
++    else:
++        try:
++            if tracker is not None:
++                logger.info("Calling local Fast-ASD tracker...")
++                _, s, DET = tracker
++                
++                import threading
++                import shutil
++                import sys
++                import importlib.util
++                
++                tid = threading.get_ident()
++                module_name = f"demoTalkNet_{tid}"
++                new_path = f"/fast-asd/talknet/{module_name}.py"
++                save_dir = f"/tmp/talknet_save_{tid}/"
++                
++                # 1. Dynamically copy and patch the TalkNet source code for this specific thread
++                shutil.copy("/fast-asd/talknet/demoTalkNet.py", new_path)
++                with open(new_path, "r") as f:
++                    content = f.read()
++                
++                # Rewrite the hardcoded global directory to a thread-specific directory
++                content = content.replace('save_path = "save/"', f'save_path = "{save_dir}"')
++                
++                with open(new_path, "w") as f:
++                    f.write(content)
++                    
++                # 2. Import the isolated module
++                spec = importlib.util.spec_from_file_location(module_name, new_path)
++                local_demoTalkNet = importlib.util.module_from_spec(spec)
++                spec.loader.exec_module(local_demoTalkNet)
++                sys.modules[module_name] = local_demoTalkNet
++                
++                try:
++                    # 3. Execute TalkNet in the isolated thread context
++                    tracking_data = local_demoTalkNet.main(
++                        s=s,
++                        DET=DET,
++                        video_path=clip_file,
++                        start_seconds=0,
++                        end_seconds=-1,
++                        return_visualization=False,
++                        in_memory_threshold=0,
++                    )
++                finally:
++                    # 4. Garbage Collection: Prevent resource leaks by deleting the clone and its temp files
++                    logger.info(f"Cleaning up TalkNet clone for thread {tid}")
++                    if module_name in sys.modules:
++                        del sys.modules[module_name]
++                    if os.path.exists(new_path):
++                        os.remove(new_path)
++                    if os.path.exists(save_dir):
++                        shutil.rmtree(save_dir, ignore_errors=True)
++            else:
++                logger.error("Fast-ASD tracker not initialized")
++                raise RuntimeError("Fast-ASD tracker not initialized")
++                
++            if remote_cache is not None:
++                try:
++                    remote_cache[_video_hash] = tracking_data
++                    logger.info(f"[FastASD] Cached TalkNet data to remote Dict")
++                except Exception as e:
++                    logger.warning(f"[FastASD] Remote cache write failed: {e}")
++                    
++        except Exception as e:
++            logger.error(f"Fast-ASD tracker failed: {e}")
++            raise RuntimeError(f"ASD tracking failed: {e}") from e
+ 
+     # ── 2. Video metadata ─────────────────────────────────────────────────────
+     cap = cv2.VideoCapture(clip_file)
+@@ -642,6 +702,9 @@ def track_speaker_and_frame(
+     def _norm_x(f): return ((f["x1"] + f["x2"]) / 2.0) / w
+     def _norm_y(f): return ((f["y1"] + f["y2"]) / 2.0) / h
+ 
++    # Per-path frame counters — logged per scene to diagnose framing issues
++    path_counts = {"A": 0, "B": 0, "C": 0, "C5": 0, "D": 0, "NOFACE": 0}
++
+     for fi in range(frames_count):
+         faces    = frame_faces.get(fi, [])
+         speaking = [f for f in faces if f.get("speaking", False)]
+@@ -656,6 +719,7 @@ def track_speaker_and_frame(
+             for i, f in enumerate(by_x):
+                 raw_spk_cx[fi, i] = _norm_x(f)
+                 raw_spk_cy[fi, i] = _norm_y(f)
++            path_counts["A"] += 1
+             continue
+ 
+         # —— B) Visual presence
+@@ -709,6 +773,7 @@ def track_speaker_and_frame(
+             raw_n_spk[fi] = 1
+             raw_spk_cx[fi, 0] = _norm_x(speaking[0])
+             raw_spk_cy[fi, 0] = _norm_y(speaking[0])
++            path_counts["C"] += 1
+             continue
+ 
+         # —— C.5) Diarization-anchored fallback
+@@ -720,23 +785,35 @@ def track_speaker_and_frame(
+             spk_positions = scene_spk_x_map.get(scene_s, {})
+             if spk in spk_positions:
+                 target_x = spk_positions[spk]
+-                best = min(faces, key=lambda f: abs(_face_cx(f) - target_x))
++                closest = min(faces, key=lambda f: abs(_face_cx(f) - target_x))
++                largest = max(faces, key=_face_area)
++                # If the speaker's face is much smaller than the dominant face,
++                # the camera is framing a different subject (reaction/cutaway shot).
++                # In that case prefer the most prominent face over positional anchor.
++                if _face_area(closest) < 0.35 * _face_area(largest):
++                    best = largest
++                else:
++                    best = closest
+             elif spk in clip_side_map:
+-                best = sorted(faces, key=lambda f: f["x1"])[clip_side_map[spk]]
++                faces_by_x = sorted(faces, key=lambda f: f["x1"])
++                best = faces_by_x[min(clip_side_map[spk], len(faces_by_x) - 1)]
+             else:
+-                best = max(faces, key=_face_score)
++                best = max(faces, key=_face_area)
+             
+             raw_n_spk[fi] = 1
+             raw_spk_cx[fi, 0] = _norm_x(best)
+             raw_spk_cy[fi, 0] = _norm_y(best)
++            path_counts["C5"] += 1
+             continue
+ 
+-        # —— D) Best-scoring detected face (last resort fallback)
+         if faces:
+-            best = max(faces, key=_face_score)
++            best = max(faces, key=_face_area)
+             raw_n_spk[fi] = 1
+             raw_spk_cx[fi, 0] = _norm_x(best)
+             raw_spk_cy[fi, 0] = _norm_y(best)
++            path_counts["D"] += 1
++        else:
++            path_counts["NOFACE"] += 1
+ 
+     # ── 7. Stabilise each speaker-count level independently ──────────────────
+     #
+@@ -788,21 +865,57 @@ def track_speaker_and_frame(
+                     col, MIN_SPEAKER_SWITCH_FRAMES, IDENTITY_PX_THRESHOLD
+                 )
+     else:
+-        # Instant tracking mode: just fill gaps with the nearest valid detection
+-        # to prevent snapping to 640px default during transient dropouts.
++        # Instant tracking mode: fill gaps by holding the last known position
++        # (forward-fill then backward-fill).
++        #
++        # Why NOT np.interp (linear interpolation):
++        # Linear interpolation creates an artificial sliding trajectory between
++        # detections. For a stationary speaker at x=0.4 with a 20-frame ASD
++        # gap, interp produces values from 0.4 → wherever they're next detected,
++        # even if they never moved. smooth_segment then sees that spread, its
++        # cluster std exceeds STATIONARY_STD_THRESHOLD, the lock fails, and the
++        # speaker is misclassified as "moving" — causing visible drift in a
++        # completely stationary shot.
++        #
++        # Hold-fill keeps gaps at the last known position, so a stationary
++        # speaker's array stays constant → tight cluster → lock fires → zero drift.
++        def _hold_fill(arr: np.ndarray, vidx: np.ndarray, aidx: np.ndarray) -> np.ndarray:
++            """Forward-fill -1 gaps then backward-fill any leading -1 region."""
++            vmask = arr != -1
++            fwd = np.where(vmask, aidx, 0)
++            np.maximum.accumulate(fwd, out=fwd)
++            out = arr[fwd]
++            first_v = vidx[0]
++            if first_v > 0:
++                out[:first_v] = arr[first_v]
++            return out
++
++        logger.info(
++            f"  [Path usage] A={path_counts['A']} B={path_counts['B']} "
++            f"C={path_counts['C']} C5={path_counts['C5']} "
++            f"D={path_counts['D']} NOFACE={path_counts['NOFACE']} "
++            f"(total={frames_count})"
++        )
++
+         for slot in range(4):
+-            col = raw_spk_cx[:, slot]
+-            valid_mask = col != -1
+-            if np.any(valid_mask):
+-                valid_idx = np.where(valid_mask)[0]
+-                all_idx = np.arange(len(col))
+-                # Fill gaps using nearest-neighbor (no smoothing)
+-                raw_spk_cx[:, slot] = np.interp(all_idx, valid_idx, col[valid_idx])
++            for seg_start, seg_end in zip(scene_boundaries[:-1], scene_boundaries[1:]):
++                seg = slice(seg_start, seg_end)
+                 
+-                col_y = raw_spk_cy[:, slot]
+-                valid_y = np.where(col_y != -1)[0]
+-                if len(valid_y) > 0:
+-                    raw_spk_cy[:, slot] = np.interp(all_idx, valid_y, col_y[valid_y])
++                # X coordinate hold-fill
++                col_x = raw_spk_cx[seg, slot]
++                valid_x = col_x != -1
++                if np.any(valid_x):
++                    valid_idx = np.where(valid_x)[0]
++                    all_idx = np.arange(len(col_x))
++                    raw_spk_cx[seg, slot] = _hold_fill(col_x, valid_idx, all_idx)
++
++                # Y coordinate hold-fill
++                col_y = raw_spk_cy[seg, slot]
++                valid_y = col_y != -1
++                if np.any(valid_y):
++                    valid_y_idx = np.where(valid_y)[0]
++                    all_y_idx = np.arange(len(col_y))
++                    raw_spk_cy[seg, slot] = _hold_fill(col_y, valid_y_idx, all_y_idx)
+ 
+     # ── 7d. Scene-boundary layout snapping ────────────────────────────────────
+     # If a layout change (n=1 -> n=2) happens within 50 frames of a scene cut,
+@@ -863,7 +976,6 @@ def track_speaker_and_frame(
+                 for s in range(4):
+                     smooth_spk_cx[i:j, s] = smooth_spk_cx[j, s]
+                     smooth_spk_cy[i:j, s] = smooth_spk_cy[j, s]
+-                logger.debug(f"  [Step 8.5] RECURSIVE MERGE: Swallowed {duration}f flicker at frame {i}")
+                 changed = True
+                 break # Restart loop to re-evaluate
+             i = j

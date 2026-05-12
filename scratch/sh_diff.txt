@@ -1,0 +1,108 @@
+diff --git a/backend/src/signal_helpers.py b/backend/src/signal_helpers.py
+index ad322c63..7a1e3025 100644
+--- a/backend/src/signal_helpers.py
++++ b/backend/src/signal_helpers.py
+@@ -13,30 +13,18 @@ _logger = logging.getLogger(__name__)
+ 
+ # Face-detection bounding boxes jitter by ~0.02-0.06 in normalised coords even for
+ # perfectly stationary speakers.  A speaker genuinely walking across frame produces
+-# std > 0.15.  0.094 safely separates "detection noise" from "real movement".
+-# (Legacy pixel equivalent: 120 / 1280 ≈ 0.094)
+-STATIONARY_STD_THRESHOLD = 0.094
+-
+-# When the ASD model's "active speaker" label alternates between two stationary
+-# faces (e.g. x=0.31 and x=0.55), the raw position array oscillates between them,
+-# producing a high overall std even though neither person moved.
+-# We detect this by sorting all positions and looking for large gaps: if the
+-# positions cluster into discrete groups that are each individually stable,
+-# it's face-switching — not real movement.
+-# (Legacy pixel equivalent: 100 / 1280 ≈ 0.078)
++# std > 0.15.  0.15 safely separates "detection noise" from "real movement".
++STATIONARY_STD_THRESHOLD = 0.15
++
++# When the ASD model alternates between two stationary faces in a wide shot,
++# the positions cluster into groups.
+ CLUSTER_GAP = 0.078
+ 
+ 
+ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
+     """
+-    Gap-fills a 1-D position array (gaps = -1) then either locks the camera
+-    (stationary speaker) or Gaussian-smooths it (moving speaker).
+-
+-    Three-tier decision:
+-      1. Low overall std → LOCKED (clearly stationary)
+-      2. High overall std but multi-modal clusters each stable → LOCKED
+-         (face-switching between stationary speakers)
+-      3. High overall std with continuous spread → TRACKING (real movement)
++    Stabilises a 1-D position array (gaps = -1) by choosing between a 
++    STABLE LOCKED shot (zero movement) or a SMOOTH TRACKING shot.
+     """
+     seg_len = len(raw)
+     valid_mask = raw != -1
+@@ -45,17 +33,8 @@ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
+         return np.full(seg_len, default)
+ 
+     valid_points = raw[valid_mask]
+-    pos_std = float(np.std(valid_points))
+-    pos_median = float(np.median(valid_points))
+-
+-    _logger.debug(
+-        f"smooth_segment: {len(valid_points)}/{seg_len} valid, "
+-        f"std={pos_std:.1f}px, median={pos_median:.1f}px, "
+-        f"threshold={STATIONARY_STD_THRESHOLD}px"
+-    )
+-
+-    # ── Tier 1: Clearly stationary or clustered → lock to largest cluster ─────
+-    # We always cluster to avoid 'averaging' two people in a wide shot.
++    
++    # ── 1. Identify Clusters (Stationary Subjects) ──────────────────────────
+     sorted_pts = np.sort(valid_points)
+     gaps = np.diff(sorted_pts)
+     gap_indices = np.where(gaps > CLUSTER_GAP)[0]
+@@ -67,20 +46,32 @@ def smooth_segment(raw: np.ndarray, default: float, sigma: int) -> np.ndarray:
+         end = int(boundaries[i + 1]) + 1
+         clusters.append(sorted_pts[start:end])
+ 
+-    # Pick the most prominent face in the scene
++    # ── 2. Determine if the scene is stationary ────────────────────────────
++    # A scene is stationary if the largest cluster is stable.
+     largest_cluster = max(clusters, key=len)
+-    lock_pos = float(np.median(largest_cluster))
+-    
+-    # If the largest cluster is stable, lock to it.
+-    if float(np.std(largest_cluster)) < STATIONARY_STD_THRESHOLD:
+-        _logger.debug(
+-            f"  → LOCKED shot (prominent face: {len(clusters)} groups, "
+-            f"locking to median={lock_pos:.1f}px)"
+-        )
+-        return np.full(seg_len, lock_pos)
+-
+-    # ── Tier 3: Genuinely moving speaker → gap-fill + Gaussian smooth ────────
+-    _logger.debug("  → TRACKING shot (moving)")
++    is_stationary = float(np.std(largest_cluster)) < STATIONARY_STD_THRESHOLD
++
++    if is_stationary:
++        # LOCKED MODE: No micro-movements.
++        # We assign each frame to its nearest cluster center to handle 
++        # speaker-switches (snap-cuts) while remaining perfectly stationary.
++        cluster_centers = [float(np.median(c)) for c in clusters]
++        out = np.full(seg_len, default)
++        
++        # Initial position from first valid
++        last_pos = cluster_centers[0]
++        
++        for i in range(seg_len):
++            if raw[i] != -1:
++                # Snap to the nearest known stationary speaker position
++                target = float(raw[i])
++                best_center = min(cluster_centers, key=lambda c: abs(c - target))
++                last_pos = best_center
++            out[i] = last_pos
++        return out
++
++    # ── 3. TRACKING MODE: Moving subject ──────────────────────────────────
++    # Gap-fill then Gaussian smooth.
+     filled = raw.copy()
+     idxs = np.arange(seg_len)
+     first_valid = int(np.argmax(valid_mask))
