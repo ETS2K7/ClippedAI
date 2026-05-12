@@ -741,8 +741,11 @@ def track_speaker_and_frame(
             path_counts["A"] += 1
             continue
 
-        # —— B) Visual presence
-        if len(faces) >= 2 and n_spk_scene >= 2:
+        # —— B) Visual presence (Reaction Shots & Multi-Subject Scenes)
+        # We trigger multi-person layouts if multiple prominent faces are visible, 
+        # even if only one person is officially 'speaking' according to diarization.
+        # This captures reactions like laughter, nodding, or shocked faces.
+        if len(faces) >= 2:
             distinct = _prominent_distinct_faces(faces, w)
 
             if len(distinct) >= 4 and n_spk_scene >= 4:
@@ -791,10 +794,7 @@ def track_speaker_and_frame(
                     continue
 
         # —— B2) Visual presence — reaction / listening shot
-        # Fires when n_spk_scene < 2 (diarization says 1 speaker, e.g. background
-        # host) but two clearly separated, similarly-sized faces are both visible.
-        # Handles frames where Tom & Zendaya are both in shot but neither is
-        # speaking yet — without this, the frame defaults to a 1-person crop.
+        # Trigger split-screen whenever two prominent, similarly-sized faces are visible.
         if len(faces) >= 2:
             distinct_vis = _prominent_distinct_faces(faces, w)
             if len(distinct_vis) >= 2:
