@@ -89,12 +89,6 @@ export async function POST(
         clips: {
           deleteMany: {}, // Remove old clips if any
         },
-        ...(captionTemplateOverride ? {
-          config: {
-            ...(task.config as any || {}),
-            caption_template: captionTemplateOverride
-          }
-        } : {})
       },
     });
 
@@ -104,8 +98,8 @@ export async function POST(
     // Dispatch Modal job (non-blocking - allow retry even if Modal fails)
     const webhookUrl = `${env.BASE_URL}/api/webhooks/modal`;
     
-    // Extract caption_template for the modal payload
-    const finalCaptionTemplate = captionTemplateOverride || (updated.config as any)?.caption_template;
+    // Use override if provided, otherwise default (Modal handles fallback)
+    const finalCaptionTemplate = captionTemplateOverride;
 
     console.log("[retry] Dispatching to Modal:", {
       endpoint: env.PROCESS_VIDEO_ENDPOINT,

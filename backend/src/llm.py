@@ -21,25 +21,30 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     logger.info("==================== PHASE 3: VIRAL CLIP SELECTION ====================")
     if not words: return []
 
+    # Pre-process into sentences with timestamps for the LLM
     sentences = []
     current_sentence = []
     start_time = None
     for w in words:
         if start_time is None: start_time = w["start"]
         current_sentence.append(w["text"])
-        if any(w["text"].endswith(p) for p in [".", "?", "!"]):
+        if any(w["text"].endswith(p) for p in [".", "?", "!", "।"]):
             sentences.append(f"[{start_time/1000.0:.1f}s - {w['end']/1000.0:.1f}s] {' '.join(current_sentence)}")
             current_sentence = []
             start_time = None
     
     transcript = "\n".join(sentences)
     prompt = (
-        "Analyze the transcript and select 3 viral clips (30-90s each).\n"
-        "Ensure each clip is self-contained and high-value.\n\n"
+        "TASK: Select 3 high-impact, viral segments from this transcript.\n"
+        "RULES for 'Perfect Clips':\n"
+        "1. START: Must begin with a 'Hook' (a strong, intriguing opening statement).\n"
+        "2. END: Must conclude with a completed thought or a 'Loop' that leaves the viewer wanting more.\n"
+        "3. COMPLETENESS: Never cut in the middle of a sentence or a punchline.\n"
+        "4. DURATION: Each clip must be between 30 and 90 seconds.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
-    # Cache Logic
+    # ... [Cache Logic Omitted for brevity] ...
     _cache_key = hashlib.sha256(prompt.encode()).hexdigest()
     _cache_file = pathlib.Path.home() / ".clippedai" / "cache" / "llm" / f"llm_{_cache_key}.json"
     _cache_file.parent.mkdir(parents=True, exist_ok=True)
@@ -47,73 +52,57 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if _cache_file.exists():
         try:
             cached = json.loads(_cache_file.read_text())
-            if cached:
-                logger.info(f"[LLM] 🟢 Cache hit (key={_cache_key[:8]})")
-                return cached
+            if cached: return cached
         except: pass
 
-    # Pass 1: Selection (Using stable Flash model)
-    logger.info(f"[LLM] 🔴 Cache miss. Calling Gemini Flash...")
-    validated_clips = _call_gemini_selection(prompt, words)
+    logger.info(f"[LLM] Selection Pass calling Gemini...")
+    raw_clips = _call_gemini_selection(prompt)
 
-    if not validated_clips:
-        logger.error("[LLM] Selection Pass failed to produce clips. This might be due to a short transcript or strict viral criteria.")
-        return []
+    # ── SEMANTIC BOUNDARY SNAPPING ──
+    # This ensures that even if the LLM rounds a timestamp, we snap it to the 
+    # nearest actual word boundary in the transcript.
+    validated_clips = []
+    for clip in raw_clips:
+        start_s = float(clip["start_time"])
+        end_s = float(clip["end_time"])
 
-    # Pass 2: Transliterate (Using focused Flash requests)
+        # Find the actual word closest to this start time
+        start_ms = start_s * 1000
+        end_ms = end_s * 1000
+        
+        # Snap to nearest word start
+        snapped_start = min(words, key=lambda x: abs(x["start"] - start_ms))["start"] / 1000.0
+        # Snap to nearest word end
+        snapped_end = min(words, key=lambda x: abs(x["end"] - end_ms))["end"] / 1000.0
+
+        # Adjust for 'breath buffer' (0.2s start padding, 0.3s end padding)
+        snapped_start = max(0, snapped_start - 0.2)
+        snapped_end = snapped_end + 0.3
+
+        clip["start_time"] = snapped_start
+        clip["end_time"] = snapped_end
+        
+        duration = snapped_end - snapped_start
+        if duration >= _MIN_CLIP_DURATION and duration <= 100:
+            validated_clips.append(clip)
+
+    # ... [Rest of logic: Transliteration & Caching] ...
     for i, clip in enumerate(validated_clips):
         start, end = clip["start_time"], clip["end_time"]
         clip_words = [w["text"] for w in words if w["start"]/1000.0 >= start and w["end"]/1000.0 <= end]
         clip_text = " ".join(clip_words)
         if any('\u0900' <= c <= '\u097f' for c in clip_text):
-            logger.info(f"[LLM] Transliterating Clip {i}...")
             clip["romanized_words"] = _call_gemini_transliterate(clip_text)
         else:
             clip["romanized_words"] = []
 
-    # Only cache if we have successful results
     try:
         _cache_file.write_text(json.dumps(validated_clips))
     except: pass
 
     return validated_clips
 
-def _validate_clips(raw_clips: list, words: list) -> list:
-    """Validate and filter clips for duration and timestamp bounds."""
-    if not words: return []
-    video_end_s = words[-1]["end"] / 1000.0
-    validated = []
-    for clip in raw_clips:
-        start = float(clip.get("start_time") or clip.get("start") or 0)
-        end   = float(clip.get("end_time")   or clip.get("end")   or 0)
-        clip["start_time"] = start
-        clip["end_time"]   = end
-        duration = end - start
-        if start < 0 or end <= start or start > video_end_s:
-            continue
-        if duration > 95 or duration < _MIN_CLIP_DURATION:
-            continue
-        validated.append(clip)
-    return validated
-
-def _get_genai_client():
-    """Initializes and returns the Vertex AI GenAI client."""
-    from google import genai
-    import os
-    import json
-
-    credentials = None
-    gcp_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
-    if gcp_json:
-        from google.oauth2 import service_account
-        credentials = service_account.Credentials.from_service_account_info(
-            json.loads(gcp_json)
-        ).with_scopes(["https://www.googleapis.com/auth/cloud-platform"])
-    
-    gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "clippedai-493912")
-    return genai.Client(vertexai=True, project=gcp_project, location="us-central1", credentials=credentials) if credentials else genai.Client(vertexai=True, project=gcp_project, location="us-central1")
-
-def _call_gemini_selection(prompt: str, words: list) -> list:
+def _call_gemini_selection(prompt: str) -> list:
     from google.genai import types
     client = _get_genai_client()
     MAX_RETRIES = 3
@@ -123,7 +112,10 @@ def _call_gemini_selection(prompt: str, words: list) -> list:
                 model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction="Select 3 viral segments (30-90s). Return JSON only.",
+                    system_instruction=(
+                        "You are a viral video editor. Your goal is to select 3 self-contained, high-retention clips. "
+                        "Ensure clips are semantically complete. Return JSON only."
+                    ),
                     response_mime_type="application/json",
                     response_schema={
                         "type": "OBJECT",
@@ -149,7 +141,7 @@ def _call_gemini_selection(prompt: str, words: list) -> list:
                 ),
             )
             data = json.loads(response.text)
-            return _validate_clips(data.get("clips", []), words)
+            return data.get("clips", [])
         except Exception as e:
             logger.warning(f"Selection attempt {attempt+1} failed: {e}")
             time.sleep(2)
