@@ -256,7 +256,6 @@ export default function Home() {
           processing_mode: "fast",
           output_format: outputFormat,
           add_subtitles: addSubtitles,
-          caption_template: captionTemplate,
         }),
       });
 
