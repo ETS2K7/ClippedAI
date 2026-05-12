@@ -258,8 +258,9 @@ def transliterate_hinglish(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 new_texts = json.loads(match.group())
                 if len(new_texts) == len(batch):
                     for idx, w in enumerate(batch):
-                        new_w = w.copy()
-                        new_w["text"] = new_texts[idx]
+                        # Construct a fresh dict to ensure all metadata is losslessly preserved
+                        new_w = {k: v for k, v in w.items()}
+                        new_w["text"] = str(new_texts[idx])
                         transliterated_words.append(new_w)
                     continue
             
@@ -270,8 +271,13 @@ def transliterate_hinglish(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             transliterated_words.extend(batch)
 
     if transliterated_words:
-        sample = [w["text"] for w in transliterated_words[:5]]
-        logger.info(f"Transliteration Sample: {sample}")
+        # Diagnostic sample to prove transliteration happened correctly
+        sample_count = min(5, len(words), len(transliterated_words))
+        sample = [
+            {"orig": words[i].get("text"), "new": transliterated_words[i].get("text")} 
+            for i in range(sample_count)
+        ]
+        logger.info(f"Hinglish Transliteration Audit: {sample}")
 
     return transliterated_words
 
