@@ -121,7 +121,7 @@ class ProcessVideoRequest(BaseModel):
     output_format: str = "vertical"
 
 image = (modal.Image.debian_slim(python_version="3.10")
-    .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig"])
+    .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig", "fonts-liberation", "ttf-bitstream-vera"])
     .pip_install_from_requirements("requirements.txt")
     .pip_install("apify-client")
     .add_local_dir("src", remote_path="/root/src", copy=True)
