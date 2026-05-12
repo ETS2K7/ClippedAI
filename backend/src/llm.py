@@ -269,6 +269,10 @@ def transliterate_hinglish(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             logger.error(f"Transliteration batch {i} failed: {e}")
             transliterated_words.extend(batch)
 
+    if transliterated_words:
+        sample = [w["text"] for w in transliterated_words[:5]]
+        logger.info(f"Transliteration Sample: {sample}")
+
     return transliterated_words
 
 

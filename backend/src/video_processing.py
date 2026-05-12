@@ -78,10 +78,13 @@ def _get_video_codec_args(use_gpu: bool, is_merge: bool = False) -> List[str]:
     return ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23"]
 
 def _run_ffmpeg(cmd: List[str], error_ctx: str):
-    """Executes FFmpeg with central error boundary mapping. Captures stderr for diagnostics."""
+    """Executes FFmpeg with central error boundary mapping. Always captures stderr for diagnostics."""
     logger.info(f"Executing FFmpeg [{error_ctx}]: {' '.join(cmd)}")
     try:
-        result = subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        result = subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # Log the last few lines of stderr even on success to see font warnings
+        stderr_out = result.stderr.decode("utf-8", errors="replace")[-1000:] if result.stderr else "(no stderr)"
+        logger.info(f"FFmpeg output [{error_ctx}]:\n{stderr_out}")
     except subprocess.CalledProcessError as e:
         stderr_out = e.stderr.decode("utf-8", errors="replace")[-2000:] if e.stderr else "(no stderr)"
         logger.error(f"FFmpeg failed [{error_ctx}]:\n{stderr_out}")
