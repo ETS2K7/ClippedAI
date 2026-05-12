@@ -10,8 +10,7 @@ import pathlib
 import requests
 import time
 from typing import List, Dict, Any
-from config import get_logger, ASSEMBLYAI_KEY
-import re
+from config import get_logger
 
 logger = get_logger(__name__)
 
@@ -62,7 +61,9 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "2. 100% SELF-CONTAINED: The clip MUST make complete sense to a viewer who has never seen the original video.\n"
         "3. NO UNRESOLVED PRONOUNS: The clip CANNOT start with words like 'He', 'This', 'That', or 'It' unless the subject is immediately clarified.\n"
         "4. FULL NARRATIVE ARC: Every clip must have a clear setup, escalation, and payoff/insight.\n"
-        "5. PUNCHY TITLE: Create a viral, high-value title for each clip.\n\n"
+        "5. PUNCHY TITLE: Create a viral, high-value title for each clip.\n"
+        "6. ROMANIZED HINDI: If the clip contains Hindi (Devanagari script), you MUST provide a 'romanized_transcript' field. "
+        "Transliterate the Hindi words into Romanized Hindi (Latin script). Keep the exact same word count and order as the original so timing stays synced.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -181,7 +182,8 @@ def _call_gemini(prompt: str, words: list) -> list:
                                         "title": {"type": "STRING", "description": "A punchy, viral caption."},
                                         "start_time": {"type": "NUMBER"},
                                         "end_time": {"type": "NUMBER"},
-                                        "virality_score": {"type": "NUMBER"}
+                                        "virality_score": {"type": "NUMBER"},
+                                        "romanized_transcript": {"type": "STRING", "description": "The full dialogue of the clip, with any Hindi script transliterated into Romanized Hindi (Latin script). Keep word count identical."}
                                     },
                                     "required": ["reasoning", "title", "start_time", "end_time", "virality_score"]
                                 }
@@ -216,91 +218,3 @@ def _call_gemini(prompt: str, words: list) -> list:
 
 
 
-def transliterate_hinglish(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Identifies Hindi (Devanagari) words and transliterates them to Romanized Hinglish
-    (English letters) while preserving original timestamps.
-    """
-    # 1. Quick check: Is there any non-ASCII (likely Hindi) text?
-    if not any(any(ord(c) > 127 for c in w["text"]) for w in words):
-        return words
-
-    logger.info("==================== PHASE 2.5: HINGLISH TRANSLITERATION ====================")
-    logger.info(f"Detected Hindi script. Transliterating {len(words)} words...")
-
-    # 2. Batch processing (Gemini handles ~100-200 words comfortably in one prompt)
-    batch_size = 150
-    batches = [words[i : i + batch_size] for i in range(0, len(words), batch_size)]
-    
-    transliterated_words = []
-    
-    for i, batch in enumerate(batches):
-        texts = [w["text"] for w in batch]
-        
-        prompt = (
-            "SYSTEM: You are a transliteration engine. Convert Hindi script to ROMANIZED HINGLISH (English letters).\n"
-            "CRITICAL RULES:\n"
-            "1. NO DEVANAGARI SCRIPT in output. Convert everything to English letters.\n"
-            "2. Keep existing English words as-is.\n"
-            "3. Phonetically spell Hindi words (e.g. 'aap', 'kaise', 'hain').\n"
-            f"4. RETURN ONLY a JSON array of strings of length {len(batch)}.\n\n"
-            f"INPUT: {json.dumps(texts, ensure_ascii=False)}"
-        )
-        
-        try:
-            # We use a smaller timeout for transliteration as it's a simpler task
-            raw_response = _call_gemini_raw(prompt)
-            # Find the JSON array in the response
-            match = re.search(r"\[.*\]", raw_response, re.DOTALL)
-            if match:
-                new_texts = json.loads(match.group())
-                if len(new_texts) == len(batch):
-                    for idx, w in enumerate(batch):
-                        # Construct a fresh dict to ensure all metadata is losslessly preserved
-                        new_w = {k: v for k, v in w.items()}
-                        new_w["text"] = str(new_texts[idx])
-                        transliterated_words.append(new_w)
-                    continue
-            
-            logger.warning(f"Transliteration batch {i} failed (length mismatch or parse error). Falling back to original.")
-            transliterated_words.extend(batch)
-        except Exception as e:
-            logger.error(f"Transliteration batch {i} failed: {e}")
-            transliterated_words.extend(batch)
-
-    if transliterated_words:
-        # Diagnostic sample to prove transliteration happened correctly
-        sample_count = min(5, len(words), len(transliterated_words))
-        sample = [
-            {"orig": words[i].get("text"), "new": transliterated_words[i].get("text")} 
-            for i in range(sample_count)
-        ]
-        logger.info(f"Hinglish Transliteration Audit: {sample}")
-
-    return transliterated_words
-
-
-def _call_gemini_raw(prompt: str) -> str:
-    """Raw wrapper for Gemini calls to handle text-in/text-out."""
-    from google import genai
-    from google.genai import types
-
-    credentials = None
-    gcp_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
-    if gcp_json:
-        from google.oauth2 import service_account
-        credentials = service_account.Credentials.from_service_account_info(
-            json.loads(gcp_json)
-        ).with_scopes(["https://www.googleapis.com/auth/cloud-platform"])
-
-    gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "clippedai-493912")
-    client = genai.Client(vertexai=True, project=gcp_project, location="us-central1", credentials=credentials)
-    
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            temperature=0.1,  # Low temperature for precise transliteration
-        )
-    )
-    return response.text

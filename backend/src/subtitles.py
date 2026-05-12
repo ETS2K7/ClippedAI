@@ -68,12 +68,12 @@ def generate_subtitles(
     start_ms = clip["start_time"] * 1000
     end_ms = clip["end_time"] * 1000
 
-    resolved_family = "Liberation Sans" # Force system font for diagnostics
+    resolved_family = resolve_font_family(font_family)
     resolved_size = font_size if isinstance(font_size, int) and 50 <= font_size <= 200 else DEFAULT_FONT_SIZE
     resolved_ass_color = hex_to_ass_color(font_color)
 
     logger.info(
-        f"DIAGNOSTIC MODE: Forcing Liberation Sans / {resolved_size}pt / "
+        f"Subtitle style locked: {resolved_family} / {resolved_size}pt / "
         f"color={resolved_ass_color}"
     )
 
@@ -87,6 +87,22 @@ def generate_subtitles(
         w for w in words if w.get("start", 0) >= start_ms and w.get("end", 0) <= end_ms
     ]
 
+    # —— Romanized Hindi Mapping Pass ——
+    # If Gemini provided a romanized version, we swap the text while keeping timestamps.
+    rom_trans = clip.get("romanized_transcript")
+    if rom_trans and len(clip_words) > 0:
+        rom_words = rom_trans.strip().split()
+        # Only apply if word counts are reasonably similar to avoid catastrophic desync
+        if abs(len(rom_words) - len(clip_words)) <= max(2, len(clip_words) // 5):
+            logger.info(f"Applying Romanized Hindi mapping for clip {idx} ({len(rom_words)} words)")
+            for i in range(min(len(rom_words), len(clip_words))):
+                clip_words[i]["text"] = rom_words[i]
+        else:
+            logger.warning(
+                f"Romanized word count mismatch (Original: {len(clip_words)}, Rom: {len(rom_words)}). "
+                "Falling back to original transcript to maintain sync."
+            )
+
     # Dynamically build ASS header with resolved font configuration
     header = f"""[Script Info]
 ScriptType: v4.00+
@@ -96,7 +112,7 @@ WrapStyle: 1
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,110,100,0,0,1,3,2,2,10,10,280,1
+Style: Hormozi,{resolved_family},{resolved_size},{resolved_ass_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,110,100,0,0,1,6,0,2,10,10,450,1
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
@@ -167,10 +183,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 raw_txt = str(cw.get("text", "")).upper()
                 clean_txt = raw_txt.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
                 if j == w_idx:
-                    # Alternate highlight color between green and yellow
+                    # Alternate highlight color between green and yellow based on word index
                     hl_color = "&H0000FFFF" if w_idx % 2 == 0 else "&H0000FF00"
-                    # Apply Neon Glow (Shadow color \4c, Blur \blur5)
-                    text_parts.append(f"{{\\c{hl_color}\\4c{hl_color}\\blur5}}{clean_txt}{{\\r}}")
+                    # Add Neon Glow Effect (\4c for shadow color, \blur for soft aura)
+                    text_parts.append(
+                        f"{{\\c{hl_color}\\4c{hl_color}\\blur5}}{clean_txt}{{\\r}}"
+                    )
                 else:
                     text_parts.append(clean_txt)
 
@@ -178,13 +196,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             line = f"Dialogue: 0,{ass_start},{ass_end},Hormozi,,0,0,0,,{full_text}"
             lines.append(line)
 
-    logger.info(f"Clip timing: {start_ms}ms to {end_ms}ms. Found {len(clip_words)} words in range.")
-    logger.info(f"Generated {len(lines)} subtitle lines.")
-
-    ass_content = header + "\n".join(lines)
-    logger.info(f"ASS Sample (first 500 chars):\n{ass_content[:500]}")
-
     with open(out, "w", encoding="utf-8") as f:
-        f.write(ass_content)
+        f.write(header)
+        for line in lines:
+            f.write(line + "\n")
 
     return out
