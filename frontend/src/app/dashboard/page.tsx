@@ -756,53 +756,6 @@ export default function Home() {
                 </div>
 
 
-                  <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
-                    <div className="flex items-start gap-3 sm:items-center">
-                      <Monitor className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
-                      <div>
-                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
-                          WIDE FORMAT
-                        </span>
-                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                          Keep original aspect ratio instead of 9:16 vertical
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="h-5 rounded-md border-white/20 bg-white/5 px-2 font-mono text-[8px] font-bold tracking-[0.2em] text-white/40 uppercase">
-                        COMING SOON
-                      </Badge>
-                      <Switch
-                        checked={false}
-                        disabled={true}
-                        onCheckedChange={() => {}}
-                        aria-label="Wide format is currently disabled"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Add subtitles */}
-                  <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
-                    <div className="flex items-start gap-3 sm:items-center">
-                      <Type className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
-                      <div>
-                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
-                          ADD SUBTITLES
-                        </span>
-                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                          Burn captions onto clips (disable for faster processing)
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={addSubtitles}
-                      onCheckedChange={setAddSubtitles}
-                      disabled={isLoading}
-                      aria-label="Toggle add subtitles: burn captions onto clips"
-                    />
-                  </div>
-                </div>
-
                 {isLoading && (
                   <div className="space-y-4">
                     <div className="space-y-2">
