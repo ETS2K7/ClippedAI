@@ -79,6 +79,7 @@ def _get_video_codec_args(use_gpu: bool, is_merge: bool = False) -> List[str]:
 
 def _run_ffmpeg(cmd: List[str], error_ctx: str):
     """Executes FFmpeg with central error boundary mapping. Captures stderr for diagnostics."""
+    logger.info(f"Executing FFmpeg [{error_ctx}]: {' '.join(cmd)}")
     try:
         result = subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
     except subprocess.CalledProcessError as e:
