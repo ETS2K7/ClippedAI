@@ -795,23 +795,26 @@ def track_speaker_and_frame(
 
         # —— B2) Visual presence — reaction / listening shot
         # Trigger split-screen whenever two prominent, similarly-sized faces are visible.
+        # Loosened thresholds to capture 'Side-by-Side' reactions more easily.
         if len(faces) >= 2:
             distinct_vis = _prominent_distinct_faces(faces, w)
             if len(distinct_vis) >= 2:
                 f0, f1 = distinct_vis[0], distinct_vis[-1]
                 cxs = [_norm_x(f0), _norm_x(f1)]
                 cys = [_norm_y(f0), _norm_y(f1)]
-                clearly_left  = cxs[0]  < (0.5 - SPLIT_MARGIN)
-                clearly_right = cxs[-1] > (0.5 + SPLIT_MARGIN)
-                sep_thresh    = SPLIT_MIN_CX_SEP / w
+                
+                # Loosened: Now only requires a 2% margin past center (was 8%)
+                clearly_left  = cxs[0]  < (0.5 - 0.02)
+                clearly_right = cxs[-1] > (0.5 + 0.02)
+                
+                # Loosened: Minimum separation reduced to 15% of frame (was 47%)
+                sep_thresh    = 0.15 
                 separable     = (cxs[-1] - cxs[0]) >= sep_thresh
-                # Both faces must be similarly prominent — prevents a close-up
-                # subject + small background bystander from triggering a split.
-                # Raised to 45% to prevent 'Over the Shoulder' (back of head) triggers.
+                
                 area0, area1  = _face_area(f0), _face_area(f1)
-                similar_size  = min(area0, area1) >= 0.45 * max(area0, area1)
+                similar_size  = min(area0, area1) >= 0.40 * max(area0, area1)
 
-                if clearly_left and clearly_right and separable and similar_size:
+                if (clearly_left and clearly_right and separable and similar_size) or (separable and similar_size and len(distinct_vis) == 2):
                     raw_n_spk[fi] = 2
                     raw_spk_cx[fi, 0] = cxs[0]
                     raw_spk_cx[fi, 1] = cxs[-1]
