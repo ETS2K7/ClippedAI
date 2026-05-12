@@ -669,157 +669,93 @@ export default function Home() {
 
 
 
-                {/* Style & Captions — interactive picker */}
-                <div className="brutal-card space-y-4 p-3 sm:p-4">
+                {/* Style & Captions */}
+                <div className="brutal-card space-y-3 p-3 sm:p-4">
                   <div className="flex items-center gap-2 font-mono text-sm font-bold tracking-widest text-white uppercase">
                     <Sparkles className="h-4 w-4 text-white" />
                     STYLE &amp; CAPTIONS
                   </div>
+                  <div className="border-l-2 border-white/20 pl-3 space-y-3">
+                    <div>
+                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Font Family</p>
+                      <p className="font-mono text-sm font-bold text-white tracking-wide">Komika Axis</p>
+                    </div>
+                    <div>
+                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Caption Style</p>
+                      <p className="font-mono text-sm font-bold text-white tracking-wide">MrBeast</p>
+                    </div>
+                  </div>
 
-                  {/* Caption style grid */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {/* Hormozi */}
-                    <button
-                      type="button"
-                      id="caption-style-hormozi"
-                      onClick={() => setCaptionTemplate("hormozi")}
-                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
-                        captionTemplate === "hormozi"
-                          ? "border-white bg-white/10"
-                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      {/* Mini preview */}
-                      <div className="w-full rounded-lg bg-black/60 px-2 py-2 text-center">
-                        <span className="font-mono text-[10px] font-black tracking-wide text-white">HERE IS </span>
-                        <span className="font-mono text-[10px] font-black tracking-wide text-green-400">YOUR</span>
-                        <span className="font-mono text-[10px] font-black tracking-wide text-white"> TEXT</span>
-                      </div>
-                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">Hormozi</span>
-                      {captionTemplate === "hormozi" && (
-                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
-                      )}
-                    </button>
-
-                    {/* Pill */}
-                    <button
-                      type="button"
-                      id="caption-style-pill"
-                      onClick={() => setCaptionTemplate("pill")}
-                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
-                        captionTemplate === "pill"
-                          ? "border-white bg-white/10"
-                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      {/* Mini preview */}
-                      <div className="w-full rounded-lg bg-gradient-to-b from-neutral-700 to-neutral-900 px-2 py-2 text-center">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 shadow">
-                          <span className="font-sans text-[9px] font-bold text-neutral-800">HERE IS </span>
-                          <span className="font-sans text-[9px] font-bold" style={{ color: "#FF6B47" }}>YOUR</span>
-                          <span className="font-sans text-[9px] font-bold text-neutral-800"> TEXT</span>
+                  {/* Pill style toggle */}
+                  <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
+                    <div className="flex items-start gap-3 sm:items-center">
+                      <Palette className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
+                      <div>
+                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
+                          PILL STYLE
                         </span>
+                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
+                          White pill background with highlighted active word
+                        </p>
                       </div>
-                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">Pill</span>
-                      {captionTemplate === "pill" && (
-                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
-                      )}
-                    </button>
-
-                    {/* MrBeast */}
-                    <button
-                      type="button"
-                      id="caption-style-mrbeast"
-                      onClick={() => setCaptionTemplate("mrbeast")}
-                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
-                        captionTemplate === "mrbeast"
-                          ? "border-white bg-white/10"
-                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      {/* Mini preview */}
-                      <div className="w-full rounded-lg bg-black/60 px-2 py-2 text-center">
-                        <span className="font-mono text-[10px] font-black tracking-wide text-yellow-300">HERE IS </span>
-                        <span className="font-mono text-[10px] font-black tracking-wide text-red-500">YOUR</span>
-                        <span className="font-mono text-[10px] font-black tracking-wide text-yellow-300"> TEXT</span>
-                      </div>
-                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">MrBeast</span>
-                      {captionTemplate === "mrbeast" && (
-                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
-                      )}
-                    </button>
-
-                    {/* Neon */}
-                    <button
-                      type="button"
-                      id="caption-style-neon"
-                      onClick={() => setCaptionTemplate("neon")}
-                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
-                        captionTemplate === "neon"
-                          ? "border-white bg-white/10"
-                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      {/* Mini preview */}
-                      <div className="w-full rounded-lg bg-black px-2 py-2 text-center">
-                        <span className="font-mono text-[10px] font-black tracking-wide text-cyan-400" style={{ textShadow: "0 0 8px #00ffff" }}>HERE IS </span>
-                        <span className="font-mono text-[10px] font-black tracking-wide text-fuchsia-400" style={{ textShadow: "0 0 8px #ff00ff" }}>YOUR</span>
-                        <span className="font-mono text-[10px] font-black tracking-wide text-cyan-400" style={{ textShadow: "0 0 8px #00ffff" }}> TEXT</span>
-                      </div>
-                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">Neon</span>
-                      {captionTemplate === "neon" && (
-                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
-                      )}
-                    </button>
-
-                    {/* Minimal */}
-                    <button
-                      type="button"
-                      id="caption-style-minimal"
-                      onClick={() => setCaptionTemplate("minimal")}
-                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
-                        captionTemplate === "minimal"
-                          ? "border-white bg-white/10"
-                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      {/* Mini preview */}
-                      <div className="w-full rounded-lg bg-black/40 px-2 py-2 text-center">
-                        <span className="font-mono text-[10px] font-medium tracking-wide text-white/90">HERE IS </span>
-                        <span className="font-mono text-[10px] font-medium tracking-wide text-white/50">YOUR</span>
-                        <span className="font-mono text-[10px] font-medium tracking-wide text-white/90"> TEXT</span>
-                      </div>
-                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">Minimal</span>
-                      {captionTemplate === "minimal" && (
-                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
-                      )}
-                    </button>
-
-                    {/* TikTok */}
-                    <button
-                      type="button"
-                      id="caption-style-tiktok"
-                      onClick={() => setCaptionTemplate("tiktok")}
-                      className={`group relative flex flex-col items-center gap-2 rounded-xl border p-3 transition-all ${
-                        captionTemplate === "tiktok"
-                          ? "border-white bg-white/10"
-                          : "border-white/10 bg-white/[0.02] hover:border-white/30 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      {/* Mini preview */}
-                      <div className="w-full rounded-lg bg-black/60 px-2 py-2 text-center">
-                        <span className="font-mono text-[10px] font-black tracking-wide text-white">HERE IS </span>
-                        <span className="font-mono text-[10px] font-black tracking-wide" style={{ color: "#FE2C55" }}>YOUR</span>
-                        <span className="font-mono text-[10px] font-black tracking-wide text-white"> TEXT</span>
-                      </div>
-                      <span className="font-mono text-[9px] font-bold tracking-widest text-white/60 uppercase">TikTok</span>
-                      {captionTemplate === "tiktok" && (
-                        <div className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-white" />
-                      )}
-                    </button>
+                    </div>
+                    <Switch
+                      checked={captionTemplate === "pill"}
+                      onCheckedChange={(v) => setCaptionTemplate(v ? "pill" : "hormozi")}
+                      disabled={isLoading || !addSubtitles}
+                      aria-label="Toggle pill caption style"
+                    />
                   </div>
 
                   {/* Output format */}
+                  <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
+                    <div className="flex items-start gap-3 sm:items-center">
+                      <Monitor className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
+                      <div>
+                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
+                          WIDE FORMAT
+                        </span>
+                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
+                          Keep original aspect ratio instead of 9:16 vertical
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="h-5 rounded-md border-white/20 bg-white/5 px-2 font-mono text-[8px] font-bold tracking-[0.2em] text-white/40 uppercase">
+                        COMING SOON
+                      </Badge>
+                      <Switch
+                        checked={false}
+                        disabled={true}
+                        onCheckedChange={() => {}}
+                        aria-label="Wide format is currently disabled"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Add subtitles */}
+                  <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
+                    <div className="flex items-start gap-3 sm:items-center">
+                      <Type className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
+                      <div>
+                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
+                          ADD SUBTITLES
+                        </span>
+                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
+                          Burn captions onto clips (disable for faster processing)
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={addSubtitles}
+                      onCheckedChange={setAddSubtitles}
+                      disabled={isLoading}
+                      aria-label="Toggle add subtitles: burn captions onto clips"
+                    />
+                  </div>
+                </div>
+
+
                   <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
                     <div className="flex items-start gap-3 sm:items-center">
                       <Monitor className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
