@@ -20,7 +20,6 @@ from src.transcriber import transcribe
 from src.llm import select_clips
 from src.video_processing import extract_segment, track_speaker_and_frame, merge_and_cleanup
 from src.subtitles import generate_subtitles
-from src.pill_subtitles import generate_pill_subtitles
 
 logger = get_logger(__name__)
 
@@ -212,21 +211,13 @@ def _process_single_clip(
     sub_file = None
 
     if add_subtitles:
-        if caption_template == "pill":
-            # Pill style: burns captions directly onto frames via PIL
-            logger.info(f"[Subtitle] Using PILL renderer for clip {index}")
-            pill_vid = generate_pill_subtitles(trk_vid, words, clip, index, work_dir)
-            # Replace tracked video with pill-burnt version for final merge
-            trk_vid = pill_vid
-            sub_file = None  # No ASS file needed
-        else:
-            sub_file = generate_subtitles(
-                words, clip, index, chunk_meta,
-                font_family=font_family,
-                font_size=font_size,
-                font_color=font_color,
-                work_dir=work_dir,
-            )
+        sub_file = generate_subtitles(
+            words, clip, index, chunk_meta,
+            font_family=font_family,
+            font_size=font_size,
+            font_color=font_color,
+            work_dir=work_dir,
+        )
 
     fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
     merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=use_gpu, fonts_dir=fonts_dir)

@@ -176,3 +176,20 @@ def _call_gemini_transliterate(text: str) -> list:
             return json.loads(response.text).get("romanized_words", [])
         except: time.sleep(1)
     return []
+
+def _get_genai_client():
+    """Initializes and returns the Vertex AI GenAI client."""
+    from google import genai
+    import os
+    import json
+
+    credentials = None
+    gcp_json = os.environ.get("GCP_SERVICE_ACCOUNT_JSON")
+    if gcp_json:
+        from google.oauth2 import service_account
+        credentials = service_account.Credentials.from_service_account_info(
+            json.loads(gcp_json)
+        ).with_scopes(["https://www.googleapis.com/auth/cloud-platform"])
+    
+    gcp_project = os.environ.get("GOOGLE_CLOUD_PROJECT", "clippedai-493912")
+    return genai.Client(vertexai=True, project=gcp_project, location="us-central1", credentials=credentials) if credentials else genai.Client(vertexai=True, project=gcp_project, location="us-central1")

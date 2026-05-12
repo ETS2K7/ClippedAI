@@ -166,6 +166,11 @@ def generate_pill_subtitles(
     out_path = os.path.join(work_dir, f"pill_{idx}.mp4") if work_dir else f"pill_{idx}.mp4"
     out = cv2.VideoWriter(out_path, fourcc, fps, (fw, fh))
 
+    # ── Speed Optimization: Cache the caption overlay ──
+    last_chunk = None
+    last_active_wi = -1
+    cached_overlay = None
+
     frame_num = 0
     while True:
         ret, frame = cap.read()
@@ -176,9 +181,54 @@ def generate_pill_subtitles(
         chunk, active_wi = get_active(t_ms)
 
         if chunk is not None and active_wi >= 0:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            rendered  = _render_pill_frame(frame_rgb, chunk, active_wi, fw, fh)
-            frame     = cv2.cvtColor(rendered, cv2.COLOR_RGB2BGR)
+            # Check if we can use the cached overlay
+            if chunk == last_chunk and active_wi == last_active_wi and cached_overlay is not None:
+                # Reuse cached overlay for speed
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(frame_rgb).convert("RGBA")
+                combined = Image.alpha_composite(img, cached_overlay).convert("RGB")
+                frame = cv2.cvtColor(np.array(combined), cv2.COLOR_RGB2BGR)
+            else:
+                # Render a new overlay
+                from PIL import Image, ImageDraw
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                img = Image.fromarray(frame_rgb).convert("RGBA")
+                
+                # Create a fresh overlay
+                cached_overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+                draw = ImageDraw.Draw(cached_overlay)
+                
+                # ... same rendering logic as _render_pill_frame but building the overlay ...
+                font = _get_font(FONT_SIZE)
+                words_text = [str(w.get("text", "")).upper() for w in chunk]
+                word_widths = []
+                for wt in words_text:
+                    try:
+                        bb = font.getbbox(wt)
+                        word_widths.append(bb[2] - bb[0])
+                    except: word_widths.append(len(wt) * 25)
+
+                SPACE_W = 14
+                total_text_w = sum(word_widths) + SPACE_W * (len(words_text) - 1)
+                pill_w = total_text_w + 2 * PILL_PADDING_X
+                pill_h = FONT_SIZE + 2 * PILL_PADDING_Y
+                pill_x = (fw - pill_w) // 2
+                pill_y = fh - BOTTOM_MARGIN - pill_h
+
+                _draw_pill(draw, pill_x, pill_y, pill_w, pill_h, PILL_RADIUS, PILL_BG)
+                cursor_x = pill_x + PILL_PADDING_X
+                text_y = pill_y + PILL_PADDING_Y
+                for i, (wt, ww) in enumerate(zip(words_text, word_widths)):
+                    color = HIGHLIGHT_COLOR if i == active_wi else TEXT_COLOR
+                    draw.text((cursor_x, text_y), wt, font=font, fill=color)
+                    cursor_x += ww + SPACE_W
+
+                combined = Image.alpha_composite(img, cached_overlay).convert("RGB")
+                frame = cv2.cvtColor(np.array(combined), cv2.COLOR_RGB2BGR)
+                
+                # Update state
+                last_chunk = chunk
+                last_active_wi = active_wi
 
         out.write(frame)
         frame_num += 1

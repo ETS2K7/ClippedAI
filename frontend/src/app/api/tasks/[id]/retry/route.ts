@@ -70,15 +70,6 @@ export async function POST(
         }
     }
 
-    // Check for caption_template override in body
-    let captionTemplateOverride = null;
-    try {
-      const body = await req.json();
-      captionTemplateOverride = body.caption_template;
-    } catch (e) {
-      // Body might be empty, that's fine
-    }
-
     // Reset task to queued status and update title if found
     const updated = await db.uploadedFile.update({
       where: { id: taskId },
@@ -97,15 +88,10 @@ export async function POST(
 
     // Dispatch Modal job (non-blocking - allow retry even if Modal fails)
     const webhookUrl = `${env.BASE_URL}/api/webhooks/modal`;
-    
-    // Use override if provided, otherwise default (Modal handles fallback)
-    const finalCaptionTemplate = captionTemplateOverride;
-
     console.log("[retry] Dispatching to Modal:", {
       endpoint: env.PROCESS_VIDEO_ENDPOINT,
       s3Key: updated.s3Key,
       taskId: updated.id,
-      captionTemplate: finalCaptionTemplate,
       webhookUrl,
     });
 
@@ -122,7 +108,6 @@ export async function POST(
           user_id: updated.userId,
           webhook_url: webhookUrl,
           webhook_secret: env.PROCESS_VIDEO_ENDPOINT_AUTH,
-          caption_template: finalCaptionTemplate,
         }),
       });
 

@@ -154,17 +154,6 @@ export default function Home() {
 
   const [outputFormat, setOutputFormat] = useState<"vertical" | "original">("vertical");
   const [addSubtitles, setAddSubtitles] = useState(true);
-  const [captionTemplate, setCaptionTemplate] = useState<string>("hormozi");
-
-  // Load/Save caption style preference
-  useEffect(() => {
-    const saved = localStorage.getItem("clippedai_caption_template");
-    if (saved) setCaptionTemplate(saved);
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("clippedai_caption_template", captionTemplate);
-  }, [captionTemplate]);
 
   // Always treat file input as uncontrolled, and store file in a ref
   const fileRef = useRef<File | null>(null);
@@ -696,26 +685,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Pill style toggle */}
-                  <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
-                    <div className="flex items-start gap-3 sm:items-center">
-                      <Palette className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
-                      <div>
-                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
-                          PILL STYLE
-                        </span>
-                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                          White pill background with highlighted active word
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={captionTemplate === "pill"}
-                      onCheckedChange={(v) => setCaptionTemplate(v ? "pill" : "hormozi")}
-                      disabled={isLoading || !addSubtitles}
-                      aria-label="Toggle pill caption style"
-                    />
-                  </div>
 
                   {/* Output format */}
                   <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">

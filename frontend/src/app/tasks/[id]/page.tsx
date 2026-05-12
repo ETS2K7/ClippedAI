@@ -225,17 +225,9 @@ export default function TaskPage() {
   const handleRetry = async () => {
     if (!params.id) return;
     setIsRetrying(true);
-    const currentTemplate = localStorage.getItem("clippedai_caption_template");
-
     try {
       const response = await fetch(`/api/tasks/${params.id}/retry`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          caption_template: currentTemplate,
-        }),
       });
       if (!response.ok) {
         throw new Error("Failed to retry task");
