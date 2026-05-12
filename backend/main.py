@@ -17,9 +17,10 @@ from pydantic import BaseModel
 from config import get_logger, validate_required_env_vars
 import functools
 from src.transcriber import transcribe
-from src.llm import select_clips, transliterate_hinglish
+from src.llm import select_clips
 from src.video_processing import extract_segment, track_speaker_and_frame, merge_and_cleanup
 from src.subtitles import generate_subtitles
+from src.pill_subtitles import generate_pill_subtitles
 
 logger = get_logger(__name__)
 
@@ -121,11 +122,11 @@ class ProcessVideoRequest(BaseModel):
     output_format: str = "vertical"
 
 image = (modal.Image.debian_slim(python_version="3.10")
-    .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig", "fonts-liberation", "ttf-bitstream-vera"])
+    .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig"])
     .pip_install_from_requirements("requirements.txt")
     .pip_install("apify-client")
     .add_local_dir("src", remote_path="/root/src", copy=True)
-    .add_local_dir("fonts", remote_path="/root/fonts", copy=True)
+    .add_local_dir("fonts", remote_path="/usr/share/fonts/truetype/custom", copy=True)
     .run_commands(["fc-cache -fv"])
     .add_local_file("config.py", remote_path="/root/config.py", copy=True)
 )
@@ -196,6 +197,7 @@ def _process_single_clip(
     add_subtitles: bool = True,
     work_dir: str = "",
     use_gpu: bool = False,
+    caption_template: str | None = None,
 ) -> dict:
     """
     Processes a single clip through the full sub-pipeline:
@@ -204,18 +206,28 @@ def _process_single_clip(
 
     Designed to run concurrently with other clip pipelines via ThreadPoolExecutor.
     """
-    logger.info(f"--- Processing Clip {index + 1} (parallel) ---")
+    logger.info(f"--- Processing Clip {index + 1} (parallel) | caption_template={caption_template} ---")
     ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=use_gpu)
     trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir, remote_cache=asd_cache)
     sub_file = None
+
     if add_subtitles:
-        sub_file = generate_subtitles(
-            words, clip, index, chunk_meta,
-            font_family=font_family,
-            font_size=font_size,
-            font_color=font_color,
-            work_dir=work_dir,
-        )
+        if caption_template == "pill":
+            # Pill style: burns captions directly onto frames via PIL
+            logger.info(f"[Subtitle] Using PILL renderer for clip {index}")
+            pill_vid = generate_pill_subtitles(trk_vid, words, clip, index, work_dir)
+            # Replace tracked video with pill-burnt version for final merge
+            trk_vid = pill_vid
+            sub_file = None  # No ASS file needed
+        else:
+            sub_file = generate_subtitles(
+                words, clip, index, chunk_meta,
+                font_family=font_family,
+                font_size=font_size,
+                font_color=font_color,
+                work_dir=work_dir,
+            )
+
     fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
     merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=use_gpu, fonts_dir=fonts_dir)
 
@@ -254,6 +266,7 @@ def _render_clips_pipeline(
     font_color: str | None = None,
     font_size: int | None = None,
     add_subtitles: bool = True,
+    caption_template: str | None = None,
 ) -> dict:
     """
     Shared video processing pipeline used by both CLI and HTTP endpoints.
@@ -315,7 +328,7 @@ def _render_clips_pipeline(
                     str(video_path), clip, index, words,
                     s3_client, bucket, s3_key_dir,
                     font_family, font_color, font_size, add_subtitles,
-                    str(base_dir), has_nvenc,
+                    str(base_dir), has_nvenc, caption_template,
                 ): index
                 for index, clip in enumerate(clips)
             }
@@ -438,6 +451,7 @@ class ClippedAI:
                 font_color=request.font_color,
                 font_size=request.font_size,
                 add_subtitles=request.add_subtitles,
+                caption_template=request.caption_template,
             )
         except RuntimeError as e:
             logger.error(f"Pipeline failed (RuntimeError): {e}")
@@ -562,9 +576,6 @@ def process_video_cpu_wrapper(request_dict: dict):
             
         timer.begin("transcription")
         words = transcribe(str(video_path), request.s3_key, remote_cache=transcript_cache)
-        
-        timer.begin("hinglish_transliteration")
-        words = transliterate_hinglish(words)
         
         timer.begin("clip_selection")
         clips = select_clips(words)
