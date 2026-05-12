@@ -62,8 +62,8 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         "3. NO UNRESOLVED PRONOUNS: The clip CANNOT start with words like 'He', 'This', 'That', or 'It' unless the subject is immediately clarified.\n"
         "4. FULL NARRATIVE ARC: Every clip must have a clear setup, escalation, and payoff/insight.\n"
         "5. PUNCHY TITLE: Create a viral, high-value title for each clip.\n"
-        "6. ROMANIZED HINDI: If the clip contains Hindi (Devanagari script), you MUST provide a 'romanized_transcript' field. "
-        "Transliterate the Hindi words into Romanized Hindi (Latin script). Keep the exact same word count and order as the original so timing stays synced.\n\n"
+        "6. ROMANIZED HINDI: If the clip contains Hindi (Devanagari script), you MUST provide a 'romanized_words' array. "
+        "Transliterate EVERY SINGLE word into Romanized Hindi (Latin script). Do not omit any words. The length of 'romanized_words' MUST exactly match the number of words in the provided transcript segment.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -203,6 +203,7 @@ def _call_gemini(prompt: str, words: list) -> list:
                         "required": ["clips"]
                     },
                     temperature=0.2,
+                    max_output_tokens=8192,
                 ),
             )
             data = json.loads(response.text)
