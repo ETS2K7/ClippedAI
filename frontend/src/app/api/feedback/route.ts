@@ -98,14 +98,13 @@ export async function POST(req: Request) {
         from: "ClippedAI Beta <hello@clippedai.app>",
         to: env.ADMIN_EMAIL,
         replyTo: session.user.email ?? undefined,
-        subject: `[ClippedAI Beta] New request from ${safeUser}`,
+        subject: `New beta request from ${safeUser}`,
         text: `From: ${userIdentifier}\nCategory: ${category}\n\nMessage:\n${message}`,
         html: `
           <div style="background-color: #f9fafb; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
             <div style="max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
               <div style="padding: 32px;">
                 <h2 style="margin: 0 0 4px 0; font-size: 20px; font-weight: 700; color: #111827; letter-spacing: -0.01em;">New Beta Request</h2>
-                <p style="margin: 0; font-size: 13px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Access Inquiry &bull; ${safeCategory}</p>
                 
                 <div style="margin-top: 32px; padding: 24px; background-color: #f3f4f6; border-radius: 12px; border: 1px solid #e5e7eb;">
                   <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151; font-style: italic;">
