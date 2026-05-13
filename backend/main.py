@@ -208,24 +208,25 @@ def _process_single_clip(
 
     Designed to run concurrently with other clip pipelines via ThreadPoolExecutor.
     """
-    logger.info(f"--- Processing Clip {index + 1} (parallel) | caption_template={caption_template} ---")
-    ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=use_gpu)
-    trk_vid, chunk_meta = track_speaker_and_frame(ext_vid, index, clip, words, work_dir, remote_cache=asd_cache)
-    sub_file = None
-
-    if add_subtitles:
-        sub_file = generate_subtitles(
-            words, clip, index, chunk_meta,
-            font_family=font_family,
-            font_size=font_size,
-            font_color=font_color,
-            work_dir=work_dir,
-        )
-
-    fonts_dir = os.path.join(os.path.dirname(__file__), "fonts")
-    merge_and_cleanup(trk_vid, ext_vid, sub_file, index, work_dir, use_gpu=use_gpu, fonts_dir=fonts_dir)
-
     clip_out_path = f"{work_dir}/clip_{index}.mp4"
+    logger.info(f"--- Processing Clip {index + 1} (parallel streaming) | caption_template={caption_template} ---")
+    ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=use_gpu)
+    
+    # Unified single-pass hardware streaming export bypasses CPU frame compression and disk bottlenecks
+    trk_vid, chunk_meta = track_speaker_and_frame(
+        ext_vid, index, clip, words, work_dir,
+        remote_cache=asd_cache,
+        streaming_output_path=clip_out_path,
+        font_family=font_family,
+        font_size=font_size,
+        font_color=font_color,
+        add_subtitles=add_subtitles,
+        use_gpu=use_gpu,
+    )
+    
+    # Clean up intermediate segment extraction file
+    try: os.remove(ext_vid)
+    except: pass
     # Append a short timestamp to bust the browser's immutable cache on Force Retry
     cache_buster = int(time.time())
     output_s3_key = f"{s3_key_dir}/clip_{index}_{cache_buster}.mp4"

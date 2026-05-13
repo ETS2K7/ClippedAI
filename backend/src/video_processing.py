@@ -486,6 +486,12 @@ def track_speaker_and_frame(
     clip_file: str, idx: int, clip: Dict[str, Any], words: List[Dict[str, Any]], work_dir: str = "",
     tracker=None,
     remote_cache=None,
+    streaming_output_path: str = None,
+    font_family: str = None,
+    font_size: int = None,
+    font_color: str = None,
+    add_subtitles: bool = True,
+    use_gpu: bool = False,
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
@@ -561,13 +567,13 @@ def track_speaker_and_frame(
 
     logger.info(f"Video: {w}x{h} @ {fps}fps, {frames_count} frames")
 
-    # Use MJPG codec into a .avi container — always available in OpenCV builds.
-    # The merge step will re-encode this to H.264 via FFmpeg.
-    fourcc   = cv2.VideoWriter_fourcc(*"MJPG")
-    out_path = f"{work_dir}/temp_tracked_{idx}.avi" if work_dir else f"temp_tracked_{idx}.avi"
-    writer   = cv2.VideoWriter(out_path, fourcc, fps, (OUT_W, OUT_H))
-    if not writer.isOpened():
-        raise RuntimeError(f"cv2.VideoWriter failed to open for clip {idx} (codec: MJPG)")
+    out_path = streaming_output_path if streaming_output_path else (f"{work_dir}/temp_tracked_{idx}.avi" if work_dir else f"temp_tracked_{idx}.avi")
+    writer = None
+    if not streaming_output_path:
+        fourcc   = cv2.VideoWriter_fourcc(*"MJPG")
+        writer   = cv2.VideoWriter(out_path, fourcc, fps, (OUT_W, OUT_H))
+        if not writer.isOpened():
+            raise RuntimeError(f"cv2.VideoWriter failed to open for clip {idx} (codec: MJPG)")
 
     frame_faces: Dict[int, List[Dict]] = {
         item["frame_number"]: item["faces"] for item in tracking_data
@@ -1129,6 +1135,17 @@ def track_speaker_and_frame(
 
     logger.info(f"  [Featured Speaker] Slot speaking frame counts: {slot_speaking_frames}")
 
+    sub_file = None
+    if streaming_output_path and add_subtitles:
+        from src.subtitles import generate_subtitles
+        sub_file = generate_subtitles(
+            words, clip, idx, chunk_meta,
+            font_family=font_family,
+            font_size=font_size,
+            font_color=font_color,
+            work_dir=work_dir,
+        )
+
     # ── 10. Render ─────────────────────────────────────────────────────────────
     # Re-open capture to reliably restart from frame 0 (fixes OpenCV seek bug)
     cap.release()
@@ -1136,6 +1153,52 @@ def track_speaker_and_frame(
     render_cap = cap  # Keep reference for finally block
     render_writer = writer  # Keep reference for finally block
     
+    ffmpeg_proc = None
+    if streaming_output_path:
+        import subprocess
+        cmd = [
+            "ffmpeg", "-y",
+            "-f", "rawvideo",
+            "-vcodec", "rawvideo",
+            "-pix_fmt", "bgr24",
+            "-s", f"{OUT_W}x{OUT_H}",
+            "-r", str(fps),
+            "-i", "pipe:0",
+            "-i", clip_file,
+        ]
+        if sub_file:
+            safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
+            safe_fonts = "/usr/share/fonts/truetype/custom".replace("\\", "/").replace(":", "\\:")
+            ass_filter = f"ass={safe_sub}:fontsdir={safe_fonts}"
+            cmd.extend(["-vf", ass_filter])
+
+        if use_gpu:
+            cmd.extend([
+                "-c:v", "h264_nvenc",
+                "-pix_fmt", "yuv420p",
+                "-preset", "p4",
+                "-rc", "constqp",
+                "-qp", "28",
+            ])
+        else:
+            cmd.extend([
+                "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
+                "-preset", "veryfast",
+                "-crf", "23",
+            ])
+
+        cmd.extend([
+            "-c:a", "aac",
+            "-map", "0:v:0",
+            "-map", "1:a:0?",
+            "-movflags", "+faststart",
+            "-shortest",
+            streaming_output_path,
+        ])
+        logger.info(f"Launching single-pass hardware streaming FFmpeg pipeline for clip {idx}...")
+        ffmpeg_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
+
     try:
         for fidx in range(frames_count):
             ret, frame = cap.read()
@@ -1184,8 +1247,17 @@ def track_speaker_and_frame(
             if n == 1:
                 out_frame = _cell_full(frame, cx[0] * w, cy[0] * h)
 
-            writer.write(out_frame)
+            if streaming_output_path:
+                ffmpeg_proc.stdin.write(out_frame.tobytes())
+            else:
+                writer.write(out_frame)
     finally:
+        if ffmpeg_proc:
+            ffmpeg_proc.stdin.close()
+            ffmpeg_proc.wait()
+            if sub_file:
+                try: os.remove(sub_file)
+                except: pass
         # Ensure resources are released even if an error occurs
         if render_writer is not None:
             render_writer.release()
