@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import AppShell from "~/components/app-shell";
+import { FloatingNav } from "~/components/landing-v2/floating-nav";
+import { Home, Zap } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — ClippedAI",
@@ -11,23 +12,30 @@ export default function PrivacyPolicy() {
   const lastUpdated = "April 2026";
   const contactEmail = "support@clippedai.app";
 
+  const navItems = [
+    {
+      name: "Home",
+      link: "/",
+      icon: <Home className="h-4 w-4 text-white" />,
+    },
+    {
+      name: "Dashboard",
+      link: "/dashboard",
+      icon: <Zap className="h-4 w-4 text-white" />,
+    },
+  ];
+
   return (
     <main className="relative min-h-screen bg-black text-white">
+      <FloatingNav navItems={navItems} />
+
       {/* Dot-grid ambient texture */}
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(#222_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_20%,transparent_100%)] [background-size:24px_24px] opacity-30" />
 
       {/* Ambient orb */}
       <div className="pointer-events-none fixed left-[-10%] top-[-10%] h-[50vh] w-[50vw] rounded-full bg-white/[0.03] blur-[120px]" />
 
-      <div className="relative z-10 mx-auto max-w-3xl px-6 py-20">
-        {/* Back link */}
-        <Link
-          href="/"
-          className="mb-12 inline-flex items-center gap-2 font-mono text-[10px] font-bold tracking-widest text-white/30 uppercase transition-colors hover:text-white"
-        >
-          ← Back to ClippedAI
-        </Link>
-
+      <div className="relative z-10 mx-auto max-w-3xl px-6 py-24 sm:py-32">
         {/* Header */}
         <div className="mb-12 border-b border-white/[0.06] pb-10">
           <h1 className="font-syne mb-4 text-5xl font-black tracking-tighter text-white uppercase md:text-6xl">

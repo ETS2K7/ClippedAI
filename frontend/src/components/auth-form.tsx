@@ -1,25 +1,14 @@
-"use client";
-
 import { cn } from "~/lib/utils";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "./ui/card";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Button } from "./ui/button";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import Link from "next/link";
-import { signupSchema, type SignupFormValues } from "~/schemas/auth";
+import { loginSchema, type LoginFormValues } from "~/schemas/auth";
 import { signIn } from "next-auth/react";
 import { sendOTP } from "~/actions/otp";
+import { AuthBackground } from "./auth-background";
 
-export function SignupForm({
+export function AuthForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
@@ -33,7 +22,7 @@ export function SignupForm({
     trigger,
     getValues,
     formState: { errors },
-  } = useForm<SignupFormValues>({ resolver: zodResolver(signupSchema) });
+  } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
   const onContinue = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -56,7 +45,7 @@ export function SignupForm({
     }
   };
 
-  const onSubmit = async (data: SignupFormValues) => {
+  const onSubmit = async (data: LoginFormValues) => {
     try {
       setIsSubmitting(true);
       setError(null);
@@ -80,13 +69,14 @@ export function SignupForm({
   };
 
   return (
-    <div className={cn("flex w-full max-w-[420px] flex-col gap-4", className)} {...props}>
-      <div className="flex flex-col gap-6 rounded-[32px] border border-[#27272a] bg-[#333333]/50 p-6 pt-10 pb-8 backdrop-blur-[40px]">
+    <div className={cn("flex w-full max-w-[460px] flex-col gap-4", className)} {...props}>
+      <AuthBackground />
+      <div className="flex flex-col gap-4 rounded-[32px] border border-[#27272a] bg-[#333333]/50 p-10 pt-12 pb-10 backdrop-blur-[40px]">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
-          <h1 className="text-[26px] font-bold tracking-tight text-[#fafafa] leading-[1.2]">
+          <h1 className="text-[27px] font-bold tracking-tight text-[#fafafa] leading-[1.2] whitespace-nowrap">
             {step === "email" ? "Finish signing up to get your free clips" : "Check your email"}
           </h1>
-          <p className="text-[15px] font-normal text-white/50 leading-[20px]">
+          <p className="text-[16px] font-normal text-white/50 leading-[22px]">
             {step === "email" 
               ? "Free plan available. No credit card required." 
               : `We sent a code to ${getValues("email")}`}
@@ -94,11 +84,11 @@ export function SignupForm({
         </div>
 
         {step === "email" && (
-          <div className="flex flex-col gap-3.5 pt-2">
+          <div className="flex flex-col gap-3.5">
             <button
               type="button"
               onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-              className="flex h-[38px] w-full items-center justify-center gap-2 rounded-[10px] bg-white/10 text-sm font-medium text-white transition-colors hover:bg-white/[0.18]"
+              className="flex h-[44px] w-full items-center justify-center gap-2 rounded-[12px] bg-white/10 text-sm font-medium text-white transition-colors hover:bg-white/[0.18]"
             >
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path fillRule="evenodd" clipRule="evenodd" d="M17.64 9.20454C17.64 8.56636 17.5827 7.95272 17.4764 7.36363H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9454 17.64 9.20454Z" fill="#4285F4"/>
@@ -112,7 +102,7 @@ export function SignupForm({
         )}
 
         {step === "email" && (
-          <div className="flex items-center gap-4 px-2 py-2">
+          <div className="flex items-center gap-4 px-2">
             <div className="h-px flex-1 bg-white/10" />
             <span className="text-sm font-normal text-white/50 leading-[22px] tracking-[-0.2px]">
               or continue with email
@@ -121,28 +111,28 @@ export function SignupForm({
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 pt-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-3">
             {step === "email" ? (
-              <div className="h-[44px] overflow-hidden rounded-[12px] border border-white/5 bg-black/20 transition-colors focus-within:border-white/20">
+              <div key="email-input" className="h-[50px] overflow-hidden rounded-[14px] border border-white/5 bg-black/20 transition-colors focus-within:border-white/20">
                 <input
                   type="email"
                   placeholder="Enter email address"
                   autoComplete="email"
                   required
-                  className="h-full w-full bg-transparent px-4 text-sm text-white outline-none placeholder:text-white/45"
+                  className="h-full w-full bg-transparent px-4 text-[15px] text-white outline-none placeholder:text-white/45"
                   {...register("email")}
                 />
               </div>
             ) : (
-              <div className="h-[44px] overflow-hidden rounded-[12px] border border-white/5 bg-black/20 transition-colors focus-within:border-white/20">
+              <div key="code-input" className="h-[50px] overflow-hidden rounded-[14px] border border-white/5 bg-black/20 transition-colors focus-within:border-white/20">
                 <input
                   type="text"
                   placeholder="Enter 6-digit code"
                   autoComplete="one-time-code"
                   autoFocus
                   required
-                  className="h-full w-full bg-transparent px-4 text-sm text-white outline-none placeholder:text-white/45"
+                  className="h-full w-full bg-transparent px-4 text-[15px] text-white outline-none placeholder:text-white/45"
                   {...register("code")}
                 />
               </div>
@@ -159,7 +149,7 @@ export function SignupForm({
                 type="button"
                 onClick={onContinue}
                 disabled={isSubmitting}
-                className="mt-1 h-[42px] rounded-[8px] bg-white text-[14px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="mt-1 h-[48px] rounded-[10px] bg-white text-[15px] font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {isSubmitting ? "Sending..." : "Continue with email"}
               </button>
@@ -167,9 +157,9 @@ export function SignupForm({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-1 h-[42px] rounded-[8px] bg-white text-[14px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="mt-1 h-[48px] rounded-[10px] bg-white text-[15px] font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                {isSubmitting ? "Creating account..." : "Verify and Create Account"}
+                {isSubmitting ? "Verifying..." : "Verify and Continue"}
               </button>
             )}
 
@@ -185,22 +175,16 @@ export function SignupForm({
           </div>
         </form>
 
-        <div className="flex flex-col items-center gap-1.5 pt-2 text-center text-xs font-normal leading-[20px]">
-          <div className="text-white/75">
-            Already have an account?{" "}
-            <Link href="/login" className="font-medium text-white hover:underline">
-              Sign in
-            </Link>
-          </div>
+        <div className="flex flex-col items-center gap-1.5 text-center text-xs font-normal leading-[20px]">
           <div className="text-white/60">
             By continuing, you agree to ClippedAI&apos;s{" "}
-            <Link href="#" className="text-white/90 underline">
+            <Link href="/terms" target="_blank" rel="noopener noreferrer" className="text-white/90 underline">
               Terms of Service
             </Link>
           </div>
           <div className="text-white/60">
             Read our{" "}
-            <Link href="#" className="text-white/90 underline">
+            <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="text-white/90 underline">
               Privacy Policy
             </Link>
           </div>

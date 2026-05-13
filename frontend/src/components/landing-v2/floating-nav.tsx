@@ -1,10 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import {
   motion,
   AnimatePresence,
-  useScroll,
-  useMotionValueEvent,
 } from "framer-motion";
 import { cn } from "~/lib/utils";
 import Link from "next/link";
@@ -24,26 +22,7 @@ export const FloatingNav = ({
   className?: string;
 }) => {
   const { data: session, status } = useSession();
-  const { scrollYProgress } = useScroll();
-  const [visible, setVisible] = useState(true);
-
-  useMotionValueEvent(scrollYProgress, "change", (current) => {
-    if (typeof current === "number") {
-      const direction = current - (scrollYProgress.getPrevious() ?? 0);
-      if (scrollYProgress.get() < 0.05) {
-        // always show at the very top
-        setVisible(true);
-      } else {
-        if (direction < 0) {
-          // scrolling up
-          setVisible(true);
-        } else {
-          // scrolling down
-          setVisible(false);
-        }
-      }
-    }
-  });
+  const visible = true;
 
   return (
     <AnimatePresence mode="wait">

@@ -1,7 +1,7 @@
 import { type Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LoginForm } from "~/components/login-form";
+import { AuthForm } from "~/components/auth-form";
 import { auth } from "~/server/auth";
 import Image from "next/image";
 
@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     "Sign in to your ClippedAI account and start turning long videos into viral-ready clips instantly.",
 };
 
+
 export default async function Page() {
   const session = await auth();
 
@@ -19,9 +20,7 @@ export default async function Page() {
   }
 
   return (
-    <main className="relative flex min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-black p-6 md:p-10">
-      {/* Ambient depth — large-scale depth */}
-      <div className="pointer-events-none absolute top-1/2 left-1/2 h-[1200px] w-[1200px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.02] blur-[160px]" />
+    <main className="relative flex min-h-svh w-full flex-col items-center justify-center overflow-hidden p-6 md:p-10">
 
       {/* Logo / back to home — Absolute Top Left */}
       <div className="absolute top-8 left-8 z-20">
@@ -37,15 +36,15 @@ export default async function Page() {
             height={24}
             className="rounded-sm"
           />
-          <span className="font-syne text-xl font-black tracking-tighter uppercase leading-none">
+          <span className="font-syne text-xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500 uppercase leading-none">
             CLIPPEDAI
           </span>
         </Link>
       </div>
 
       {/* Form card */}
-      <div className="relative z-10 w-full max-w-[420px]">
-        <LoginForm />
+      <div className="relative z-10 w-full max-w-[460px]">
+        <AuthForm />
       </div>
 
     </main>
