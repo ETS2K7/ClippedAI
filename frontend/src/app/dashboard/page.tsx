@@ -291,9 +291,9 @@ export default function Home() {
     e.preventDefault();
 
     const isLocalDev = process.env.NODE_ENV === "development";
-    const isTestAdmin = session?.user?.email === "admin@clippedai.app";
+    const isSuperAdmin = session?.user?.email === "ebelthomasseiko@gmail.com";
 
-    if (!isAdmin && !isLocalDev && !isTestAdmin) {
+    if (!isAdmin && !isLocalDev && !isSuperAdmin) {
       setShowBetaModal(true);
       return;
     }

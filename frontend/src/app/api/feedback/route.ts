@@ -95,18 +95,36 @@ export async function POST(req: Request) {
 
     try {
       await resend.emails.send({
-        from: "ClippedAI Beta <onboarding@resend.dev>",
+        from: "ClippedAI Beta <hello@clippedai.app>",
         to: env.ADMIN_EMAIL,
         replyTo: session.user.email ?? undefined,
         subject: `[ClippedAI Beta] New request from ${safeUser}`,
         text: `From: ${userIdentifier}\nCategory: ${category}\n\nMessage:\n${message}`,
         html: `
-          <div style="font-family: sans-serif; padding: 20px; max-width: 600px;">
-            <h2 style="margin-top: 0;">New Beta Request</h2>
-            <p><strong>User:</strong> ${safeUser}</p>
-            <p><strong>Category:</strong> ${safeCategory}</p>
-            <hr />
-            <p style="white-space: pre-wrap; background: #f5f5f5; padding: 12px; border-radius: 4px;">${safeMessage}</p>
+          <div style="background-color: #f9fafb; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+            <div style="max-width: 560px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+              <div style="padding: 32px;">
+                <h2 style="margin: 0 0 4px 0; font-size: 20px; font-weight: 700; color: #111827; letter-spacing: -0.01em;">New Beta Request</h2>
+                <p style="margin: 0; font-size: 13px; font-weight: 500; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">Access Inquiry &bull; ${safeCategory}</p>
+                
+                <div style="margin-top: 32px; padding: 24px; background-color: #f3f4f6; border-radius: 12px; border: 1px solid #e5e7eb;">
+                  <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151; font-style: italic;">
+                    "${safeMessage}"
+                  </p>
+                </div>
+                
+                <div style="margin-top: 32px; border-top: 1px solid #f3f4f6; padding-top: 24px;">
+                  <p style="margin: 0; font-size: 14px; color: #6b7280;">
+                    From: <strong style="color: #111827;">${safeUser}</strong>
+                  </p>
+                </div>
+              </div>
+              <div style="background-color: #f9fafb; padding: 16px 32px; border-top: 1px solid #f3f4f6;">
+                <p style="margin: 0; font-size: 11px; color: #9ca3af; text-align: center; font-weight: 500;">
+                  This is an automated notification from your ClippedAI Beta engine.
+                </p>
+              </div>
+            </div>
           </div>
         `,
       });
