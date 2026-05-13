@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title:
     "ClippedAI — AI Video Clipping Tool | Turn Long Videos Into Viral Shorts",
   description:
-    "ClippedAI is the fastest AI video clipping tool. Paste a YouTube link or upload a video — AI finds your best moments, reframes for vertical, burns in captions, and delivers ready-to-post clips in minutes. Free to try.",
+    "ClippedAI is the fastest AI video clipping tool. Paste a YouTube link or upload a video — AI finds your best moments, reframes for vertical, burns in captions, and delivers ready-to-post clips in minutes.",
   alternates: {
     canonical: "https://clippedai.app",
   },
@@ -57,7 +57,7 @@ const jsonLd = {
         "@type": "Offer",
         price: "0",
         priceCurrency: "USD",
-        description: "Free to try",
+        description: "Professional AI Clipping Engine",
       },
       publisher: {
         "@type": "Organization",
@@ -88,11 +88,6 @@ export default function HomePage() {
       icon: <Home className="h-4 w-4 text-white" />,
     },
     {
-      name: "Pricing",
-      link: "/pricing",
-      icon: <Tag className="h-4 w-4 text-white" />,
-    },
-    {
       name: "Dashboard",
       link: "/dashboard",
       icon: <Zap className="h-4 w-4 text-white" />,
@@ -105,7 +100,7 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <div className="landing-v3 min-h-screen bg-black font-sans text-white selection:bg-white/20">
+      <div className="landing-v3 min-h-screen bg-[#121212] font-sans text-white selection:bg-white/20">
         <FloatingNav navItems={navItems} />
         <main className="flex w-full flex-col">
           <InteractiveHero />

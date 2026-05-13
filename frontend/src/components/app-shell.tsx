@@ -1,253 +1,142 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-import { Separator } from "~/components/ui/separator";
 import { signOut, useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
-import { Menu, X, LogOut, List, Settings, Plus, Shield, Tag } from "lucide-react";
+import { LogOut, List, Settings, Plus, Shield, Tag } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "~/lib/utils";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const isAdmin = Boolean(session?.user?.isAdmin);
   const isSuperAdmin = session?.user?.email === "ebelthomasseiko@gmail.com";
+  const pathname = usePathname();
+
+  const isActive = (path: string) => pathname === path;
 
   const handleSignOut = async () => {
     await signOut();
     window.location.href = "/login";
   };
 
-  if (!session?.user) return <>{children}</>;
-
+  const navItems = [
+    { name: "NEW CLIP", link: "/dashboard", icon: <Plus className="h-3.5 w-3.5" /> },
+    { name: "GENERATIONS", link: "/list", icon: <List className="h-3.5 w-3.5" /> },
+    { name: "SETTINGS", link: "/settings", icon: <Settings className="h-3.5 w-3.5" /> },
+    ...(isSuperAdmin ? [{ name: "ADMIN", link: "/admin", icon: <Shield className="h-3.5 w-3.5" /> }] : []),
+  ];
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black">
-      {/* ── Ambient depth layers (matching landing page) ── */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        {/* Soft background orbs for glass refraction */}
-        <div className="absolute top-[-10%] left-[-10%] h-[50vh] w-[50vw] rounded-full bg-white/[0.04] blur-[120px]" />
-        <div className="absolute right-[-10%] bottom-[-10%] h-[60vh] w-[60vw] rounded-full bg-white/[0.03] blur-[150px]" />
+    <div className="relative min-h-screen bg-black text-white selection:bg-white selection:text-black">
+      {/* ── Ambient Depth Background ─────────────────────────── */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-gradient-to-b from-[#1a1a1a] to-[#000000]">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:80px_80px]" />
         
-        {/* Dot grid texture */}
-        <div className="absolute inset-0 bg-[radial-gradient(#222_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_20%,transparent_100%)] [background-size:24px_24px] opacity-40" />
+        <motion.div
+          className="absolute top-0 bottom-0 left-1/2 w-px bg-gradient-to-b from-transparent via-white/20 to-transparent"
+          animate={{ opacity: [0.2, 0.7, 0.2] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute top-1/2 right-0 left-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+          animate={{ opacity: [0.2, 0.7, 0.2] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        />
+        <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:32px_32px]" />
       </div>
 
-      {/* ── Top Navigation Bar ──────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-white/[0.06] bg-black/60 backdrop-blur-2xl">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex h-14 items-center justify-between">
-            {/* Left: Logo + Brand */}
-            <Link href="/dashboard" className="group flex items-center gap-2.5">
-              <Image
-                src="/logo.png?v=6"
-                alt="ClippedAI"
-                width={22}
-                height={22}
-                className="rounded-md"
-              />
-              <span className="font-syne text-[17px] font-black tracking-tight text-white uppercase transition-colors group-hover:text-white/80">
-                CLIPPEDAI
-              </span>
-            </Link>
+      {/* ── Floating Navigation Pill ────────────────────────── */}
+      <div className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+        <motion.nav 
+          initial={false}
+          className="flex h-12 w-full max-w-[700px] items-center justify-between rounded-full border border-white/[0.08] bg-black/80 px-4 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+        >
+          {/* Logo Section */}
+          <Link href="/dashboard" className="group flex items-center gap-2.5">
+            <Image
+              src="/logo.png?v=6"
+              alt="Logo"
+              width={20}
+              height={20}
+              className="rounded-sm"
+            />
+            <span className="font-syne hidden text-lg leading-none font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500 uppercase sm:block">
+              CLIPPEDAI
+            </span>
+          </Link>
 
-            {/* Center: Desktop nav links */}
-            <nav className="hidden items-center gap-1 md:flex">
-              <Link href="/dashboard">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="ml-4 h-8 rounded-full border border-white/15 px-4 font-mono text-[11px] font-bold tracking-widest text-white uppercase transition-all duration-200 hover:bg-white hover:text-black"
-                >
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                  NEW CLIP
-                </Button>
-              </Link>
-              <Link href="/list">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
-                >
-                  GENERATIONS
-                </Button>
-              </Link>
-              <Link href="/upgrade">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
-                >
-                  PRICING
-                </Button>
-              </Link>
-              <Link href="/settings">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
-                >
-                  SETTINGS
-                </Button>
-              </Link>
-              {isSuperAdmin && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  asChild
-                  className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/50 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
-                >
-                  <Link href="/admin">ADMIN</Link>
-                </Button>
-              )}
-            </nav>
-
-            {/* Right: User avatar + sign out */}
-            <div className="hidden items-center gap-2 md:flex">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleSignOut}
-                className="h-8 rounded-full font-mono text-[11px] font-bold tracking-widest text-white/30 uppercase transition-all duration-200 hover:bg-white/[0.04] hover:text-white"
+          {/* Nav Links */}
+          <div className="flex flex-1 items-center justify-center gap-0.5">
+            {navItems.map((item) => (
+              <Link
+                key={item.link}
+                href={item.link}
+                  className={cn(
+                    "relative flex items-center gap-2 px-4 py-1.5 text-sm font-bold tracking-wider uppercase transition-all duration-200 whitespace-nowrap rounded-full",
+                    isActive(item.link)
+                      ? "text-white bg-white/[0.12] drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]"
+                      : "text-white/70 hover:text-white/90 hover:bg-white/[0.06]"
+                  )}
               >
-                SIGN OUT
-              </Button>
-              <Link href="/settings">
-                <div className="flex cursor-pointer items-center gap-2.5 rounded-full border border-transparent px-2.5 py-1.5 transition-colors hover:border-white/[0.06] hover:bg-white/[0.04]">
-                  <Avatar className="h-7 w-7">
+                {item.icon}
+                {item.name}
+              </Link>
+            ))}
+          </div>
+
+          {/* User Actions Section */}
+          <div className="flex items-center gap-1.5 border-l border-white/20 pl-3 md:gap-3">
+            {session?.user && (
+              <>
+                <button
+                  onClick={handleSignOut}
+                  className="group flex h-8 w-8 items-center justify-center rounded-full transition-all hover:bg-red-500/10"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-4 w-4 text-white/45 transition-colors group-hover:text-red-400" />
+                </button>
+                <Link href="/settings">
+                  <Avatar className="h-7 w-7 border border-white/[0.12] transition-opacity hover:opacity-80 active:opacity-100">
                     <AvatarImage src={session.user.image || ""} />
-                    <AvatarFallback className="bg-white/10 font-mono text-xs font-bold text-white/80">
-                      {session.user.name?.charAt(0) ||
-                        session.user.email?.charAt(0) ||
-                        "U"}
+                    <AvatarFallback className="bg-white/10 font-mono text-[10px] font-black text-white/70">
+                      {session.user.name?.charAt(0) || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="hidden lg:block">
-                    <p className="text-xs leading-none font-medium text-white/80">
-                      {session.user.name}
-                    </p>
-                    <p className="mt-0.5 font-mono text-[10px] leading-none text-white/30">
-                      {session.user.email}
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            </div>
-
-            {/* Mobile: Hamburger */}
-            <div className="flex md:hidden">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="rounded-full p-2 text-white/60 hover:bg-white/[0.06] hover:text-white"
-                aria-label="Toggle menu"
-              >
-                {mobileMenuOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Mobile Dropdown ──────────────────────────────── */}
-        {mobileMenuOpen && (
-          <div className="border-t border-white/[0.06] bg-black/95 backdrop-blur-2xl md:hidden">
-            <div className="space-y-1 px-4 py-3">
-              {/* User info */}
-              <Link
-                href="/settings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={session.user.image || ""} />
-                  <AvatarFallback className="bg-white/10 text-sm font-medium text-white/80">
-                    {session.user.name?.charAt(0) ||
-                      session.user.email?.charAt(0) ||
-                      "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-white/90">
-                    {session.user.name}
-                  </p>
-                  <p className="truncate text-xs text-white/40">
-                    {session.user.email}
-                  </p>
-                </div>
-              </Link>
-
-              <Separator className="bg-white/[0.06]" />
-
-              {/* Nav links */}
-              <Link
-                href="/dashboard"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
-              >
-                <Plus className="h-4 w-4 text-white/30" />
-                New Clip
-              </Link>
-              <Link
-                href="/list"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
-              >
-                <List className="h-4 w-4 text-white/30" />
-                Generations
-              </Link>
-              <Link
-                href="/upgrade"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
-              >
-                <Tag className="h-4 w-4 text-white/30" />
-                Pricing
-              </Link>
-              {isSuperAdmin && (
-                <Link
-                  href="/admin"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
-                >
-                  <Shield className="h-4 w-4 text-white/30" />
-                  Admin
                 </Link>
-              )}
-              <Link
-                href="/settings"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/60 transition-colors hover:bg-white/[0.04] hover:text-white"
-              >
-                <Settings className="h-4 w-4 text-white/30" />
-                Settings
-              </Link>
+              </>
+            )}
+          </div>
+        </motion.nav>
+      </div>
 
-              <Separator className="bg-white/[0.06]" />
+      {/* ── Main Content Area ──────────────────────────────── */}
+      <div className="relative z-10 flex min-h-screen flex-col bg-transparent">
+        <main className="flex-1 bg-transparent pb-10 pt-16">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            {children}
+          </div>
+        </main>
 
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  handleSignOut();
-                }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-red-400/80 transition-colors hover:bg-red-500/[0.06] hover:text-red-400"
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
+        {/* ── Footer ─────────────────────────────────────────── */}
+        <footer className="bg-transparent py-12">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <div className="flex flex-col items-center justify-between gap-6 border-t border-white/[0.06] pt-10 sm:flex-row">
+              <div className="flex items-center gap-2.5 opacity-60">
+                <Image src="/logo.png?v=6" alt="Logo" width={18} height={18} />
+                <span className="font-syne text-sm font-black tracking-tight text-white uppercase">CLIPPEDAI</span>
+              </div>
+              <p className="font-mono text-[10px] tracking-widest text-white/45 uppercase">
+                © {new Date().getFullYear()} ClippedAI. All rights reserved.
+              </p>
             </div>
           </div>
-        )}
-      </header>
-
-      {/* ── Page Content ──────────────────────────────── */}
-      <main className="relative z-10">{children}</main>
+        </footer>
+      </div>
     </div>
   );
 }

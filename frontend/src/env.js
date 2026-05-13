@@ -25,7 +25,10 @@ export const env = createEnv({
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
     // Email Integrations
-    RESEND_API_KEY: z.string().optional(),
+    RESEND_API_KEY:
+      process.env.NODE_ENV === "production"
+        ? z.string().min(1)
+        : z.string().optional(),
     ADMIN_EMAIL: z.string().optional(),
     
     // Dodo Payments

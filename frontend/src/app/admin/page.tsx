@@ -154,21 +154,10 @@ export default function AdminPage() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-6">
             <div className="space-y-1">
-              <div className="flex items-center gap-4">
-                <Link href="/dashboard">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-md text-white/40 hover:text-white"
-                  >
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                </Link>
-                <h1 className="font-syne text-3xl font-black tracking-tighter text-white uppercase">
-                  SYSTEM ADMIN
-                </h1>
-              </div>
-              <p className="pl-12 font-mono text-xs tracking-widest text-white/40 uppercase">
+              <h1 className="font-syne text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase">
+                System Admin
+              </h1>
+              <p className="font-mono text-xs tracking-widest text-white/40 uppercase">
                 Platform Statistics & User Management
               </p>
             </div>

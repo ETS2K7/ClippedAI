@@ -20,54 +20,34 @@ export default async function Page() {
 
   return (
     <main className="relative flex min-h-svh w-full flex-col items-center justify-center overflow-hidden bg-black p-6 md:p-10">
-      {/* Ambient depth — dot grid */}
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(#222_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_30%,#000_20%,transparent_100%)] [background-size:24px_24px] opacity-40" />
+      {/* Ambient depth — large-scale depth */}
+      <div className="pointer-events-none absolute top-1/2 left-1/2 h-[1200px] w-[1200px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.02] blur-[160px]" />
 
-      {/* Logo / back to home */}
-      <div className="relative z-10 mb-10 flex items-center gap-3">
+      {/* Logo / back to home — Absolute Top Left */}
+      <div className="absolute top-8 left-8 z-20">
         <Link
           href="/"
-          className="flex items-center gap-3 text-white/80 transition-colors hover:text-white"
+          className="flex items-center gap-3 text-white transition-opacity hover:opacity-80"
           aria-label="Back to ClippedAI home"
         >
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.06] backdrop-blur-sm">
-            <Image
-              src="/logo.png?v=6"
-              alt="ClippedAI"
-              width={20}
-              height={20}
-              className="rounded-sm"
-            />
-          </div>
-          <span className="font-syne text-xl font-black tracking-tight uppercase leading-none mt-[1px]">
+          <Image
+            src="/logo.png?v=6"
+            alt="ClippedAI"
+            width={24}
+            height={24}
+            className="rounded-sm"
+          />
+          <span className="font-syne text-xl font-black tracking-tighter uppercase leading-none">
             CLIPPEDAI
           </span>
         </Link>
       </div>
 
       {/* Form card */}
-      <div className="relative z-10 w-full max-w-sm">
+      <div className="relative z-10 w-full max-w-[420px]">
         <SignupForm />
       </div>
 
-      {/* Footer note */}
-      <p className="relative z-10 mt-10 text-center font-mono text-[10px] tracking-widest text-white/25 uppercase">
-        By creating an account, you agree to our{" "}
-        <Link
-          href="#"
-          className="underline underline-offset-4 transition-colors hover:text-white/50"
-        >
-          TERMS
-        </Link>{" "}
-        and{" "}
-        <Link
-          href="#"
-          className="underline underline-offset-4 transition-colors hover:text-white/50"
-        >
-          PRIVACY POLICY
-        </Link>
-        .
-      </p>
     </main>
   );
 }

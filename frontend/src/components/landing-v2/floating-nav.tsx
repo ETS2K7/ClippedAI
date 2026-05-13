@@ -8,7 +8,9 @@ import {
 } from "framer-motion";
 import { cn } from "~/lib/utils";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "~/components/ui/button";
+import { useSession } from "next-auth/react";
 
 export const FloatingNav = ({
   navItems,
@@ -21,6 +23,7 @@ export const FloatingNav = ({
   }[];
   className?: string;
 }) => {
+  const { data: session, status } = useSession();
   const { scrollYProgress } = useScroll();
   const [visible, setVisible] = useState(true);
 
@@ -55,32 +58,44 @@ export const FloatingNav = ({
       >
         <Link
           href="/"
-          className="font-syne flex items-center text-lg leading-none font-black tracking-tight text-white uppercase"
+          className="group flex items-center gap-2.5"
         >
-          CLIPPEDAI
+          <Image
+            src="/logo.png?v=6"
+            alt="ClippedAI"
+            width={20}
+            height={20}
+            className="rounded-sm"
+          />
+          <span className="font-syne text-xl leading-none font-black tracking-tighter text-white uppercase">
+            CLIPPEDAI
+          </span>
         </Link>
-        {navItems.map((navItem, idx) => (
-          <Link
-            key={`link=${idx}`}
-            href={navItem.link}
-            aria-label={navItem.name}
-            className={cn(
-              "relative flex items-center gap-1 text-sm leading-none font-bold tracking-wider text-neutral-400 uppercase transition-colors hover:text-white",
-            )}
-          >
-            <span className="block sm:hidden" aria-hidden="true">
-              {navItem.icon}
-            </span>
-            <span className="hidden sm:block">{navItem.name}</span>
-          </Link>
-        ))}
-        <Button
-          variant="outline"
-          className="ml-4 h-8 rounded-full border-white/20 bg-transparent px-5 text-xs font-bold tracking-wider text-white uppercase transition-all hover:bg-white hover:text-black"
-          asChild
-        >
-          <Link href="/dashboard">Get Started</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {navItems.map((navItem, idx) => (
+            <Link
+              key={`link=${idx}`}
+              href={navItem.link}
+              aria-label={navItem.name}
+              className={cn(
+                "relative flex items-center gap-1 px-4 py-2 text-sm leading-none font-bold tracking-wider text-white/70 uppercase transition-colors hover:text-white",
+              )}
+            >
+              <span className="block sm:hidden" aria-hidden="true">
+                {navItem.icon}
+              </span>
+              <span className="hidden sm:block">{navItem.name}</span>
+            </Link>
+          ))}
+          {status === "unauthenticated" && (
+            <Button
+              className="ml-2 h-9 rounded-full bg-white px-6 text-xs font-black tracking-wider text-black uppercase transition-all hover:bg-white/90 hover:scale-[1.05]"
+              asChild
+            >
+              <Link href="/dashboard">Login</Link>
+            </Button>
+          )}
+        </div>
       </motion.div>
     </AnimatePresence>
   );

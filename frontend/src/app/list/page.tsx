@@ -99,10 +99,10 @@ const STATUS_CONFIG: Record<
   },
   cancelled: {
     label: "CANCELLED",
-    dotClass: "bg-white/40",
+    dotClass: "bg-white/45",
     bgClass:
-      "bg-transparent border-white/10 text-[10px] font-bold tracking-widest uppercase rounded-md px-2 py-0.5",
-    textClass: "text-white/40",
+      "bg-transparent border border-white/20 text-[10px] font-bold tracking-[0.08em] uppercase rounded-md px-2 py-0.5",
+    textClass: "text-white/70",
   },
 };
 
@@ -352,10 +352,10 @@ export default function ListPage() {
     return (
       <div className="min-h-screen">
         <div className="mx-auto max-w-4xl px-4 py-24 text-center">
-          <h1 className="font-syne mb-4 text-4xl font-black text-white uppercase md:text-5xl">
+          <h1 className="font-syne mb-4 text-4xl font-black text-white uppercase md:text-5xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
             SIGN IN REQUIRED.
           </h1>
-          <p className="mb-8 font-mono text-xs tracking-widest text-white/40 uppercase">
+          <p className="mb-8 font-mono text-xs font-medium tracking-[0.04em] text-white/70 uppercase">
             You need to be signed in to view your generations.
           </p>
           <Link href="/login">
@@ -407,25 +407,13 @@ export default function ListPage() {
         {/* ── Page header ──────────────────────────────────────── */}
         <div className="border-b border-white/[0.06]">
           <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
-            <div className="mb-4 flex items-center gap-3">
-              <Link href="/dashboard">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white/40 hover:bg-white/[0.06] hover:text-white"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back
-                </Button>
-              </Link>
-            </div>
 
             <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h1 className="font-syne text-3xl leading-none font-black tracking-tighter text-white uppercase sm:text-4xl md:text-5xl">
-                  GENERATIONS.
+                <h1 className="font-syne text-3xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-4xl md:text-5xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
+                  Generations.
                 </h1>
-                <p className="mt-3 font-mono text-[10px] tracking-widest text-white/40 uppercase sm:mt-4 sm:text-xs">
+                <p className="mt-3 font-mono text-[10px] font-medium tracking-[0.04em] text-white/70 uppercase sm:mt-4 sm:text-xs">
                   {tasks.length} total &middot; manage and review your clips
                 </p>
               </div>
@@ -513,10 +501,10 @@ export default function ListPage() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-md border border-white/10 bg-white/[0.04]">
                   <PlayCircle className="h-8 w-8 text-white" />
                 </div>
-                <h2 className="font-syne mb-2 text-xl font-bold text-white uppercase">
+                <h2 className="font-syne mb-2 text-xl font-black text-white/95 uppercase">
                   No generations yet
                 </h2>
-                <p className="mb-6 font-mono text-xs tracking-widest text-white/35 uppercase">
+                <p className="mb-6 font-mono text-[10px] font-medium tracking-[0.04em] text-white/70 uppercase">
                   Start by processing your first video to create clips.
                 </p>
                 <Link href="/dashboard">
@@ -543,7 +531,7 @@ export default function ListPage() {
                   aria-label="Select all generations"
                   className="rounded-md border-white/20 data-[state=checked]:border-white data-[state=checked]:bg-white data-[state=checked]:text-black data-[state=indeterminate]:border-white/20 data-[state=indeterminate]:bg-white/20"
                 />
-                <span className="text-xs font-medium tracking-widest text-white/25 uppercase">
+                <span className="text-[10px] font-bold tracking-[0.08em] text-white/45 uppercase">
                   {selectedCount > 0
                     ? `${selectedCount} of ${tasks.length} selected`
                     : "Select"}
@@ -595,18 +583,18 @@ export default function ListPage() {
                       >
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
-                            <h3 className="truncate text-xs font-semibold text-white/90 transition-colors group-hover:text-white sm:text-sm">
+                            <h3 className="truncate text-xs font-black text-white/98 transition-colors group-hover:text-white sm:text-sm">
                               {task.source_title}
                             </h3>
                             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/25">
-                              <span className="font-medium tracking-wide text-white/35 uppercase">
+                              <span className="font-bold tracking-[0.04em] text-white/45 uppercase">
                                 {task.source_type}
                               </span>
                               <Separator
                                 orientation="vertical"
                                 className="h-3 bg-white/[0.08]"
                               />
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-1 font-medium text-white/70">
                                 <Clock className="h-3 w-3" />
                                 {formatDate(task.created_at)}
                               </span>
@@ -614,7 +602,7 @@ export default function ListPage() {
                                 orientation="vertical"
                                 className="h-3 bg-white/[0.08]"
                               />
-                              <span>
+                              <span className="font-medium text-white/70">
                                 {task.clips_count}{" "}
                                 {task.clips_count === 1 ? "clip" : "clips"}
                               </span>

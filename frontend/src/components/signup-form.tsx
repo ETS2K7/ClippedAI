@@ -16,43 +16,59 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import Link from "next/link";
 import { signupSchema, type SignupFormValues } from "~/schemas/auth";
-import { signUp } from "~/actions/auth";
 import { signIn } from "next-auth/react";
+import { sendOTP } from "~/actions/otp";
 
 export function SignupForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
+  const [step, setStep] = useState<"email" | "code">("email");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     register,
     handleSubmit,
+    trigger,
+    getValues,
     formState: { errors },
   } = useForm<SignupFormValues>({ resolver: zodResolver(signupSchema) });
+
+  const onContinue = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    const isEmailValid = await trigger("email");
+    if (isEmailValid) {
+      setIsSubmitting(true);
+      setError(null);
+      try {
+        const result = await sendOTP(getValues("email"));
+        if (result.success) {
+          setStep("code");
+        } else {
+          setError(result.error ?? "Failed to send verification code");
+        }
+      } catch {
+        setError("An error occurred");
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
 
   const onSubmit = async (data: SignupFormValues) => {
     try {
       setIsSubmitting(true);
       setError(null);
 
-      const result = await signUp(data);
-      if (!result.success) {
-        setError(result.error ?? "An error occurred during signup");
-        return;
-      }
-
-      const signUpResult = await signIn("credentials", {
+      const signInResult = await signIn("credentials", {
         email: data.email,
-        password: data.password,
+        code: data.code,
         redirect: false,
       });
 
-      if (signUpResult?.error) {
-        setError(
-          "Account created but couldn't sign in automatically. Please try again.",
-        );
+      if (signInResult?.error) {
+        setError("Invalid verification code");
       } else {
         window.location.href = "/dashboard";
       }
@@ -64,129 +80,132 @@ export function SignupForm({
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card className="rounded-2xl border-white/[0.08] bg-white/[0.03] text-white shadow-2xl shadow-black/40 backdrop-blur-xl">
-        <CardHeader className="pb-4">
-          <CardTitle className="font-syne text-3xl leading-none font-black tracking-tight text-white uppercase">
-            Create account.
-          </CardTitle>
-          <CardDescription className="mt-3 font-mono text-[10px] tracking-widest text-white/40 uppercase">
-            Start creating viral clips with AI
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-5">
-            <Button
+    <div className={cn("flex w-full max-w-[420px] flex-col gap-4", className)} {...props}>
+      <div className="flex flex-col gap-6 rounded-[32px] border border-[#27272a] bg-[#333333]/50 p-6 pt-10 pb-8 backdrop-blur-[40px]">
+        <div className="flex flex-col items-center gap-2 px-4 text-center">
+          <h1 className="text-[26px] font-bold tracking-tight text-[#fafafa] leading-[1.2]">
+            {step === "email" ? "Finish signing up to get your free clips" : "Check your email"}
+          </h1>
+          <p className="text-[15px] font-normal text-white/50 leading-[20px]">
+            {step === "email" 
+              ? "Free plan available. No credit card required." 
+              : `We sent a code to ${getValues("email")}`}
+          </p>
+        </div>
+
+        {step === "email" && (
+          <div className="flex flex-col gap-3.5 pt-2">
+            <button
               type="button"
-              variant="outline"
               onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-              className="h-12 w-full rounded-xl border-white/[0.08] bg-white/[0.04] text-white hover:bg-white/[0.08] hover:text-white transition-colors"
+              className="flex h-[38px] w-full items-center justify-center gap-2 rounded-[10px] bg-white/10 text-sm font-medium text-white transition-colors hover:bg-white/[0.18]"
             >
-              <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                <path fillRule="evenodd" clipRule="evenodd" d="M17.64 9.20454C17.64 8.56636 17.5827 7.95272 17.4764 7.36363H9V10.845H13.8436C13.635 11.97 13.0009 12.9232 12.0477 13.5614V15.8195H14.9564C16.6582 14.2527 17.64 11.9454 17.64 9.20454Z" fill="#4285F4"/>
+                <path fillRule="evenodd" clipRule="evenodd" d="M9 18C11.43 18 13.4673 17.1941 14.9564 15.8196L12.0477 13.5614C11.2418 14.1014 10.2109 14.4205 9 14.4205C6.65591 14.4205 4.67182 12.8373 3.96409 10.71H0.957275V13.0418C2.43818 15.9832 5.48182 18 9 18Z" fill="#34A853"/>
+                <path fillRule="evenodd" clipRule="evenodd" d="M3.96409 10.71C3.78409 10.17 3.68182 9.59318 3.68182 8.99999C3.68182 8.40681 3.78409 7.82999 3.96409 7.28999V4.95818H0.957273C0.347727 6.17318 0 7.54772 0 8.99999C0 10.4523 0.347727 11.8268 0.957273 13.0418L3.96409 10.71Z" fill="#FBBC05"/>
+                <path fillRule="evenodd" clipRule="evenodd" d="M9 3.57955C10.3214 3.57955 11.5077 4.03364 12.4405 4.92545L15.0218 2.34409C13.4632 0.891818 11.4259 0 9 0C5.48182 0 2.43818 2.01682 0.957275 4.95818L3.96409 7.29C4.67182 5.16273 6.65591 3.57955 9 3.57955Z" fill="#EA4335"/>
               </svg>
-              Sign Up with Google
-            </Button>
+              Continue with Google
+            </button>
+          </div>
+        )}
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/[0.08]" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-black/40 px-2 text-white/40 font-mono tracking-widest backdrop-blur-md rounded-full">
-                  Or
-                </span>
-              </div>
-            </div>
+        {step === "email" && (
+          <div className="flex items-center gap-4 px-2 py-2">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-sm font-normal text-white/50 leading-[22px] tracking-[-0.2px]">
+              or continue with email
+            </span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+        )}
 
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <div className="flex flex-col gap-5">
-              <div className="grid gap-2">
-                <Label
-                  htmlFor="email"
-                  className="font-mono text-[10px] font-bold tracking-widest text-white/60 uppercase"
-                >
-                  EMAIL
-                </Label>
-                <Input
-                  id="email"
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 pt-2">
+          <div className="flex flex-col gap-3">
+            {step === "email" ? (
+              <div className="h-[44px] overflow-hidden rounded-[12px] border border-white/5 bg-black/20 transition-colors focus-within:border-white/20">
+                <input
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="Enter email address"
+                  autoComplete="email"
                   required
-                  className="h-12 rounded-xl border-white/[0.08] bg-white/[0.04] px-4 text-white transition-colors placeholder:text-white/20 focus:border-white/20 focus:ring-0"
+                  className="h-full w-full bg-transparent px-4 text-sm text-white outline-none placeholder:text-white/45"
                   {...register("email")}
                 />
-                {errors.email && (
-                  <p className="font-mono text-xs text-red-400">
-                    {errors.email.message}
-                  </p>
-                )}
               </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label
-                    htmlFor="password"
-                    className="font-mono text-[10px] font-bold tracking-widest text-white/60 uppercase"
-                  >
-                    PASSWORD
-                  </Label>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
+            ) : (
+              <div className="h-[44px] overflow-hidden rounded-[12px] border border-white/5 bg-black/20 transition-colors focus-within:border-white/20">
+                <input
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  autoComplete="one-time-code"
+                  autoFocus
                   required
-                  className="h-12 rounded-xl border-white/[0.08] bg-white/[0.04] px-4 text-white transition-colors placeholder:text-white/20 focus:border-white/20 focus:ring-0"
-                  {...register("password")}
+                  className="h-full w-full bg-transparent px-4 text-sm text-white outline-none placeholder:text-white/45"
+                  {...register("code")}
                 />
-                {errors.password && (
-                  <p className="font-mono text-xs text-red-400">
-                    {errors.password.message}
-                  </p>
-                )}
               </div>
+            )}
 
-              {error && (
-                <p className="rounded-xl border border-red-500/15 bg-red-500/10 p-3 font-mono text-xs text-red-400">
-                  {error}
-                </p>
-              )}
+            {error && (
+              <p className="px-1 text-xs font-medium text-red-400">
+                {error}
+              </p>
+            )}
 
-              <Button
-                type="submit"
-                className="font-syne mt-1 h-12 w-full rounded-xl bg-white text-sm font-black tracking-widest text-black uppercase transition-all duration-200 hover:bg-white/90"
+            {step === "email" ? (
+              <button
+                type="button"
+                onClick={onContinue}
                 disabled={isSubmitting}
+                className="mt-1 h-[42px] rounded-[8px] bg-white text-[14px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                {isSubmitting ? "Creating account..." : "Create Account"}
-              </Button>
-            </div>
-            <div className="mt-6 text-center font-mono text-[10px] tracking-widest text-white/30 uppercase">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="text-white/70 underline underline-offset-4 transition-colors hover:text-white"
+                {isSubmitting ? "Sending..." : "Continue with email"}
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-1 h-[42px] rounded-[8px] bg-white text-[14px] font-semibold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                Sign In
-              </Link>
-            </div>
-            </form>
+                {isSubmitting ? "Creating account..." : "Verify and Create Account"}
+              </button>
+            )}
+
+            {step === "code" && (
+              <button
+                type="button"
+                onClick={() => setStep("email")}
+                className="text-xs font-medium text-white/40 hover:text-white/60 transition-colors"
+              >
+                Back to email
+              </button>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </form>
+
+        <div className="flex flex-col items-center gap-1.5 pt-2 text-center text-xs font-normal leading-[20px]">
+          <div className="text-white/75">
+            Already have an account?{" "}
+            <Link href="/login" className="font-medium text-white hover:underline">
+              Sign in
+            </Link>
+          </div>
+          <div className="text-white/60">
+            By continuing, you agree to ClippedAI&apos;s{" "}
+            <Link href="#" className="text-white/90 underline">
+              Terms of Service
+            </Link>
+          </div>
+          <div className="text-white/60">
+            Read our{" "}
+            <Link href="#" className="text-white/90 underline">
+              Privacy Policy
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

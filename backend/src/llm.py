@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 # ── Minimum duration (seconds) ──
 _MIN_CLIP_DURATION = 30.0
 
-def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> List[Dict[str, Any]]:
     """Groups words and selects viral segments using Two-Pass architecture."""
     logger.info("==================== PHASE 3: VIRAL CLIP SELECTION ====================")
     if not words: return []
@@ -55,8 +55,8 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             if cached: return cached
         except: pass
 
-    logger.info(f"[LLM] Selection Pass calling Gemini...")
-    raw_clips = _call_gemini_selection(prompt)
+    logger.info(f"[LLM] Selection Pass calling Gemini... (Specific: {specific_moments})")
+    raw_clips = _call_gemini_selection(prompt, specific_moments)
 
     # ── SEMANTIC BOUNDARY SNAPPING ──
     # This ensures that even if the LLM rounds a timestamp, we snap it to the 
@@ -102,9 +102,21 @@ def select_clips(words: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
     return validated_clips
 
-def _call_gemini_selection(prompt: str) -> list:
+def _call_gemini_selection(prompt: str, specific_moments: str = None) -> list:
     from google.genai import types
     client = _get_genai_client()
+    
+    system_instruction = (
+        "You are a viral video editor. Your goal is to select 3 self-contained, high-retention clips. "
+        "Ensure clips are semantically complete. Return JSON only."
+    )
+    if specific_moments:
+        system_instruction += (
+            f"\n\nPRIORITY: The user is specifically interested in the following moments: '{specific_moments}'. "
+            "Prioritize selecting clips that match this description. If you find less than 3 matching clips, "
+            "fill the remaining slots with the most viral moments from the rest of the transcript."
+        )
+
     MAX_RETRIES = 3
     for attempt in range(MAX_RETRIES):
         try:
@@ -112,10 +124,7 @@ def _call_gemini_selection(prompt: str) -> list:
                 model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    system_instruction=(
-                        "You are a viral video editor. Your goal is to select 3 self-contained, high-retention clips. "
-                        "Ensure clips are semantically complete. Return JSON only."
-                    ),
+                    system_instruction=system_instruction,
                     response_mime_type="application/json",
                     response_schema={
                         "type": "OBJECT",

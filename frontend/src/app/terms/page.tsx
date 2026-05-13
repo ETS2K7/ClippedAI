@@ -58,19 +58,15 @@ export default function TermsOfService() {
               body: "By uploading media to ClippedAI, you represent and warrant that you own or have the necessary licenses, rights, consents, and permissions to use and authorize us to use all patent, trademark, trade secret, copyright or other proprietary rights in and to any and all of your uploads.",
             },
             {
-              title: "4. Payments and Subscriptions",
-              body: "ClippedAI offers both subscription-based and pay-as-you-go credit services. Payments are processed securely via Dodo Payments. All purchases of credits are final and non-refundable unless otherwise required by law. Subscriptions will automatically renew unless canceled prior to the renewal date.",
-            },
-            {
-              title: "5. Disclaimer",
+              title: "4. Disclaimer",
               body: "The materials on ClippedAI's website are provided on an 'as is' basis. ClippedAI makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.",
             },
             {
-              title: "6. Limitations",
+              title: "5. Limitations",
               body: "In no event shall ClippedAI or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on ClippedAI's website.",
             },
             {
-              title: "7. Modifications",
+              title: "6. Modifications",
               body: "ClippedAI may revise these terms of service for its website at any time without notice. By using this website you are agreeing to be bound by the then current version of these terms of service.",
             },
           ].map(({ title, body, bullets }) => (
@@ -95,7 +91,7 @@ export default function TermsOfService() {
           {/* Contact */}
           <div className="brutal-card p-6 sm:p-8">
             <h2 className="font-syne mb-4 text-lg font-black tracking-widest text-white uppercase">
-              8. Contact Us
+              7. Contact Us
             </h2>
             <p className="text-sm leading-relaxed text-white/60">
               If you have any questions about these Terms, please contact us at{" "}
@@ -115,7 +111,6 @@ export default function TermsOfService() {
           <span>© 2026 ClippedAI</span>
           <div className="flex gap-6">
             <Link href="/privacy" className="transition-colors hover:text-white/50">Privacy</Link>
-            <Link href="/pricing" className="transition-colors hover:text-white/50">Pricing</Link>
           </div>
         </div>
       </div>

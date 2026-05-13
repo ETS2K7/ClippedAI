@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { getPendingFile, clearPendingFile } from "~/lib/file-storage";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Progress } from "~/components/ui/progress";
@@ -16,6 +18,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Slider } from "~/components/ui/slider";
+import { Label } from "~/components/ui/label";
 import { useSession } from "~/lib/auth-client";
 import { track } from "~/lib/datafast";
 import { formatSupportMessage, parseApiError } from "~/lib/api-error";
@@ -37,6 +40,8 @@ import {
   Send,
   X,
   Zap,
+  Mail,
+  Info,
 } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
@@ -112,21 +117,93 @@ const getYouTubeThumbnailUrl = (value: string): string | null => {
 
 export default function Home() {
   const [showBetaModal, setShowBetaModal] = useState(false);
-  const [showCapacityModal, setShowCapacityModal] = useState(false);
   const [betaMessage, setBetaMessage] = useState("");
   const [betaSending, setBetaSending] = useState(false);
-  const [betaSent, setBetaSent] = useState(false);
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState("");
-  const [currentStep, setCurrentStep] = useState("");
+  const [uploadPreviewUrl, setUploadPreviewUrl] = useState<string | null>(null);
+  const [thumbnailQuality, setThumbnailQuality] = useState<"maxresdefault" | "sddefault" | "hqdefault" | "mqdefault" | "default">("maxresdefault");
+  const [specificMoments, setSpecificMoments] = useState("");
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [timeRange, setTimeRange] = useState<[number, number]>([0, 0]);
   const [sourceType, setSourceType] = useState<"youtube" | "upload">("youtube");
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Format seconds to HH:MM:SS
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // Helper to extract YouTube ID
+  const getYouTubeId = (url: string) => {
+    if (!url) return null;
+    const regExp = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const match = url.match(regExp);
+    return match ? match[1] : null;
+  };
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Handle URL from query params
+  useEffect(() => {
+    const queryUrl = searchParams.get("url");
+    if (queryUrl) {
+      setUrl(queryUrl);
+    }
+    const mode = searchParams.get("mode");
+    if (mode === "upload") {
+      setSourceType("upload");
+    }
+    
+    // Check for pending file from landing page
+    const source = searchParams.get("source");
+    if (source === "pending") {
+      getPendingFile().then((file) => {
+        if (file) {
+          fileRef.current = file;
+          setFileName(file.name);
+          setUploadPreviewUrl(URL.createObjectURL(file));
+          clearPendingFile();
+        }
+      });
+    }
+  }, [searchParams]);
+
   const { data: session, isPending } = useSession();
+
+  // Handle auth redirect
+  useEffect(() => {
+    if (!isPending && !session?.user) {
+      const currentUrl = window.location.href;
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
+    }
+  }, [session, isPending, router]);
+
+  // Effect to handle YouTube duration simulation or fetching
+  useEffect(() => {
+    if (sourceType === "youtube" && url) {
+      // For now, default to a sensible max if we don't have duration
+      // Ideally we'd fetch this from a YouTube API or a proxy
+      setVideoDuration(1200); // Default 20 mins
+      setTimeRange([0, 1200]);
+    }
+  }, [url, sourceType]);
+
+  // Reset thumbnail quality when URL changes
+  useEffect(() => {
+    setThumbnailQuality("maxresdefault");
+  }, [url]);
+
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [currentStep, setCurrentStep] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const isAdminSession = Boolean(session?.user?.isAdmin);
 
 
@@ -159,9 +236,25 @@ export default function Home() {
   const fileRef = useRef<File | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    fileRef.current = file;
-    setFileName(file ? file.name : null);
+    const file = e.target.files?.[0];
+    if (file) {
+      // Basic validation
+      if (!file.type.startsWith("video/")) {
+        setError("Please select a valid video file.");
+        return;
+      }
+      
+      const MAX_SIZE = 500 * 1024 * 1024; // 500MB
+      if (file.size > MAX_SIZE) {
+        setError("File is too large. Max size is 500MB.");
+        return;
+      }
+
+      setError(null);
+      fileRef.current = file;
+      setFileName(file.name);
+      setUploadPreviewUrl(URL.createObjectURL(file));
+    }
   };
 
 
@@ -205,7 +298,14 @@ export default function Home() {
     }
 
     if (sourceType === "upload" && !fileRef.current) return;
-    if (sourceType === "youtube" && !url.trim()) return;
+    if (sourceType === "youtube") {
+      if (!url.trim()) return;
+      const videoId = extractYouTubeVideoId(url);
+      if (!videoId) {
+        setError("Please enter a valid YouTube URL.");
+        return;
+      }
+    }
     if (!session?.user?.id) return;
 
     setIsLoading(true);
@@ -256,18 +356,12 @@ export default function Home() {
           processing_mode: "fast",
           output_format: outputFormat,
           add_subtitles: addSubtitles,
+          specific_moments: specificMoments,
+          timeframe: timeRange,
         }),
       });
 
       if (!startResponse.ok) {
-        // 402 out_of_credits → show upgrade modal instead of generic error
-        if (startResponse.status === 402) {
-          const body = await startResponse.json().catch(() => ({})) as { error?: string };
-          if (body?.error === "out_of_credits") {
-            setShowCapacityModal(true);
-            return;
-          }
-        }
         const startError = await parseApiError(
           startResponse,
           `API error: ${startResponse.status}`,
@@ -320,64 +414,6 @@ export default function Home() {
   return (
     <AppShell>
       <AnimatePresence>
-        {/* ── Capacity / out-of-credits modal ─────────────────── */}
-        {showCapacityModal && (
-          <motion.div
-            key="capacity-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-            className="fixed inset-0 z-[500] flex items-center justify-center p-4"
-          >
-            <div
-              className="absolute inset-0 bg-black/60 backdrop-blur-md"
-              onClick={() => setShowCapacityModal(false)}
-            />
-            <motion.div
-              initial={{ scale: 0.96, y: 18 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.96, y: 18 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="brutal-card relative w-full max-w-md overflow-hidden p-8"
-            >
-              <button
-                onClick={() => setShowCapacityModal(false)}
-                aria-label="Close"
-                className="absolute top-4 right-4 flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-white/40 transition-all hover:bg-white/10 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.06]">
-                <Zap className="h-5 w-5 text-white/60" />
-              </div>
-
-              <h3 className="font-syne mb-2 text-2xl font-black tracking-tight text-white uppercase">
-                Out of credits.
-              </h3>
-              <p className="mb-8 font-mono text-[11px] leading-relaxed tracking-wide text-white/40 uppercase">
-                You&apos;ve used all your credits for this month. Upgrade to Pro for 200 credits per month, or top up with a one-time credit pack.
-              </p>
-
-              <div className="flex flex-col gap-3">
-                <Link
-                  href="/upgrade"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3.5 font-mono text-[11px] font-black tracking-widest text-black uppercase transition-all hover:bg-white/90"
-                  onClick={() => setShowCapacityModal(false)}
-                >
-                  Upgrade to Pro <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
-                <button
-                  onClick={() => setShowCapacityModal(false)}
-                  className="w-full rounded-xl border border-white/10 py-3 font-mono text-[10px] tracking-widest text-white/30 uppercase transition-all hover:border-white/20 hover:text-white/50"
-                >
-                  Maybe later
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
 
         {/* ── Beta modal ──────────────────────────────────────── */}
         {showBetaModal && (
@@ -443,7 +479,7 @@ export default function Home() {
               </div>
 
               <div className="relative border-t border-white/10 pt-6">
-                <p className="mb-4 font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
+                <p className="mb-4 font-mono text-[10px] font-bold tracking-widest text-white/60 uppercase">
                   Request Early Access / Contact The Team
                 </p>
                 {betaSent ? (
@@ -482,7 +518,7 @@ export default function Home() {
                       onChange={(e) => setBetaMessage(e.target.value)}
                       placeholder="Want early access or have questions? Send us a message..."
                       aria-label="Message to ClippedAI team"
-                      className="h-24 resize-none border-white/10 bg-white/5 text-sm font-medium text-white transition-all placeholder:text-white/30 focus-visible:ring-1 focus-visible:ring-white/20"
+                      className="h-24 resize-none border-white/10 bg-white/5 text-sm font-medium text-white transition-all placeholder:text-white/40 focus-visible:ring-1 focus-visible:ring-white/20"
                       disabled={betaSending}
                     />
                     <Button
@@ -521,7 +557,7 @@ export default function Home() {
                     <p className="truncate font-mono text-xs font-bold tracking-wider text-white uppercase sm:text-sm sm:tracking-widest">
                       {latestTask.source_title}
                     </p>
-                    <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-white/40 sm:gap-2 sm:text-xs">
+                    <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-white/60 sm:gap-2 sm:text-xs">
                       <span className="tracking-wider uppercase">
                         {latestTask.source_type}
                       </span>
@@ -547,7 +583,7 @@ export default function Home() {
                   ) : (
                     <Badge
                       variant="outline"
-                      className="rounded-md border-white/10 text-[10px] font-bold tracking-widest text-white/50 uppercase"
+                      className="rounded-md border-white/10 text-[10px] font-bold tracking-widest text-white/60 uppercase"
                     >
                       {latestTask.status}
                     </Badge>
@@ -570,20 +606,20 @@ export default function Home() {
             </div>
           )}
 
-          {/* Two Column Layout */}
-          <div className="flex flex-col items-start gap-6 sm:gap-10 lg:flex-row lg:gap-0">
-            {/* Left Column — Form */}
+          {/* Centered Single Column Layout */}
+          <div className="flex flex-col items-center justify-center w-full gap-6 sm:gap-10">
+            {/* Main Form — Centered */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-              className="min-w-0 flex-1"
+              className="w-full max-w-2xl"
             >
-              <div className="mb-5 sm:mb-8">
-                <h1 className="font-syne mb-2 text-3xl leading-none font-black tracking-tighter text-white uppercase sm:text-4xl md:text-5xl">
-                  NEW CLIP.
+              <div className="mb-5 text-center sm:mb-8">
+                <h1 className="font-syne mb-2 text-3xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-4xl md:text-5xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
+                  New Clip.
                 </h1>
-                <p className="mt-3 font-mono text-[10px] tracking-widest text-white/40 uppercase sm:mt-4 sm:text-xs">
+                <p className="mt-3 font-mono text-[11px] font-medium tracking-[0.04em] text-white/70 uppercase sm:mt-4 sm:text-xs">
                   Paste a YouTube link or upload a video.
                 </p>
               </div>
@@ -593,7 +629,7 @@ export default function Home() {
                 <div className="space-y-2">
                   {/* URL input */}
                   <div className="relative">
-                    <Youtube className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-white/25" />
+                    <Youtube className="absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2 text-white/70" />
                     <Input
                       id="youtube-url"
                       type="url"
@@ -606,14 +642,14 @@ export default function Home() {
                         fileRef.current = null;
                       }}
                       disabled={isLoading}
-                      className="brutal-input h-14 pl-12 font-mono text-base placeholder:text-white/20"
+                      className="brutal-input h-14 pl-12 font-mono text-base placeholder:text-zinc-600"
                     />
                   </div>
 
                   {/* Divider */}
                   <div className="flex items-center gap-3">
                     <div className="h-px flex-1 bg-white/[0.06]" />
-                    <span className="font-mono text-[10px] tracking-widest text-white/20 uppercase">or</span>
+                    <span className="font-mono text-[10px] font-bold tracking-widest text-white/45 uppercase">or</span>
                     <div className="h-px flex-1 bg-white/[0.06]" />
                   </div>
 
@@ -651,17 +687,71 @@ export default function Home() {
                       className="hidden"
                     />
                     <div className="flex items-center justify-center gap-3">
-                      <Upload className="h-4 w-4 flex-shrink-0 text-white/20" />
+                      <Upload className="h-4 w-4 flex-shrink-0 text-zinc-500" />
                       {fileName ? (
                         <p className="text-sm font-medium text-white/80 truncate max-w-[260px]">{fileName}</p>
                       ) : (
-                        <p className="text-sm font-medium text-white/30">
-                          Upload a video <span className="text-white/20 text-xs">&mdash; MP4, MOV, AVI up to 500MB</span>
+                        <p className="text-sm font-bold text-white/90">
+                          Upload a video <span className="text-white/45 text-xs font-normal tracking-wide">&mdash; MP4, MOV, AVI up to 500MB</span>
                         </p>
                       )}
                     </div>
                   </div>
                 </div>
+
+                {/* 16:9 Dynamic Preview Section — Compact */}
+                <AnimatePresence mode="wait">
+                  {(url || fileName) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                      className="group relative mx-auto mt-4 w-full max-w-sm overflow-hidden rounded-xl border border-white/10 bg-black/40 shadow-2xl"
+                      style={{ aspectRatio: "16/9" }}
+                    >
+                      {sourceType === "youtube" && getYouTubeId(url) ? (
+                        <div className="h-full w-full relative">
+                          <img
+                            key={`${getYouTubeId(url)}-${thumbnailQuality}`}
+                            src={`https://img.youtube.com/vi/${getYouTubeId(url)}/${thumbnailQuality}.jpg`}
+                            alt="YouTube Thumbnail"
+                            className="h-full w-full object-cover"
+                            onError={() => {
+                              if (thumbnailQuality === "maxresdefault") setThumbnailQuality("sddefault");
+                              else if (thumbnailQuality === "sddefault") setThumbnailQuality("hqdefault");
+                              else if (thumbnailQuality === "hqdefault") setThumbnailQuality("mqdefault");
+                              else if (thumbnailQuality === "mqdefault") setThumbnailQuality("default");
+                            }}
+                            onLoad={(e) => {
+                              const img = e.target as HTMLImageElement;
+                              if (img.naturalWidth === 120 && thumbnailQuality === "maxresdefault") {
+                                setThumbnailQuality("hqdefault");
+                              }
+                            }}
+                          />
+                        </div>
+                      ) : sourceType === "upload" && uploadPreviewUrl ? (
+                        <div className="h-full w-full relative">
+                          <video
+                            src={uploadPreviewUrl}
+                            className="h-full w-full object-cover"
+                            onLoadedMetadata={(e) => {
+                              const video = e.target as HTMLVideoElement;
+                              video.currentTime = video.duration / 2;
+                              setVideoDuration(video.duration);
+                              setTimeRange([0, video.duration]);
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-white/[0.02]">
+                           <Loader2 className="h-8 w-8 animate-spin text-white/45" />
+                           <p className="font-mono text-[10px] tracking-widest text-white/70 uppercase">Waiting for valid source...</p>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
 
 
@@ -669,32 +759,88 @@ export default function Home() {
 
                 {/* Style & Captions */}
                 <div className="brutal-card space-y-3 p-3 sm:p-4">
-                  <div className="flex items-center gap-2 font-mono text-sm font-bold tracking-widest text-white uppercase">
-                    <Sparkles className="h-4 w-4 text-white" />
+                  <div className="flex items-center gap-2 font-mono text-xs font-bold tracking-[0.08em] text-white/95 uppercase">
+                    <Sparkles className="h-4 w-4 text-white/90" />
                     STYLE &amp; CAPTIONS
                   </div>
                   <div className="border-l-2 border-white/20 pl-3 space-y-3">
                     <div>
-                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Font Family</p>
-                      <p className="font-mono text-sm font-bold text-white tracking-wide">Komika Axis</p>
+                      <p className="font-mono text-[10px] tracking-[0.06em] text-white/70 uppercase mb-0.5">Font Family</p>
+                      <p className="font-mono text-sm font-bold text-white/95 tracking-wide">Komika Axis</p>
                     </div>
                     <div>
-                      <p className="font-mono text-[9px] tracking-widest text-white/30 uppercase mb-0.5">Caption Style</p>
-                      <p className="font-mono text-sm font-bold text-white tracking-wide">MrBeast</p>
+                      <p className="font-mono text-[10px] tracking-[0.06em] text-white/70 uppercase mb-0.5">Caption Style</p>
+                      <p className="font-mono text-sm font-bold text-white/95 tracking-wide">MrBeast</p>
                     </div>
                   </div>
 
+
+                  {/* Advanced Configuration — Only show when source is present */}
+                  <AnimatePresence>
+                    {(url || fileName) && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="space-y-6 pt-2 pb-2 overflow-hidden"
+                      >
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-[10px] font-bold tracking-[0.2em] text-white/60 uppercase">
+                              Include specific moments
+                            </Label>
+                          </div>
+                          <Input
+                            placeholder="Example: find moments when we talked about the playoffs"
+                            value={specificMoments}
+                            onChange={(e) => setSpecificMoments(e.target.value)}
+                            className="brutal-input h-12 text-sm placeholder:text-white/20"
+                          />
+                        </div>
+
+                        <div className="space-y-6">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-[10px] font-bold tracking-[0.1em] text-white/90 uppercase">
+                              Processing timeframe
+                            </Label>
+                            <span className="rounded-full bg-white/5 px-2.5 py-1 text-[9px] font-black tracking-widest text-white/45 uppercase border border-white/[0.05]">
+                          Coming Soon
+                        </span>
+                          </div>
+                          
+                          <div className="px-1">
+                            <Slider
+                              value={[timeRange[0], timeRange[1]]}
+                              max={videoDuration || 100}
+                              step={1}
+                              onValueChange={(val) => setTimeRange(val as [number, number])}
+                              className="py-4"
+                            />
+                            <div className="mt-4 flex items-center justify-between font-mono text-[11px] font-bold tracking-tight text-white/45">
+                              <div className="rounded-md bg-white/[0.03] px-3 py-1.5 border border-white/[0.05]">
+                                {formatTime(timeRange[0])}
+                              </div>
+                              <div className="rounded-md bg-white/[0.03] px-3 py-1.5 border border-white/[0.05]">
+                                {formatTime(timeRange[1])}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="h-px w-full bg-white/[0.05] my-2" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {/* Output format */}
                   <div className="flex flex-col justify-between gap-4 rounded-xl border border-white/10 bg-transparent p-4 sm:flex-row sm:items-center">
                     <div className="flex items-start gap-3 sm:items-center">
                       <Monitor className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
                       <div>
-                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
+                        <span className="font-mono text-xs font-bold tracking-[0.08em] text-white/95 uppercase">
                           WIDE FORMAT
                         </span>
-                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                          Keep original aspect ratio instead of 9:16 vertical
+                        <p className="mt-1 font-mono text-[10px] font-medium tracking-wide text-white/70 uppercase sm:text-xs">
+                          Keep original aspect ratio <span className="text-white/45">&mdash; instead of 9:16 vertical</span>
                         </p>
                       </div>
                     </div>
@@ -716,11 +862,11 @@ export default function Home() {
                     <div className="flex items-start gap-3 sm:items-center">
                       <Type className="mt-1 h-5 w-5 text-white opacity-80 sm:mt-0" />
                       <div>
-                        <span className="font-mono text-xs font-bold tracking-widest text-white/80 uppercase">
+                        <span className="font-mono text-xs font-bold tracking-[0.08em] text-white/95 uppercase">
                           ADD SUBTITLES
                         </span>
-                        <p className="mt-1 font-mono text-[10px] tracking-wider text-white/40 uppercase sm:text-xs">
-                          Burn captions onto clips (disable for faster processing)
+                        <p className="mt-1 font-mono text-[10px] font-medium tracking-wide text-white/70 uppercase sm:text-xs">
+                          Burn captions onto clips <span className="text-white/45">&mdash; disable for faster processing</span>
                         </p>
                       </div>
                     </div>
@@ -826,16 +972,21 @@ export default function Home() {
                   </Alert>
                 )}
 
-                <p className="text-xs text-white/25">
-                  Completion emails use your user preference in{" "}
-                  <Link
-                    href="/settings"
-                    className="font-medium text-white/40 underline underline-offset-2 transition-colors hover:text-white/60"
-                  >
-                    Settings
-                  </Link>
-                  .
-                </p>
+                <div className="flex items-center gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] p-3.5 transition-colors hover:bg-white/[0.03]">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/5">
+                    <Mail className="h-4 w-4 text-white/40" />
+                  </div>
+                  <p className="font-mono text-[10px] leading-relaxed font-medium tracking-wider text-white/70 uppercase sm:text-[11px]">
+                    Completion emails use your user preference in{" "}
+                    <Link
+                      href="/settings"
+                      className="font-black text-white/90 underline underline-offset-4 transition-colors hover:text-white"
+                    >
+                      Settings
+                    </Link>
+                    .
+                  </p>
+                </div>
 
                 <Button
                   type="submit"
@@ -851,349 +1002,6 @@ export default function Home() {
               </form>
             </motion.div>
 
-            {/* Right Column — Phone Preview */}
-            <AnimatePresence>
-              {sourceType === "youtube" && (
-                <motion.div
-                  initial={{ opacity: 0, width: 0, filter: "blur(4px)" }}
-                  animate={{ opacity: 1, width: 380, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, width: 0, filter: "blur(4px)" }}
-                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                  className="hidden flex-shrink-0 overflow-hidden lg:block"
-                >
-                  <div className="w-[380px] pl-10">
-                    <div className="lg:sticky lg:top-20">
-                      <div className="mb-5 flex items-center justify-center gap-2 text-sm text-white/25">
-                        <Monitor className="h-4 w-4" />
-                        <span>Live Preview</span>
-                      </div>
-
-                      {/* Phone Frame */}
-                      <div
-                        className="group relative mx-auto"
-                        style={{ maxWidth: "320px" }}
-                      >
-                        {/* Subtle ambient glow behind phone */}
-                        <div className="absolute inset-0 rounded-[3rem] bg-white/[0.02] blur-3xl transition-all duration-700 group-hover:bg-white/[0.04]" />
-
-                        <div
-                          className="relative bg-white/[0.02] shadow-[0_0_0_1px_rgba(255,255,255,0.08),_0_40px_80px_-20px_rgba(0,0,0,1)] ring-1 ring-white/5 ring-inset"
-                          style={{ borderRadius: "3.5rem", padding: "12px" }}
-                        >
-                          {/* Hardware Buttons */}
-                          <div className="absolute top-[110px] -left-[1.5px] h-[26px] w-[2px] rounded-l-md bg-white/[0.15]" />
-                          <div className="absolute top-[160px] -left-[1.5px] h-[50px] w-[2px] rounded-l-md bg-white/[0.15]" />
-                          <div className="absolute top-[220px] -left-[1.5px] h-[50px] w-[2px] rounded-l-md bg-white/[0.15]" />
-                          <div className="absolute top-[180px] -right-[1.5px] h-[70px] w-[2px] rounded-r-md bg-white/[0.15]" />
-
-                          {/* Inner Screen */}
-                          <div
-                            className="relative overflow-hidden bg-transparent ring-1 ring-white/[0.08]"
-                            style={{ borderRadius: "2.75rem", height: "620px" }}
-                          >
-                            {/* Status bar */}
-                            <div className="absolute top-0 right-0 left-0 z-30 flex h-[54px] items-center justify-between px-6 pt-2 text-white">
-                              {/* Time */}
-                              <div className="flex flex-1 justify-start pl-1">
-                                <span className="text-[14.5px] font-semibold tracking-tight">
-                                  9:41
-                                </span>
-                              </div>
-
-                              {/* Dynamic Island */}
-                              <div className="flex h-[32px] w-[110px] flex-shrink-0 items-center justify-between overflow-hidden rounded-[24px] bg-white/[0.05] px-2 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] text-white">
-                                {/* Inner camera sensors */}
-                                <div className="ml-1 h-[10px] w-[10px] rounded-full border border-white/[0.02] bg-[#080808] shadow-[inset_0_0_2px_rgba(0,0,0,0.5)]" />
-                                <div className="mr-1 flex h-[10px] w-[30px] items-center justify-center rounded-full border border-white/[0.02] bg-[#080808] shadow-[inset_0_0_2px_rgba(0,0,0,0.5)]">
-                                  <div className="h-[6px] w-[6px] rounded-full bg-[#001030] opacity-50 shadow-[inset_0_0_2px_rgba(100,150,255,0.3)]" />
-                                </div>
-                              </div>
-
-                              {/* Hardware Icons */}
-                              <div className="flex flex-1 justify-end pr-1">
-                                <div className="flex origin-right scale-90 items-center gap-1.5 opacity-90">
-                                  <svg
-                                    width="16"
-                                    height="12"
-                                    viewBox="0 0 16 12"
-                                    className="text-white"
-                                  >
-                                    <rect
-                                      x="0"
-                                      y="8"
-                                      width="3"
-                                      height="4"
-                                      rx="0.5"
-                                      fill="currentColor"
-                                    />
-                                    <rect
-                                      x="4.5"
-                                      y="5"
-                                      width="3"
-                                      height="7"
-                                      rx="0.5"
-                                      fill="currentColor"
-                                    />
-                                    <rect
-                                      x="9"
-                                      y="2"
-                                      width="3"
-                                      height="10"
-                                      rx="0.5"
-                                      fill="currentColor"
-                                    />
-                                    <rect
-                                      x="13.5"
-                                      y="0"
-                                      width="3"
-                                      height="12"
-                                      rx="0.5"
-                                      fill="currentColor"
-                                    />
-                                  </svg>
-                                  <svg
-                                    width="15"
-                                    height="12"
-                                    viewBox="0 0 14 12"
-                                    className="ml-0.5 text-white"
-                                  >
-                                    <path
-                                      d="M7 10.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z"
-                                      fill="currentColor"
-                                    />
-                                    <path
-                                      d="M3.5 8.5a5 5 0 017 0"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      fill="none"
-                                      strokeLinecap="round"
-                                    />
-                                    <path
-                                      d="M1 5.5a8.5 8.5 0 0112 0"
-                                      stroke="currentColor"
-                                      strokeWidth="1.5"
-                                      fill="none"
-                                      strokeLinecap="round"
-                                    />
-                                  </svg>
-                                  <svg
-                                    width="24"
-                                    height="12"
-                                    viewBox="0 0 26 12"
-                                    className="ml-0.5 text-white"
-                                  >
-                                    <rect
-                                      x="0"
-                                      y="1"
-                                      width="22"
-                                      height="10"
-                                      rx="2"
-                                      stroke="currentColor"
-                                      strokeWidth="1"
-                                      fill="none"
-                                    />
-                                    <rect
-                                      x="2"
-                                      y="3"
-                                      width="16"
-                                      height="6"
-                                      rx="1"
-                                      fill="currentColor"
-                                    />
-                                    <rect
-                                      x="23"
-                                      y="4"
-                                      width="2"
-                                      height="4"
-                                      rx="0.5"
-                                      fill="currentColor"
-                                      opacity="0.4"
-                                    />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Best Frame display */}
-                            <div className="absolute inset-0 bg-black cursor-pointer">
-                                <img
-                                  src="/images/mobile-fallback.png"
-                                  alt="Default preview"
-                                  className="h-full w-full object-cover transition-opacity duration-300"
-                                />
-                            </div>
-
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/90" />
-
-                            {/* TikTok-style top navigation */}
-                            <div className="absolute top-[60px] right-0 left-0 z-20 flex items-center justify-center gap-6">
-                              <span className="text-[15px] font-semibold tracking-wide text-white/60 drop-shadow-md">
-                                Following
-                              </span>
-                              <div className="relative flex flex-col items-center">
-                                <span className="text-[15px] font-bold tracking-wide text-white drop-shadow-md">
-                                  For You
-                                </span>
-                                <div className="absolute -bottom-[9px] h-1 w-8 rounded-full bg-white drop-shadow-lg" />
-                              </div>
-                            </div>
-
-                            {/* Right side action buttons */}
-                            <div
-                              className="absolute right-2 z-20 space-y-6"
-                              style={{ bottom: "240px" }}
-                            >
-                              <div className="flex flex-col items-center gap-1">
-                                <div className="h-[42px] w-[42px] rounded-full border-[1.5px] border-white/30 bg-white/10 shadow-lg backdrop-blur-md" />
-                                <div className="relative -mt-3 flex h-5 w-5 items-center justify-center rounded-full border-2 border-black bg-[#EA4335] shadow-md">
-                                  <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[52%] text-[12px] font-bold text-white">
-                                    +
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex flex-col items-center gap-1">
-                                <svg
-                                  width="32"
-                                  height="32"
-                                  viewBox="0 0 24 24"
-                                  fill="white"
-                                  className="drop-shadow-lg"
-                                >
-                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                                </svg>
-                                <span className="text-[12px] font-semibold text-white drop-shadow-md">
-                                  24.5K
-                                </span>
-                              </div>
-                              <div className="flex flex-col items-center gap-1">
-                                <svg
-                                  width="30"
-                                  height="30"
-                                  viewBox="0 0 24 24"
-                                  fill="white"
-                                  className="drop-shadow-lg"
-                                >
-                                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                                </svg>
-                                <span className="text-[12px] font-semibold text-white drop-shadow-md">
-                                  482
-                                </span>
-                              </div>
-                              <div className="flex flex-col items-center gap-1">
-                                <svg
-                                  width="30"
-                                  height="30"
-                                  viewBox="0 0 24 24"
-                                  fill="white"
-                                  className="drop-shadow-lg"
-                                >
-                                  <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" />
-                                </svg>
-                                <span className="text-[12px] font-semibold text-white drop-shadow-md">
-                                  Share
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Subtitle area previously here -> Now handled intrinsically by the video embed rendering */}
-
-                            {/* Bottom left — creator info */}
-                            <div
-                              className="absolute left-4 z-20 max-w-[65%]"
-                              style={{ bottom: "100px" }}
-                            >
-                              <p className="mb-0.5 text-[15px] font-bold text-white drop-shadow-md">
-                                @creator_name
-                              </p>
-                              <p className="text-[13px] leading-snug text-white/90 drop-shadow-md">
-                                Check out this amazing clip generated by AI
-                              </p>
-                              <div className="mt-2.5 flex items-center gap-2">
-                                <svg
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="white"
-                                  className="-translate-y-[0.5px] opacity-90"
-                                >
-                                  <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                                </svg>
-                                <span className="text-[11px] font-medium tracking-wide text-white/80">
-                                  Original Sound - creator_name
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Bottom nav bar */}
-                            <div className="absolute right-0 bottom-0 left-0 z-30 border-t border-white/[0.05] bg-gradient-to-t from-black via-black/95 to-transparent px-3 pt-8 pb-6">
-                              <div className="flex items-center justify-around">
-                                <div className="flex flex-col items-center gap-1 opacity-100">
-                                  <svg
-                                    width="22"
-                                    height="22"
-                                    viewBox="0 0 24 24"
-                                    fill="white"
-                                  >
-                                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-                                  </svg>
-                                  <span className="text-[9px] font-semibold tracking-wide text-white">
-                                    Home
-                                  </span>
-                                </div>
-                                <div className="flex flex-col items-center gap-1 opacity-60 transition-opacity hover:opacity-100">
-                                  <svg
-                                    width="22"
-                                    height="22"
-                                    viewBox="0 0 24 24"
-                                    fill="white"
-                                  >
-                                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5z" />
-                                  </svg>
-                                  <span className="text-[9px] font-medium tracking-wide text-white">
-                                    Discover
-                                  </span>
-                                </div>
-                                <div className="relative -mt-4 flex-shrink-0 transform transition-transform hover:scale-105">
-                                  <div className="h-[30px] w-[45px] rounded-[10px] bg-gradient-to-tr from-[#69C9D0] via-white to-[#EE1D52] p-[2px]">
-                                    <div className="relative flex h-full w-full items-center justify-center rounded-[8px] bg-white">
-                                      <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[52%] text-2xl font-bold text-black">
-                                        +
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-center gap-1 opacity-60 transition-opacity hover:opacity-100">
-                                  <svg
-                                    width="22"
-                                    height="22"
-                                    viewBox="0 0 24 24"
-                                    fill="white"
-                                  >
-                                    <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
-                                  </svg>
-                                  <span className="text-[9px] font-medium tracking-wide text-white">
-                                    Inbox
-                                  </span>
-                                </div>
-                                <div className="flex flex-col items-center gap-1 opacity-60 transition-opacity hover:opacity-100">
-                                  <div className="h-5 w-5 rounded-full bg-white/90" />
-                                  <span className="text-[9px] font-medium tracking-wide text-white">
-                                    Me
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="mx-auto mt-4 h-1.5 w-[120px] rounded-full bg-white/80" />
-                            </div>
-                          </div>
-                        </div>
-
-
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
         </div>
       </div>

@@ -38,31 +38,54 @@ export const authConfig = {
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        code: { label: "Code", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.email || !credentials?.code) {
           return null;
         }
 
         const email = credentials.email as string;
-        const password = credentials.password as string;
+        const code = credentials.code as string;
 
-        const user = await db.user.findUnique({
+        // Verify the code
+        const verificationToken = await db.verificationToken.findUnique({
+          where: {
+            identifier_token: {
+              identifier: email,
+              token: code,
+            },
+          },
+        });
+
+        if (!verificationToken || verificationToken.expires < new Date()) {
+          return null;
+        }
+
+        // Delete the token after use
+        await db.verificationToken.delete({
+          where: {
+            identifier_token: {
+              identifier: email,
+              token: code,
+            },
+          },
+        });
+
+        // Find or create user
+        let user = await db.user.findUnique({
           where: { email },
         });
 
         if (!user) {
-          return null;
+          user = await db.user.create({
+            data: {
+              email,
+              emailVerified: new Date(),
+            },
+          });
         }
 
-        // OAuth-created accounts have no password — credentials login not allowed
-        if (!user.password) return null;
-
-        const passwordMatch = await comparePasswords(password, user.password);
-        if (!passwordMatch) return null;
-
-        // Only return fields needed by NextAuth — never expose the password hash
         return {
           id: user.id,
           email: user.email,

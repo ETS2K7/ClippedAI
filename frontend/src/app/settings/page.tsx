@@ -100,21 +100,9 @@ export default function SettingsPage() {
         {/* ── Page header ── */}
         <div className="border-b border-white/[0.1]">
           <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-            <div className="mb-6 flex items-center gap-3">
-              <Link href="/dashboard">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full font-mono text-[10px] tracking-widest text-white/40 uppercase hover:bg-white/[0.06] hover:text-white"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  BACK
-                </Button>
-              </Link>
-            </div>
             <div className="mb-2 flex items-center gap-3">
-              <h1 className="font-syne text-3xl leading-none font-black tracking-tighter text-white uppercase sm:text-4xl md:text-5xl">
-                SETTINGS.
+              <h1 className="font-syne text-3xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-4xl md:text-5xl">
+                Settings.
               </h1>
             </div>
             <p className="mt-3 font-mono text-[10px] tracking-widest text-white/40 uppercase sm:mt-4 sm:text-xs">

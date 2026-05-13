@@ -9,6 +9,8 @@ type ProcessingOptions = {
   includeBroll?: boolean;
   outputFormat?: "vertical" | "original";
   addSubtitles?: boolean;
+  specificMoments?: string;
+  timeframe?: [number, number];
 };
 
 export async function POST(req: Request) {
@@ -46,6 +48,8 @@ export async function POST(req: Request) {
       includeBroll: Boolean(body?.include_broll),
       outputFormat: body?.output_format === "original" ? "original" : "vertical",
       addSubtitles: body?.add_subtitles !== false,
+      specificMoments: body?.specific_moments,
+      timeframe: body?.timeframe,
     };
 
     if (processingOptions.includeBroll) {
@@ -298,6 +302,9 @@ async function dispatchModalJobToModal(
       caption_template: processingOptions.captionTemplate,
       add_subtitles: processingOptions.addSubtitles !== false,
       output_format: processingOptions.outputFormat ?? "vertical",
+      specific_moments: processingOptions.specificMoments,
+      timeframe_start: processingOptions.timeframe?.[0],
+      timeframe_end: processingOptions.timeframe?.[1],
     }),
     redirect: "manual",
   });

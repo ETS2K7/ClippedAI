@@ -81,7 +81,7 @@ export const StickyNarrative = () => {
   return (
     <section
       ref={containerRef}
-      className="relative h-[400vh] bg-[#FAFAFA] text-black"
+      className="relative h-[400vh] bg-[#121212] text-white"
     >
       {/* Sticky Checkpoint */}
       <div className="perspective-1000 sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden">
@@ -92,19 +92,19 @@ export const StickyNarrative = () => {
         >
           <motion.div
             style={{ x: bgText1X }}
-            className="text-[15vw] leading-none font-black tracking-tighter whitespace-nowrap text-black uppercase mix-blend-overlay"
+            className="text-[15vw] leading-none font-black tracking-tighter whitespace-nowrap text-white uppercase mix-blend-overlay"
           >
             RAW FOOTAGE
           </motion.div>
           <motion.div
             style={{ x: bgText2X }}
-            className="border-text font-outline-2 text-[15vw] leading-none font-black tracking-tighter whitespace-nowrap text-black text-transparent uppercase"
+            className="border-text font-outline-2 text-[15vw] leading-none font-black tracking-tighter whitespace-nowrap text-white text-transparent uppercase"
           >
             AI EXTRACTION
           </motion.div>
           <motion.div
             style={{ x: bgText3X }}
-            className="text-[15vw] leading-none font-black tracking-tighter whitespace-nowrap text-black uppercase mix-blend-overlay"
+            className="text-[15vw] leading-none font-black tracking-tighter whitespace-nowrap text-white uppercase mix-blend-overlay"
           >
             VIRAL PAYLOAD
           </motion.div>
@@ -113,7 +113,7 @@ export const StickyNarrative = () => {
         {/* Floating Glass Mock */}
         <motion.div
           style={{ rotateX, rotateY, scale, transformStyle: "preserve-3d" }}
-          className="relative z-10 flex h-[680px] w-[340px] flex-col overflow-hidden rounded-[50px] border-[8px] border-black bg-white shadow-[0_40px_100px_-20px_rgba(0,0,0,0.2)]"
+          className="relative z-10 flex h-[680px] w-[340px] flex-col overflow-hidden rounded-[50px] border-[8px] border-[#1a1a1a] bg-black shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]"
         >
           {/* Top Notch Area */}
           <div className="absolute inset-x-0 top-0 z-50 flex h-8 justify-center">
@@ -123,10 +123,10 @@ export const StickyNarrative = () => {
           {/* Phase 1: Endless Raw Timeline */}
           <motion.div
             style={{ opacity: rawPhase }}
-            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-neutral-100 p-6 text-center"
+            className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#0a0a0a] p-6 text-center"
           >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.05)_0,transparent_100%)]" />
-            <div className="relative mb-8 flex w-full flex-1 items-center overflow-hidden rounded-2xl border border-black/10 bg-white shadow-sm">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.05)_0,transparent_100%)]" />
+            <div className="relative mb-8 flex w-full flex-1 items-center overflow-hidden rounded-2xl border border-white/10 bg-[#111] shadow-sm">
               <motion.div
                 animate={{ x: ["0%", "-100%"] }}
                 transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
@@ -137,7 +137,7 @@ export const StickyNarrative = () => {
                   return (
                     <div
                       key={i}
-                      className="w-1 rounded-t-sm bg-black"
+                      className="w-1 rounded-t-sm bg-white"
                       style={{ height: `${pseudoRandomHeight}%` }}
                     ></div>
                   );
@@ -197,7 +197,7 @@ export const StickyNarrative = () => {
           {/* Phase 3: The Output */}
           <motion.div
             style={{ opacity: finalPhase }}
-            className="absolute inset-0 z-30 flex flex-col bg-white p-4 pt-12 shadow-inner shadow-black/20 will-change-[opacity]"
+            className="absolute inset-0 z-30 flex flex-col bg-[#0a0a0a] p-4 pt-12 shadow-inner shadow-white/5 will-change-[opacity]"
           >
             <div className="group relative isolate flex flex-1 items-center justify-center overflow-hidden rounded-[32px] bg-black shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-br from-neutral-700 via-neutral-900 to-black transition-all duration-700 group-hover:scale-105" />
@@ -233,18 +233,18 @@ export const StickyNarrative = () => {
                 </div>
               </div>
             </div>
-            <div className="mt-4 flex items-center justify-between rounded-3xl border border-black/10 bg-neutral-100 p-4">
+            <div className="mt-4 flex items-center justify-between rounded-3xl border border-white/10 bg-white/5 p-4 text-white">
               <div className="flex flex-col">
-                <span className="mb-1 font-mono text-xs font-bold text-neutral-500">
+                <span className="mb-1 font-mono text-xs font-bold text-white/40">
                   BATCH_01_COMPLETE
                 </span>
-                <span className="text-lg font-black text-black">
+                <span className="text-lg font-black">
                   14 CLIPS READY
                 </span>
               </div>
               <button
                 aria-label="Play clips"
-                className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-white shadow-lg shadow-black/20 transition-transform hover:scale-110"
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-lg shadow-black/20 transition-transform hover:scale-110"
               >
                 <Play className="ml-1 h-5 w-5" aria-hidden="true" />
               </button>
@@ -255,10 +255,10 @@ export const StickyNarrative = () => {
         {/* Desktop Side Narrative with Scrubbing Timeline */}
         <div className="absolute right-16 z-20 hidden h-full w-[400px] flex-col justify-between py-32 xl:flex">
           {/* Track line mapping the progress */}
-          <div className="absolute top-32 bottom-32 left-[-40px] w-1 overflow-hidden rounded-full bg-black/10">
+          <div className="absolute top-32 bottom-32 left-[-40px] w-1 overflow-hidden rounded-full bg-white/10">
             <motion.div
               style={{ height: progressHeight }}
-              className="w-full rounded-full bg-black shadow-[0_0_10px_black]"
+              className="w-full rounded-full bg-white shadow-[0_0_10px_white]"
             ></motion.div>
           </div>
 
@@ -338,7 +338,7 @@ export const StickyNarrative = () => {
 
       <style jsx>{`
         .font-outline-2 {
-          -webkit-text-stroke: 4px rgba(0, 0, 0, 0.05);
+          -webkit-text-stroke: 4px rgba(255, 255, 255, 0.05);
         }
         .perspective-1000 {
           perspective: 1500px;

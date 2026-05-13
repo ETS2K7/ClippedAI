@@ -99,25 +99,23 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
         <div className="flex flex-1 flex-col bg-transparent p-5">
           {/* Header row: clip number + date */}
           <div className="mb-3 flex items-start justify-between">
-            <h3 className="font-syne text-xl font-black tracking-widest text-white uppercase">
+            <h3 className="font-syne text-xl font-black tracking-[0.08em] text-white/98 uppercase">
               CLIP {String(index + 1).padStart(2, "0")}
             </h3>
-            <p className="font-mono text-[10px] font-bold tracking-widest text-white/30 tabular-nums">
+            <p className="font-mono text-[10px] font-bold tracking-[0.04em] text-white/45 tabular-nums">
               {new Date(clip.created_at).toLocaleDateString()}
             </p>
           </div>
 
           {/* LLM-generated title */}
-          {clip.clip_title && (
-            <p className="mb-3 font-mono text-sm leading-snug text-white/80">
+            <p className="mb-3 font-mono text-sm leading-relaxed font-medium text-white/72">
               {clip.clip_title}
             </p>
-          )}
 
           {/* Virality score */}
           {clip.virality_score !== null && clip.virality_score !== undefined && (
             <div className="mb-4 flex items-center gap-2">
-              <span className="shrink-0 font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase">Virality</span>
+              <span className="shrink-0 font-mono text-[10px] font-black tracking-[0.08em] text-white/45 uppercase">Virality</span>
               <div className="flex flex-1 items-center gap-1.5">
                 <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
                   <div
@@ -137,7 +135,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
             <Button
               size="default"
               variant="outline"
-              className="flex-1 rounded-md border-white/20 font-mono text-[10px] font-bold tracking-widest uppercase transition-all hover:bg-white hover:text-black hover:border-white"
+              className="flex-1 rounded-md border-white/20 font-mono text-[11px] font-black tracking-[0.08em] uppercase transition-all hover:bg-white hover:text-black hover:border-white text-white/95"
               asChild
             >
               <a
@@ -151,7 +149,7 @@ function LazyClipCard({ clip, index, onDelete, autoLoad = false, onVideoPlay, on
             <Button
               size="default"
               variant="outline"
-              className="flex-1 rounded-md border-white/10 font-mono text-[10px] font-bold tracking-widest text-white/40 uppercase transition-all hover:text-red-500 hover:border-red-500"
+              className="flex-1 rounded-md border-white/10 font-mono text-[11px] font-bold tracking-[0.08em] text-white/45 uppercase transition-all hover:text-red-500 hover:border-red-500"
               onClick={() => onDelete(clip.id)}
             >
               <Trash2 className="mr-2 h-4 w-4" />
@@ -435,7 +433,7 @@ export default function TaskPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="rounded-md font-mono text-[10px] tracking-widest text-white/40 uppercase hover:text-white"
+                  className="rounded-md font-mono text-[11px] font-bold tracking-[0.08em] text-white/70 uppercase hover:text-white"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   BACK
@@ -479,10 +477,10 @@ export default function TaskPage() {
                         setIsEditing(true);
                       }}
                     >
-                      <h1 className="font-syne text-2xl leading-tight font-black tracking-tighter text-white uppercase transition-colors group-hover:text-white/80 md:text-3xl">
+                      <h1 className="font-syne text-2xl leading-tight font-black tracking-tighter text-white uppercase transition-colors group-hover:text-white/80 md:text-3xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
                         {task?.source_title ?? "GENERATION"}
                       </h1>
-                      <Edit2 className="h-5 w-5 text-white/20 transition-colors group-hover:text-white" />
+                      <Edit2 className="h-5 w-5 text-white/45 transition-colors group-hover:text-white" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="rounded-md bg-white text-[10px] font-bold tracking-widest text-black uppercase">
@@ -495,21 +493,21 @@ export default function TaskPage() {
 
           {task && (
             <div className="mt-6 flex items-center gap-3 pb-2">
-              <span className="font-mono text-[10px] font-bold tracking-widest text-white/50 tabular-nums">
+              <span className="font-mono text-[10px] font-bold tracking-[0.04em] text-white/70 tabular-nums">
                 {new Date(task.created_at).toLocaleDateString()}
               </span>
               <span className="text-white/10">•</span>
-              <span className="font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
+              <span className="font-mono text-[10px] font-bold tracking-[0.08em] text-white/70 uppercase">
                 {task.source_type}
               </span>
               <span className="text-white/10">•</span>
               <span
-                className={`rounded-md border px-2 py-0.5 text-[10px] font-bold tracking-widest uppercase ${
+                className={`rounded-md border px-2.5 py-1 text-[10px] font-black tracking-[0.08em] uppercase ${
                   task.status === "completed"
                     ? "border-white bg-white text-black"
                     : task.status === "failed" || task.status === "error"
                       ? "border-red-500 bg-red-500 text-white"
-                      : "border-white/30 bg-transparent text-white"
+                      : "border-white/30 bg-transparent text-white/90"
                 }`}
               >
                 {task.status}
@@ -569,19 +567,19 @@ export default function TaskPage() {
                   WAITING ON SONY CLOUD.
                 </div>
               </div>
-              <p className="font-mono text-sm tracking-wide text-white/40 uppercase">
+              <p className="font-mono text-sm font-medium tracking-wide text-white/72 uppercase">
                 {task.status === "queued" ? "Queued" : "Processing"}
               </p>
               {/* Live elapsed timer */}
               {(process.env.NODE_ENV === "development" || session?.user?.email === "ebelthomasseiko@gmail.com") && (
                 <div className="mt-4 flex items-center gap-2 rounded-md border border-white/10 px-4 py-2">
-                  <Clock className="h-3.5 w-3.5 text-white/30" />
-                  <span className="font-mono text-2xl font-black tabular-nums tracking-widest text-white">
+                  <Clock className="h-3.5 w-3.5 text-white/45" />
+                  <span className="font-mono text-2xl font-black tabular-nums tracking-widest text-white/98">
                     {formatElapsed(displayElapsed)}
                   </span>
                 </div>
               )}
-              <p className="mt-3 text-[10px] font-bold tracking-widest text-white/20 uppercase">
+              <p className="mt-3 text-[10px] font-black tracking-[0.08em] text-white/45 uppercase">
                 AUTO-REFRESHING...
               </p>
             </div>
@@ -598,11 +596,11 @@ export default function TaskPage() {
               <CardContent className="p-8 text-center">
                 <div className="mb-4 text-red-400">
                   <AlertCircle className="mx-auto mb-4 h-12 w-12" />
-                  <h2 className="font-syne text-2xl font-black tracking-widest text-white uppercase">
+                  <h2 className="font-syne text-2xl font-black tracking-widest text-white/98 uppercase">
                     PROCESSING FAILED.
                   </h2>
                 </div>
-                <p className="mb-8 font-mono text-xs tracking-widest text-white/40 uppercase">
+                <p className="mb-8 font-mono text-xs font-medium tracking-[0.04em] text-white/70 uppercase">
                   There was an error processing your video.
                 </p>
                 <div className="flex gap-4 justify-center">
@@ -665,8 +663,8 @@ export default function TaskPage() {
             </Card>
           ) : (
             <div className="pb-20">
-              <div className="mb-6 flex items-center gap-2 font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
-                <Clapperboard className="h-4 w-4 text-white" />
+              <div className="mb-6 flex items-center gap-2 font-mono text-[11px] font-bold tracking-[0.08em] text-white/72 uppercase">
+                <Clapperboard className="h-4 w-4 text-white/90" />
                 <span>
                   {clips.length} clip{clips.length !== 1 ? "s" : ""} generated
                 </span>

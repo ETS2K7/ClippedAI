@@ -119,6 +119,9 @@ class ProcessVideoRequest(BaseModel):
     caption_template: str | None = None
     add_subtitles: bool = True
     output_format: str = "vertical"
+    specific_moments: str | None = None
+    timeframe_start: float | None = None
+    timeframe_end: float | None = None
 
 image = (modal.Image.debian_slim(python_version="3.10")
     .apt_install(["ffmpeg", "libgl1-mesa-glx", "libsm6", "libxext6", "wget", "git", "fontconfig"])
@@ -562,14 +565,36 @@ def process_video_cpu_wrapper(request_dict: dict):
                             f"S3 object not found ({request.s3_key}) and no YouTube URL to recover from. "
                             "Please re-upload the file."
                         ) from e
+                    ) from e
                 else:
                     raise
+
+        # ── CREDIT SAVER: Timeframe Trimming ─────────────────────────────
+        if request.timeframe_start is not None and request.timeframe_end is not None:
+            if request.timeframe_end > request.timeframe_start:
+                timer.begin("timeframe_trimming")
+                trimmed_path = base_dir / "trimmed_input.mp4"
+                duration = request.timeframe_end - request.timeframe_start
+                logger.info(f"[Credit Saver] Trimming to {request.timeframe_start}s - {request.timeframe_end}s")
+                
+                # Use ffmpeg to trim the video before transcription/processing
+                trim_cmd = [
+                    "ffmpeg", "-y", 
+                    "-ss", str(request.timeframe_start), 
+                    "-i", str(video_path), 
+                    "-t", str(duration), 
+                    "-c", "copy", # Fast copy
+                    str(trimmed_path)
+                ]
+                subprocess.run(trim_cmd, check=True)
+                video_path = trimmed_path
+                logger.info("[Credit Saver] Trimming complete")
             
         timer.begin("transcription")
         words = transcribe(str(video_path), request.s3_key, remote_cache=transcript_cache)
         
         timer.begin("clip_selection")
-        clips = select_clips(words)
+        clips = select_clips(words, request.specific_moments)
         
         # Flush timer to get accurate timings for CPU phases
         timer._flush()

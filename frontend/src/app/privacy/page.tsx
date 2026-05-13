@@ -50,7 +50,6 @@ export default function PrivacyPolicy() {
               body: "We collect personal information that you voluntarily provide to us when you register on the Services, express an interest in obtaining information about us or our products and Services, when you participate in activities on the Services, or otherwise when you contact us.",
               bullets: [
                 "Personal Information: Names, email addresses, usernames, and passwords.",
-                "Payment Data: We may collect data necessary to process your payment if you make purchases, such as your payment instrument number. All payment data is stored by our payment processor (Dodo Payments).",
                 "Media: Videos and audio files you upload or link for processing through our platform.",
               ],
             },
@@ -59,7 +58,6 @@ export default function PrivacyPolicy() {
               body: "We use personal information collected via our Services for a variety of business purposes described below:",
               bullets: [
                 "To facilitate account creation and logon process.",
-                "To fulfill and manage your orders and subscriptions.",
                 "To provide and deliver the video processing services you request.",
                 "To respond to user inquiries/offer support to users.",
               ],
@@ -70,7 +68,7 @@ export default function PrivacyPolicy() {
             },
             {
               title: "5. Third-Party Services",
-              body: "We may share your data with third-party vendors, service providers, contractors, or agents who perform services for us or on our behalf. These include payment processing (Dodo Payments), AI Transcription (AssemblyAI), and AI processing models (Groq/Llama).",
+              body: "We may share your data with third-party vendors, service providers, contractors, or agents who perform services for us or on our behalf. These include AI Transcription (AssemblyAI) and AI processing models (Groq/Llama).",
             },
             {
               title: "6. Data Retention and Security",
@@ -118,7 +116,6 @@ export default function PrivacyPolicy() {
           <span>© 2026 ClippedAI</span>
           <div className="flex gap-6">
             <Link href="/terms" className="transition-colors hover:text-white/50">Terms</Link>
-            <Link href="/pricing" className="transition-colors hover:text-white/50">Pricing</Link>
           </div>
         </div>
       </div>

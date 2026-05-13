@@ -154,22 +154,10 @@ export default function UpgradeClient() {
         {/* ── Page header ─────────────────────────────────────── */}
         <div className="border-b border-white/[0.06]">
           <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-            <div className="mb-6">
-              <Link href="/dashboard">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full font-mono text-[10px] tracking-widest text-white/40 uppercase hover:bg-white/[0.06] hover:text-white"
-                >
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  BACK
-                </Button>
-              </Link>
-            </div>
-            <h1 className="font-syne text-4xl font-black leading-none tracking-tighter text-white uppercase sm:text-5xl">
-              {hasPro ? "MANAGE PLAN." : "UPGRADE."}
+            <h1 className="font-syne text-4xl font-black leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-5xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
+              {hasPro ? "Manage Plan." : "Upgrade."}
             </h1>
-            <p className="mt-3 font-mono text-xs tracking-widest text-white/30 uppercase">
+            <p className="mt-3 font-mono text-[11px] font-medium tracking-[0.04em] text-white/72 uppercase">
               {hasPro
                 ? "You're on Pro. Top up credits or manage your subscription below."
                 : "Choose the plan that fits your workflow. Cancel anytime."}
@@ -180,7 +168,7 @@ export default function UpgradeClient() {
         {/* ── Plans (only show if not already on Pro) ─────────── */}
         {!hasPro && (
           <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-            <p className="mb-6 font-mono text-[10px] font-bold tracking-widest text-white/25 uppercase">
+            <p className="mb-6 font-mono text-[10px] font-bold tracking-[0.08em] text-white/45 uppercase">
               Choose a plan
             </p>
             <div className="grid gap-4 md:grid-cols-3">
@@ -222,7 +210,7 @@ export default function UpgradeClient() {
                       <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.05]">
                         <Icon className="h-3.5 w-3.5 text-white/60" />
                       </div>
-                      <h2 className="font-syne text-lg font-black tracking-tight text-white uppercase">
+                      <h2 className="font-syne text-lg font-black tracking-[0.04em] text-white/98 uppercase">
                         {plan.name}
                       </h2>
                     </div>
@@ -256,7 +244,7 @@ export default function UpgradeClient() {
                           )}
                         </div>
                         {plan.credits !== null && (
-                          <p className="mt-1 font-mono text-[10px] tracking-wider text-white/25 uppercase">
+                          <p className="mt-1 font-mono text-[10px] font-bold tracking-[0.06em] text-white/45 uppercase">
                             {plan.credits} credits / month
                           </p>
                         )}
@@ -270,8 +258,8 @@ export default function UpgradeClient() {
                       <ul className="mb-6 flex-1 space-y-2">
                         {plan.features.map((f) => (
                           <li key={f} className="flex items-center gap-2.5">
-                            <Check className="h-3 w-3 shrink-0 text-white/50" />
-                            <span className="font-mono text-[10px] tracking-wide text-white/50 uppercase">{f}</span>
+                            <Check className="h-3 w-3 shrink-0 text-white/72" />
+                            <span className="font-mono text-[10px] font-medium tracking-wide text-white/72 uppercase">{f}</span>
                           </li>
                         ))}
                       </ul>
@@ -323,7 +311,7 @@ export default function UpgradeClient() {
         <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
           <div className="mb-6 flex items-center gap-2">
             <Coins className="h-3.5 w-3.5 text-amber-400/70" />
-            <p className="font-mono text-[10px] font-bold tracking-widest text-white/25 uppercase">
+            <p className="font-mono text-[10px] font-bold tracking-[0.08em] text-white/45 uppercase">
               {hasPro ? "Top up credits — never expire" : "Pro subscribers only — credits never expire"}
             </p>
           </div>
@@ -342,7 +330,7 @@ export default function UpgradeClient() {
                     <h3 className="font-syne mb-0.5 text-xl font-black tracking-tight text-white uppercase">
                       {pack.name}
                     </h3>
-                    <p className="mb-4 font-mono text-[9px] tracking-wider text-white/25 uppercase">
+                    <p className="mb-4 font-mono text-[9px] font-bold tracking-[0.06em] text-white/45 uppercase">
                       ${pack.perClip} per clip
                     </p>
                     <span className="font-syne mb-5 text-3xl font-black tracking-tighter text-white">
@@ -372,7 +360,7 @@ export default function UpgradeClient() {
         {/* ── Reassurance footer ───────────────────────────────── */}
         <div className="border-t border-white/[0.06]">
           <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-            <p className="font-mono text-[10px] tracking-widest text-white/20 uppercase">
+            <p className="font-mono text-[10px] font-medium tracking-[0.08em] text-white/45 uppercase">
               Secure checkout via Dodo Payments · Cancel anytime · 7-day money-back on subscriptions
             </p>
           </div>

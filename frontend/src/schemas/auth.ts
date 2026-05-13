@@ -2,15 +2,12 @@ import { z } from "zod";
 
 export const signupSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128, "Password must be under 128 characters"),
+  code: z.string().length(6, "Verification code must be 6 digits"),
 });
 
 export const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
+  code: z.string().length(6, "Verification code must be 6 digits"),
 });
 
 export type SignupFormValues = z.infer<typeof signupSchema>;
