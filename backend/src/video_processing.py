@@ -163,11 +163,23 @@ def merge_and_cleanup(tracked_vid: str, extract_vid: str, sub_file: str | None, 
             ass_filter = f"ass={safe_sub}"
         cmd.extend(["-vf", ass_filter])
 
+    if use_gpu:
+        cmd.extend([
+            "-c:v", "h264_nvenc",
+            "-pix_fmt", "yuv420p",
+            "-preset", "p4",
+            "-rc", "constqp",
+            "-qp", "28",
+        ])
+    else:
+        cmd.extend([
+            "-c:v", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-preset", "veryfast",
+            "-crf", "23",
+        ])
+
     cmd.extend([
-        "-c:v", "libx264",
-        "-pix_fmt", "yuv420p",
-        "-preset", "veryfast",
-        "-crf", "23",
         "-c:a", "aac",
         "-map", "0:v:0",
         "-map", "1:a:0?",

@@ -565,7 +565,6 @@ def process_video_cpu_wrapper(request_dict: dict):
                             f"S3 object not found ({request.s3_key}) and no YouTube URL to recover from. "
                             "Please re-upload the file."
                         ) from e
-                    ) from e
                 else:
                     raise
 
