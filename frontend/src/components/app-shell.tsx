@@ -32,9 +32,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="relative min-h-screen bg-black text-white selection:bg-white selection:text-black">
+    <div className="relative min-h-screen text-white selection:bg-white selection:text-black">
       {/* ── Ambient Depth Background ─────────────────────────── */}
-      <div className="pointer-events-none fixed inset-0 z-[-1] overflow-hidden bg-gradient-to-b from-[#1a1a1a] to-[#000000]">
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-gradient-to-b from-[#1a1a1a] to-[#000000]">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:80px_80px]" />
         
         <motion.div
