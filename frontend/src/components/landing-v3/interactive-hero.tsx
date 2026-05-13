@@ -362,7 +362,7 @@ export const InteractiveHero = () => {
                     ease: [0.22, 1, 0.36, 1],
                     delay: 0.15,
                   }}
-                  className="block text-white"
+                  className="block text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500"
                 >
                   SKIP THE
                 </motion.span>

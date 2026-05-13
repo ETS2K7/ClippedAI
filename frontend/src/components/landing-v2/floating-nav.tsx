@@ -67,7 +67,7 @@ export const FloatingNav = ({
             height={20}
             className="rounded-sm"
           />
-          <span className="font-syne text-xl leading-none font-black tracking-tighter text-white uppercase">
+          <span className="font-syne text-xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500 uppercase">
             CLIPPEDAI
           </span>
         </Link>
