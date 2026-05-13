@@ -101,8 +101,8 @@ class PipelineTimer:
         logger.info(f"[{self.run_id[:8]}] Pipeline complete in {total:.1f}s — {parts}")
         return {"total_seconds": round(total, 1), "phases": {n: round(t, 1) for n, t in self.phases}}
 
-S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "clippedai-ap-south-1")
-S3_REGION = os.environ.get("AWS_REGION", "ap-south-1")
+S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "clippedai-7137")
+S3_REGION = os.environ.get("AWS_REGION", "us-east-1")
 
 class ProcessVideoRequest(BaseModel):
     s3_key: str
