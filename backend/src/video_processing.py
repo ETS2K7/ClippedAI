@@ -515,9 +515,9 @@ def track_speaker_and_frame(
     with open(clip_file, "rb") as f:
         _video_hash = hashlib.sha256(f.read()).hexdigest()
 
-    if remote_cache is not None and _video_hash in remote_cache:
-        logger.info(f"[FastASD] 🟢 Remote cache hit — skipping TalkNet (key={_video_hash[:8]})")
-        tracking_data = remote_cache[_video_hash]
+    # FastASD caching disabled per user request
+    if False:
+        pass
     else:
         try:
             with open(clip_file, "rb") as f:
@@ -536,12 +536,7 @@ def track_speaker_and_frame(
             import json
             tracking_data = json.loads(result_json)
                 
-            if remote_cache is not None:
-                try:
-                    remote_cache[_video_hash] = tracking_data
-                    logger.info(f"[FastASD] Cached TalkNet data to remote Dict")
-                except Exception as e:
-                    logger.warning(f"[FastASD] Remote cache write failed: {e}")
+            # FastASD cache writes disabled per user request
                     
         except Exception as e:
             logger.error(f"Fast-ASD tracker failed: {e}")

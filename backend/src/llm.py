@@ -49,11 +49,7 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
     _cache_file = pathlib.Path.home() / ".clippedai" / "cache" / "llm" / f"llm_{_cache_key}.json"
     _cache_file.parent.mkdir(parents=True, exist_ok=True)
 
-    if _cache_file.exists():
-        try:
-            cached = json.loads(_cache_file.read_text())
-            if cached: return cached
-        except: pass
+    # Cache reads disabled per user request
 
     logger.info(f"[LLM] Selection Pass calling Gemini... (Specific: {specific_moments})")
     raw_clips = _call_gemini_selection(prompt, specific_moments)
@@ -96,9 +92,7 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
         else:
             clip["romanized_words"] = []
 
-    try:
-        _cache_file.write_text(json.dumps(validated_clips))
-    except: pass
+    # Cache writes disabled per user request
 
     return validated_clips
 

@@ -87,25 +87,8 @@ def transcribe(video_path: str, _video_url: str = "", remote_cache=None) -> List
         _tcache_file = None
         _video_hash = "<unknown>"
 
-    if remote_cache is not None and _video_hash in remote_cache:
-        logger.info(f"[Transcript] 🟢 Remote cache hit — skipping AssemblyAI (key={_video_hash[:8]})")
-        return remote_cache[_video_hash]
-
-    if _tcache_file and _tcache_file.exists():
-        try:
-            words = _json.loads(_tcache_file.read_text("utf-8"))
-            if isinstance(words, list) and len(words) > 0:
-                logger.info(
-                    f"[Transcript] 🟢 Cache hit — skipping AssemblyAI "
-                    f"(key={_video_hash[:8]}, {len(words)} words)"
-                )
-                return words
-            else:
-                logger.warning("[Transcript] Cache entry empty/invalid, re-transcribing.")
-        except Exception as _ce:
-            logger.warning(f"[Transcript] Cache read failed ({_ce}), re-transcribing.")
-
-    logger.info(f"[Transcript] 🔴 Cache miss (key={_video_hash[:8]}). Calling AssemblyAI...")
+    # Caching disabled per user request to force cold execution paths
+    logger.info(f"[Transcript] 🔴 Cache disabled (key={_video_hash[:8]}). Calling AssemblyAI...")
 
     # Extract lightweight audio for upload (P0 optimization)
     upload_path = _extract_audio(video_path)
@@ -188,22 +171,7 @@ def transcribe(video_path: str, _video_url: str = "", remote_cache=None) -> List
             words = data["words"]
             logger.info(f"Transcription complete after {attempt + 1} polls.")
 
-            # Write transcript cache
-            if _tcache_file:
-                try:
-                    _tcache_file.write_text(_json.dumps(words), "utf-8")
-                    logger.info(
-                        f"[Transcript] Cached {len(words)} words to {_tcache_file.name}"
-                    )
-                except Exception as _we:
-                    logger.warning(f"[Transcript] Local cache write failed (non-fatal): {_we}")
-
-            if remote_cache is not None:
-                try:
-                    remote_cache[_video_hash] = words
-                    logger.info(f"[Transcript] Cached {len(words)} words to remote Dict")
-                except Exception as _we:
-                    logger.warning(f"[Transcript] Remote cache write failed (non-fatal): {_we}")
+            # Cache writes disabled per user request
 
             return words
         
