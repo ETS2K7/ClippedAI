@@ -26,7 +26,7 @@ if (redisUrl && redisToken) {
 export async function middleware(request: NextRequest) {
   // Only apply rate limiting to auth and specific API routes
   const path = request.nextUrl.pathname;
-  const isRateLimitedPath = path.startsWith("/api/auth") || path.startsWith("/api/checkout") || path.startsWith("/api/webhooks") || path.startsWith("/api/feedback");
+  const isRateLimitedPath = path.startsWith("/api/auth") || path.startsWith("/api/checkout") || path.startsWith("/api/webhooks") || path.startsWith("/api/feedback") || path.startsWith("/auth/oauth/login");
 
   if (ratelimit && isRateLimitedPath) {
     // Get the IP address from headers
@@ -68,5 +68,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/api/:path*',
+    '/auth/:path*',
   ],
 };

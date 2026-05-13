@@ -81,7 +81,7 @@ export default function SettingsPage() {
           <p className="mb-8 font-mono text-xs tracking-widest text-white/40 uppercase">
             You need to sign in to access your settings.
           </p>
-          <Link href="/login">
+          <Link href="/auth/oauth/login">
             <Button
               size="lg"
               className="font-syne rounded-xl bg-white font-black tracking-widest text-black uppercase hover:bg-white/90"

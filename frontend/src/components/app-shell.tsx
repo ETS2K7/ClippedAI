@@ -21,7 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   const handleSignOut = async () => {
     await signOut();
-    window.location.href = "/login";
+    window.location.href = "/auth/oauth/login";
   };
 
   const navItems = [

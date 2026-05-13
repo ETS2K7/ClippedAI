@@ -182,7 +182,7 @@ export default function Home() {
   useEffect(() => {
     if (!isPending && !session?.user) {
       const currentUrl = window.location.href;
-      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
+      router.push(`/auth/oauth/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
     }
   }, [session, isPending, router]);
 

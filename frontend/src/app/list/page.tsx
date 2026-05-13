@@ -358,7 +358,7 @@ export default function ListPage() {
           <p className="mb-8 font-mono text-xs font-medium tracking-[0.04em] text-white/70 uppercase">
             You need to be signed in to view your generations.
           </p>
-          <Link href="/login">
+          <Link href="/auth/oauth/login">
             <Button
               size="lg"
               className="font-syne rounded-md bg-white font-black tracking-widest text-black uppercase hover:bg-white/90"

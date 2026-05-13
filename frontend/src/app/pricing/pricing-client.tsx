@@ -35,7 +35,7 @@ const PLANS = [
     envKey: process.env.NEXT_PUBLIC_DODO_PLAN_STARTER ?? "",
     highlight: false,
     cta: "Start for free",
-    ctaHref: "/signup",
+    ctaHref: "/auth/oauth/login",
     isComingSoon: false,
   },
   {
@@ -134,14 +134,14 @@ export default function PricingClient() {
     { name: "Pricing", link: "/pricing", icon: <Zap className="h-4 w-4 text-white" /> },
     {
       name: session ? "Dashboard" : "Sign in",
-      link: session ? "/dashboard" : "/login",
+      link: session ? "/dashboard" : "/auth/oauth/login",
       icon: <Zap className="h-4 w-4 text-white" />,
     },
   ];
 
   async function handleCheckout(planId: string, type: "subscription" | "credits") {
     if (!session) {
-      router.push(`/login?next=/pricing`);
+      router.push(`/auth/oauth/login?next=/pricing`);
       return;
     }
     setLoading(planId);

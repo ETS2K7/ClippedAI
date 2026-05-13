@@ -37,7 +37,7 @@ function ResetPasswordForm() {
 
       if (res.ok) {
         toast.success("Password reset successfully. You can now log in.");
-        router.push("/login");
+        router.push("/auth/oauth/login");
       } else {
         const data = await res.json();
         toast.error(data.error || "Failed to reset password.");

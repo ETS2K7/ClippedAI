@@ -12,7 +12,7 @@ export default async function TasksLayout({
 }) {
   const session = await auth();
   if (!session?.user?.id) {
-    redirect("/login");
+    redirect("/auth/oauth/login");
   }
   return <SessionProvider session={session}>{children}</SessionProvider>;
 }
