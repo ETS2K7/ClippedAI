@@ -8,8 +8,10 @@ import { S3Client } from "@aws-sdk/client-s3";
 import { env } from "~/env";
 
 function createS3Client() {
+  const region = env.AWS_REGION || "ap-south-1";
   return new S3Client({
-    region: env.AWS_REGION,
+    region,
+    endpoint: `https://s3.${region}.amazonaws.com`,
     credentials: {
       accessKeyId: env.AWS_ACCESS_KEY_ID,
       secretAccessKey: env.AWS_SECRET_ACCESS_KEY,

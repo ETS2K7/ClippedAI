@@ -326,20 +326,40 @@ export default function Home() {
 
         const formData = new FormData();
         formData.append("video", fileRef.current);
-        const uploadResponse = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
+
+        const uploadResult = await new Promise<any>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("POST", "/api/upload", true);
+
+          xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+              const percentComplete = Math.round((event.loaded / event.total) * 94) + 5;
+              setProgress(percentComplete);
+              setStatusMessage(`Uploading video file... ${percentComplete}%`);
+            }
+          };
+
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                resolve(JSON.parse(xhr.responseText));
+              } catch {
+                reject(new Error("Failed to parse server response"));
+              }
+            } else {
+              try {
+                const errResp = JSON.parse(xhr.responseText);
+                reject(new Error(errResp.error || `Upload error: ${xhr.status}`));
+              } catch {
+                reject(new Error(`Upload error: ${xhr.status}`));
+              }
+            }
+          };
+
+          xhr.onerror = () => reject(new Error("Network error during upload"));
+          xhr.send(formData);
         });
 
-        if (!uploadResponse.ok) {
-          const uploadError = await parseApiError(
-            uploadResponse,
-            `Upload error: ${uploadResponse.status}`,
-          );
-          throw new Error(formatSupportMessage(uploadError));
-        }
-
-        const uploadResult = await uploadResponse.json();
         videoUrl = uploadResult.video_path;
       }
 
