@@ -34,7 +34,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen bg-black text-white selection:bg-white selection:text-black">
       {/* ── Ambient Depth Background ─────────────────────────── */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden bg-gradient-to-b from-[#1a1a1a] to-[#000000]">
+      <div className="pointer-events-none fixed inset-0 z-[-1] overflow-hidden bg-gradient-to-b from-[#1a1a1a] to-[#000000]">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] bg-[size:80px_80px]" />
         
         <motion.div
@@ -51,10 +51,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* ── Floating Navigation Pill ────────────────────────── */}
-      <div className="fixed inset-x-0 top-4 z-50 flex justify-center px-4">
+      <div className="fixed inset-x-0 top-6 z-50 flex justify-center px-4">
         <motion.nav 
-          initial={false}
-          className="flex h-12 w-full max-w-[700px] items-center justify-between rounded-full border border-white/[0.08] bg-black/80 px-4 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="flex h-12 w-auto items-center justify-between gap-6 rounded-full border border-white/[0.08] bg-black/80 px-6 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.7)] backdrop-blur-xl"
         >
           {/* Logo Section */}
           <Link href="/dashboard" className="group flex items-center gap-2.5">
@@ -71,7 +72,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Nav Links */}
-          <div className="flex flex-1 items-center justify-center gap-0.5">
+          <div className="flex items-center justify-center gap-1 sm:gap-2">
             {navItems.map((item) => (
               <Link
                 key={item.link}
@@ -90,7 +91,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* User Actions Section */}
-          <div className="flex items-center gap-1.5 border-l border-white/20 pl-3 md:gap-3">
+          <div className="flex items-center gap-1.5 border-l border-white/20 pl-4 md:gap-3">
             {session?.user && (
               <>
                 <button

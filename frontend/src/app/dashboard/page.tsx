@@ -547,65 +547,6 @@ export default function Home() {
         {/* ── Main Content ── */}
         <div className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
           {/* Latest Generation Banner */}
-          {latestTask && (
-            <Link href={`/tasks/${latestTask.id}`} className="mb-8 block">
-              <div className="brutal-card group flex items-center justify-between p-3 sm:p-4">
-                <div className="flex min-w-0 items-center gap-4">
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 sm:h-10 sm:w-10">
-                    <Film className="h-4 w-4 text-white sm:h-5 sm:w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-mono text-xs font-bold tracking-wider text-white uppercase sm:text-sm sm:tracking-widest">
-                      {latestTask.source_title}
-                    </p>
-                    <div className="mt-0.5 flex items-center gap-1.5 font-mono text-[10px] text-white/60 sm:gap-2 sm:text-xs">
-                      <span className="tracking-wider uppercase">
-                        {latestTask.source_type}
-                      </span>
-                      <span>&middot;</span>
-                      <span>
-                        {latestTask.clips_count}{" "}
-                        {latestTask.clips_count === 1 ? "clip" : "clips"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-shrink-0 items-center gap-3">
-                  {latestTask.status === "completed" ? (
-                    <Badge className="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold tracking-widest text-black uppercase hover:bg-white">
-                      <CheckCircle className="mr-1 h-3 w-3" />
-                      COMPLETED
-                    </Badge>
-                  ) : latestTask.status === "processing" ? (
-                    <Badge className="rounded-md border border-white/30 bg-transparent px-2 py-0.5 text-[10px] font-bold tracking-widest text-white uppercase">
-                      <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                      PROCESSING
-                    </Badge>
-                  ) : (
-                    <Badge
-                      variant="outline"
-                      className="rounded-md border-white/10 text-[10px] font-bold tracking-widest text-white/60 uppercase"
-                    >
-                      {latestTask.status}
-                    </Badge>
-                  )}
-                  <ArrowRight className="h-4 w-4 text-white/20 transition-colors group-hover:text-white/50" />
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {isLoadingLatest && (
-            <div className="brutal-card mb-8 p-4">
-              <div className="flex items-center gap-4">
-                <Skeleton className="h-10 w-10 rounded-xl bg-white/[0.1]" />
-                <div>
-                  <Skeleton className="mb-1.5 h-4 w-48 rounded-md bg-white/[0.1]" />
-                  <Skeleton className="h-3 w-32 rounded-md bg-white/[0.1]" />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Centered Single Column Layout */}
           <div className="flex flex-col items-center justify-center w-full gap-6 sm:gap-10">
