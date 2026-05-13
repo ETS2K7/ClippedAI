@@ -66,14 +66,12 @@ export const FloatingNav = ({
               <span className="hidden sm:block">{navItem.name}</span>
             </Link>
           ))}
-          {status === "unauthenticated" && (
-            <Button
-              className="ml-2 h-9 rounded-full bg-white px-6 text-xs font-black tracking-wider text-black uppercase transition-all hover:bg-white/90 hover:scale-[1.05]"
-              asChild
-            >
-              <Link href="/dashboard">Login</Link>
-            </Button>
-          )}
+          <Button
+            className="ml-2 h-9 rounded-full bg-white px-6 text-xs font-black tracking-wider text-black uppercase transition-all hover:bg-white/90 hover:scale-[1.05]"
+            asChild
+          >
+            <Link href="/dashboard">Dashboard</Link>
+          </Button>
         </div>
       </motion.div>
     </AnimatePresence>

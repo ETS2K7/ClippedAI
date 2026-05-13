@@ -87,11 +87,6 @@ export default function HomePage() {
       link: "/",
       icon: <Home className="h-4 w-4 text-white" />,
     },
-    {
-      name: "Dashboard",
-      link: "/dashboard",
-      icon: <Zap className="h-4 w-4 text-white" />,
-    },
   ];
 
   return (
