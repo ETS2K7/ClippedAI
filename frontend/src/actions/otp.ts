@@ -41,7 +41,7 @@ export async function sendOTP(email: string) {
 
     // Send the email
     const { data, error } = await resend.emails.send({
-      from: "ClippedAI <auth@clippedai.app>",
+      from: "ClippedAI <login@clippedai.app>",
       to: [email],
       subject: `${code} is your ClippedAI verification code`,
       html: `
