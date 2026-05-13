@@ -36,7 +36,7 @@ fast_asd_image = (
 
 @app.cls(
     image=fast_asd_image, 
-    gpu="T4", 
+    gpu="A10G", 
     timeout=1200,
     scaledown_window=15,
     max_containers=10,
