@@ -189,6 +189,10 @@ export async function POST(req: Request) {
         Body: file.stream(),
         ContentType: file.type,
       },
+      // Optimise for large files (10 min videos)
+      queueSize: 4, 
+      partSize: 5 * 1024 * 1024, // 5MB parts
+      leavePartsOnError: false,
     });
 
     await upload.done();
@@ -198,7 +202,7 @@ export async function POST(req: Request) {
       data: {
         userId: session.user.id,
         s3Key,
-        displayName, // persisted so GET /api/tasks returns a human-readable title
+        displayName,
         status: "uploading",
       },
     });
@@ -206,6 +210,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ video_path: uploadedFile.id });
   } catch (error) {
     console.error("[upload] S3 upload failed:", error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    
+    // Provide more descriptive error messages for debugging production failures
+    let errorMessage = "Upload failed";
+    if (error instanceof Error) {
+      if (error.name === "AccessDenied") errorMessage = "S3 Access Denied: Check IAM permissions";
+      else if (error.name === "NoSuchBucket") errorMessage = "S3 Bucket not found: Check S3_BUCKET_NAME";
+      else if (error.name === "TimeoutError") errorMessage = "Upload timed out: The file might be too large for the current connection";
+      else errorMessage = `Upload failed: ${error.message}`;
+    }
+    
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
