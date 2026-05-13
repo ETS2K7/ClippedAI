@@ -17,22 +17,22 @@ export async function sendOTP(email: string) {
 
   // Generate a 6-digit numeric code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
   try {
+    // 1. Delete all expired tokens in the DB (Global Cleanup)
+    await db.verificationToken.deleteMany({
+      where: { expires: { lt: new Date() } },
+    });
+
+    // 2. Delete any existing tokens for THIS email (User Cleanup)
+    await db.verificationToken.deleteMany({
+      where: { identifier: email },
+    });
+
     // Store in VerificationToken table
-    await db.verificationToken.upsert({
-      where: {
-        identifier_token: {
-          identifier: email,
-          token: code,
-        },
-      },
-      update: {
-        token: code,
-        expires,
-      },
-      create: {
+    await db.verificationToken.create({
+      data: {
         identifier: email,
         token: code,
         expires,
@@ -41,7 +41,7 @@ export async function sendOTP(email: string) {
 
     // Send the email
     const { data, error } = await resend.emails.send({
-      from: "ClippedAI <auth@clipped.ai>",
+      from: "ClippedAI <auth@clippedai.app>",
       to: [email],
       subject: `${code} is your ClippedAI verification code`,
       html: `
@@ -51,7 +51,7 @@ export async function sendOTP(email: string) {
           <div style="background: #f4f4f4; padding: 15px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">
             ${code}
           </div>
-          <p style="font-size: 14px; color: #999;">This code expires in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+          <p style="font-size: 14px; color: #999;">This code expires in 5 minutes. If you didn't request this, you can safely ignore this email.</p>
         </div>
       `,
     });

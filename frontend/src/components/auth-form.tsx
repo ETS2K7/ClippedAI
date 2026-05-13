@@ -75,7 +75,7 @@ export function AuthForm({
       <div className="flex flex-col gap-4 rounded-[32px] border border-[#27272a] bg-[#333333]/50 p-10 pt-12 pb-10 backdrop-blur-[40px]">
         <div className="flex flex-col items-center gap-2 px-4 text-center">
           <h1 className="text-[27px] font-bold tracking-tight text-[#fafafa] leading-[1.2] whitespace-nowrap">
-            {step === "email" ? "Finish signing up to get your free clips" : "Check your email"}
+            {step === "email" ? "Get started with ClippedAI" : "Check your email"}
           </h1>
           <p className="text-[16px] font-normal text-white/50 leading-[22px]">
             {step === "email" 
