@@ -119,6 +119,7 @@ export default function Home() {
   const [showBetaModal, setShowBetaModal] = useState(false);
   const [betaMessage, setBetaMessage] = useState("");
   const [betaSending, setBetaSending] = useState(false);
+  const [betaSent, setBetaSent] = useState(false);
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [uploadPreviewUrl, setUploadPreviewUrl] = useState<string | null>(null);
