@@ -45,25 +45,23 @@ export async function sendOTP(email: string) {
       to: [email],
       subject: `${code} is your ClippedAI verification code`,
       html: `
-        <div style="background-color: #f9fafb; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-          <div style="max-width: 480px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <div style="padding: 40px 32px; text-align: center;">
-              <h2 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #111827;">Verify your email</h2>
-              <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.5;">Enter this code in ClippedAI to complete your sign-in.</p>
-              
-              <div style="margin: 32px 0; padding: 20px; background-color: #f3f4f6; border-radius: 12px; border: 1px solid #e5e7eb;">
-                <span style="font-size: 36px; font-weight: 800; color: #111827; letter-spacing: 0.25em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">${code}</span>
-              </div>
-              
-              <p style="margin: 0; font-size: 13px; color: #9ca3af;">
-                This code expires in 5 minutes. If you didn't request this, you can safely ignore this email.
-              </p>
+        <div style="max-width: 480px; margin: 40px auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+          <div style="padding: 40px 32px; text-align: center;">
+            <h2 style="margin: 0 0 8px 0; font-size: 20px; font-weight: 700; color: #111827;">Verify your email</h2>
+            <p style="margin: 0; font-size: 15px; color: #6b7280; line-height: 1.5;">Enter this code in ClippedAI to complete your sign-in.</p>
+            
+            <div style="margin: 32px 0; padding: 20px; background-color: #f3f4f6; border-radius: 12px; border: 1px solid #e5e7eb;">
+              <span style="font-size: 36px; font-weight: 800; color: #111827; letter-spacing: 0.25em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">${code}</span>
             </div>
-            <div style="background-color: #f9fafb; padding: 16px 32px; border-top: 1px solid #f3f4f6;">
-              <p style="margin: 0; font-size: 11px; color: #9ca3af; text-align: center; font-weight: 500;">
-                &copy; 2026 ClippedAI. All rights reserved.
-              </p>
-            </div>
+            
+            <p style="margin: 0; font-size: 13px; color: #9ca3af;">
+              This code expires in 5 minutes. If you didn't request this, you can safely ignore this email.
+            </p>
+          </div>
+          <div style="background-color: #f9fafb; padding: 16px 32px; border-top: 1px solid #f3f4f6;">
+            <p style="margin: 0; font-size: 11px; color: #9ca3af; text-align: center; font-weight: 500;">
+              &copy; 2026 ClippedAI. All rights reserved.
+            </p>
           </div>
         </div>
       `,
