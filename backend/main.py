@@ -600,21 +600,14 @@ class ClippedAI:
         
         logger.info("Warmup request received. Triggering all workers...")
         
-        # 1. Warm up WhisperX
-        try:
-            whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
-            # Using spawn with empty data just to trigger container provisioning
-            whisperx_cls().transcribe.spawn(b"", "")
+        # Non-blocking triggers to speed up response
+        try: modal.Cls.from_name("whisperx-worker", "WhisperXWorker")().transcribe.spawn(b"", "")
         except: pass
 
-        # 2. Warm up Fast-ASD
-        try:
-            tracker_cls = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-            tracker_cls().process_video.spawn(b"")
+        try: modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")().process_video.spawn(b"")
         except: pass
 
-        logger.info("Warmup signals sent to all workers. Pipeline is now priming.")
-        return {"status": "warming_up", "message": "Full pipeline (Main + WhisperX + FastASD) is being provisioned."}
+        return {"status": "warming_up"}
 
     @modal.fastapi_endpoint(method="POST")
     def process_video(self, request: ProcessVideoRequest, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
