@@ -518,12 +518,11 @@ class ClippedAI:
             timer.begin("parallel_spawn")
             logger.info("Spawning parallel ASD, Transcription, and Proxy Generation...")
             
-            # 1. 360p Downscale for ASD (Using CUDA for max speed)
+            # 1. 360p Downscale for ASD (Safe NVENC path)
             lowres_video_path = base_dir / "input_360p.mp4"
             subprocess.run([
-                "/usr/bin/ffmpeg", "-y", "-hwaccel", "cuda", "-hwaccel_output_format", "cuda",
-                "-i", str(video_path),
-                "-vf", "scale_cuda=-2:360",
+                "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
+                "-vf", "scale=-2:360",
                 "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "28",
                 "-an", str(lowres_video_path)
             ], check=True)
