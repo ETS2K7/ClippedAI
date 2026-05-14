@@ -289,7 +289,7 @@ def _render_clips_pipeline(
     # Detect NVENC at pipeline scope so it's available for clip workers
     try:
         nvenc_result = subprocess.run(
-            ["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=10
+            ["/usr/bin/ffmpeg", "-encoders"], capture_output=True, text=True, timeout=10
         )
         has_nvenc = "h264_nvenc" in nvenc_result.stdout
     except Exception:
@@ -426,7 +426,7 @@ class ClippedAI:
         # Verify GPU availability for NVENC
         try:
             result = subprocess.run(
-                ["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=10
+                ["/usr/bin/ffmpeg", "-encoders"], capture_output=True, text=True, timeout=10
             )
             self._has_nvenc = "h264_nvenc" in result.stdout
             logger.info(f"NVENC available: {self._has_nvenc}")
@@ -494,7 +494,7 @@ class ClippedAI:
                     trimmed_path = base_dir / "trimmed_input.mp4"
                     duration = request.timeframe_end - request.timeframe_start
                     subprocess.run([
-                        "ffmpeg", "-y", "-ss", str(request.timeframe_start),
+                        "/usr/bin/ffmpeg", "-y", "-ss", str(request.timeframe_start),
                         "-i", str(video_path), "-t", str(duration),
                         "-c", "copy", str(trimmed_path)
                     ], check=True)
@@ -507,7 +507,7 @@ class ClippedAI:
             # Extract audio first (WhisperX worker takes audio bytes)
             audio_path = base_dir / "input_audio.wav"
             subprocess.run([
-                "ffmpeg", "-y", "-i", str(video_path), 
+                "/usr/bin/ffmpeg", "-y", "-i", str(video_path), 
                 "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", 
                 str(audio_path)
             ], check=True)
