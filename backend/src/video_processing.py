@@ -1148,6 +1148,8 @@ def track_speaker_and_frame(
             "-s", f"{OUT_W}x{OUT_H}",
             "-r", str(fps),
             "-i", "pipe:0",
+            "-ss", str(clip.get("start", 0)),
+            "-t", str(clip.get("end", 0) - clip.get("start", 0)),
             "-i", audio_file if audio_file else clip_file,
         ]
         if sub_file:
