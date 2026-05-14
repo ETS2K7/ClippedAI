@@ -14,7 +14,7 @@ from config import get_logger
 logger = get_logger(__name__)
 
 # ── Minimum duration (seconds) ──
-_MIN_CLIP_DURATION = 10.0
+_MIN_CLIP_DURATION = 30.0
 
 def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> List[Dict[str, Any]]:
     """Groups words and selects viral segments using Two-Pass architecture."""
@@ -40,7 +40,7 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
         "1. START: Must begin with a 'Hook' (a strong, intriguing opening statement).\n"
         "2. END: Must conclude with a completed thought or a 'Loop' that leaves the viewer wanting more.\n"
         "3. COMPLETENESS: Never cut in the middle of a sentence or a punchline.\n"
-        "4. DURATION: Each clip must be between 15 and 90 seconds.\n\n"
+        "4. DURATION: Each clip must be between 30 and 90 seconds.\n\n"
         f"TRANSCRIPT:\n{transcript}"
     )
 
@@ -81,8 +81,6 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
         duration = snapped_end - snapped_start
         if duration >= _MIN_CLIP_DURATION and duration <= 100:
             validated_clips.append(clip)
-        else:
-            logger.warning(f"[LLM] Rejecting clip '{clip['title']}' due to duration: {duration:.1f}s (Min: {_MIN_CLIP_DURATION}s)")
 
     # ── Parallel Transliteration ──
     from concurrent.futures import ThreadPoolExecutor
@@ -109,7 +107,7 @@ def _call_gemini_selection(prompt: str, specific_moments: str = None) -> list:
     client = _get_genai_client()
     
     system_instruction = (
-        "You are a viral video editor. Your goal is to select 3 to 5 self-contained, high-retention clips. "
+        "You are a viral video editor. Your goal is to select 3 self-contained, high-retention clips. "
         "Ensure clips are semantically complete. Return JSON only."
     )
     if specific_moments:

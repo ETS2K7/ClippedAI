@@ -474,43 +474,52 @@ class ClippedAI:
         timer = PipelineTimer(run_id)
         base_dir = pathlib.Path("/tmp") / run_id
         base_dir.mkdir(parents=True, exist_ok=True)
-        
+        video_path = base_dir / "input.mp4"
+        s3_client = _create_s3_client()
+        bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
+        video_title = None
+
         try:
-            video_path = base_dir / "input.mp4"
-            video_title = "Untitled Video"
-            s3_client = _create_s3_client()
-            bucket = os.environ.get("S3_BUCKET", "clipped-ai-storage")
-            
-            # Phase 1: Ingestion
+            # ── Phase 1: Ingest ───────────────────────────────────────────────
+            timer.begin("ingestion")
             if request.youtube_url:
-                timer.begin("ingestion")
-                logger.info(f"Phase 1: Downloading from YouTube: {request.youtube_url}")
-                video_title = _download_youtube(request.youtube_url, video_path)
-            elif request.s3_key:
-                timer.begin("ingestion")
-                logger.info(f"Phase 1: Ingesting from S3: {request.s3_key}")
-                s3_client.download_file(bucket, request.s3_key, str(video_path))
-            
-            if not video_path.exists():
-                raise FileNotFoundError(f"Video file not found at {video_path}")
-            
-            # Check for existing proxy
-            proxy_path = base_dir / "proxy_1080p.mp4"
-            video_path_override = None
-            if request.s3_key:
-                s3_key_dir = os.path.dirname(request.s3_key)
-                potential_proxy_key = os.path.join(s3_key_dir, "proxy_1080p.mp4")
+                _already_in_s3 = False
                 try:
-                    s3_client.head_object(Bucket=bucket, Key=potential_proxy_key)
-                    logger.info(f"Found existing proxy at {potential_proxy_key}, downloading...")
-                    s3_client.download_file(bucket, potential_proxy_key, str(proxy_path))
-                    video_path_override = str(proxy_path)
-                except: pass
+                    s3_client.head_object(Bucket=bucket, Key=request.s3_key)
+                    _already_in_s3 = True
+                    logger.info(f"[S3 Cache] Hit — '{request.s3_key}' already exists. Skipping Apify.")
+                except Exception:
+                    logger.info("[S3 Cache] Miss — downloading via Apify.")
+
+                if _already_in_s3:
+                    s3_client.download_file(bucket, request.s3_key, str(video_path))
+                else:
+                    video_title = _download_youtube(request.youtube_url, video_path)
+                    s3_client.upload_file(str(video_path), bucket, request.s3_key)
+                request_dict["youtube_url"] = None
+            else:
+                logger.info("Downloading from S3 to GPU container...")
+                try:
+                    s3_client.download_file(bucket, request.s3_key, str(video_path))
+                except Exception as e:
+                    err_str = str(e)
+                    if "404" in err_str or "NoSuchKey" in err_str:
+                        parts = request.s3_key.split("/")
+                        if parts[0] == "youtube-downloads" and len(parts) >= 2:
+                            reconstructed_url = f"https://www.youtube.com/watch?v={parts[1]}"
+                            logger.warning(f"S3 404. Re-ingesting from YouTube: {reconstructed_url}")
+                            _download_youtube(reconstructed_url, video_path)
+                            s3_client.upload_file(str(video_path), bucket, request.s3_key)
+                        else:
+                            raise
+                    else:
+                        raise
 
             # ── Phase 1.5: Triple Parallel Spawn ──────────────────────────────
             timer.begin("parallel_spawn")
             logger.info("Spawning parallel ASD, Transcription, and Proxy Generation...")
             
+            # 1. 360p Downscale for ASD (Safe NVENC path)
             lowres_video_path = base_dir / "input_360p.mp4"
             subprocess.run([
                 "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
@@ -524,21 +533,34 @@ class ClippedAI:
             
             asd_call = self.asd_cls().process_video.spawn(video_bytes_lowres)
 
+            # 2. H.264 Proxy Generation Spawn (Background Process)
+            proxy_path = base_dir / "proxy_1080p.mp4"
             rendering_audio_path = base_dir / "global_audio.aac"
-            if not video_path_override:
-                proxy_proc = subprocess.Popen([
-                    "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
-                    "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "19",
-                    "-c:a", "aac", "-b:a", "192k",
-                    "-map", "0:v:0", "-map", "0:a:0?",
-                    str(proxy_path)
-                ])
-                video_path_override = str(proxy_path)
-            else:
-                proxy_proc = None
+            proxy_proc = subprocess.Popen([
+                "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
+                "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "19",
+                "-c:a", "aac", "-b:a", "192k",
+                "-map", "0:v:0", "-map", "0:a:0?",
+                str(proxy_path)
+            ])
+            # (We will wait for proxy_proc later)
 
-            # ── Phase 2: Transcription ───────────────────────────────────────
+            if request.timeframe_start is not None and request.timeframe_end is not None:
+                if request.timeframe_end > request.timeframe_start:
+                    trimmed_path = base_dir / "trimmed_input.mp4"
+                    duration = request.timeframe_end - request.timeframe_start
+                    subprocess.run([
+                        "/usr/bin/ffmpeg", "-y", "-ss", str(request.timeframe_start),
+                        "-i", str(video_path), "-t", str(duration),
+                        "-c", "copy", str(trimmed_path)
+                    ], check=True)
+                    video_path = trimmed_path
+
+            # ── Phase 2: Transcription (Remote WhisperX GPU Worker) ──────────
             timer.begin("transcription")
+            hf_token = os.environ.get("HF_TOKEN", "")
+            
+            # Extract audio first (WhisperX worker takes audio bytes)
             transcription_audio_path = base_dir / "input_audio.wav"
             subprocess.run([
                 "/usr/bin/ffmpeg", "-y", "-i", str(video_path), 
@@ -549,32 +571,52 @@ class ClippedAI:
             with open(transcription_audio_path, "rb") as f:
                 audio_bytes = f.read()
             
-            words_json = self.whisperx_cls().transcribe.remote(audio_bytes, os.environ.get("HF_TOKEN", ""))
+            logger.info("Calling isolated WhisperX worker...")
+            words_json = self.whisperx_cls().transcribe.remote(audio_bytes, hf_token)
             words = json.loads(words_json)
+            logger.info(f"WhisperX worker returned {len(words)} words.")
 
-            # ── Phase 3: Selection ───────────────────────────────────────────
+            # ── Phase 3: Clip Selection (Gemini) ──────────────────────────────
             timer.begin("clip_selection")
             clips = select_clips(words, request.specific_moments)
-            
-            # ── Phase 3.7: Parallel Wait ─────────────────────────────────────
-            timer.begin("parallel_wait")
-            tracking_data_json = asd_call.get()
-            tracking_data = json.loads(tracking_data_json)
-            
-            if proxy_proc:
-                proxy_proc.wait()
-            
-            subprocess.run([
-                "/usr/bin/ffmpeg", "-y", "-i", str(proxy_path),
-                "-vn", "-acodec", "copy", str(rendering_audio_path)
-            ], check=True)
+            timer._flush()
 
-            # ── Phase 4-7: GPU Rendering ─────────────────────────────────────
+        except Exception as e:
+            logger.error(f"Pipeline ingestion/transcription failed: {e}")
+            if request.webhook_url:
+                _send_webhook(
+                    request.webhook_url, request.webhook_secret,
+                    request.uploaded_file_id, request.user_id,
+                    {"status": "failed", "clips": [], "error": f"Pipeline error: {str(e)}"},
+                    video_title
+                )
+            return
+            
+        # ── Phase 3.7: Wait for Parallel Tasks ──────────────────────────
+        timer.begin("parallel_wait")
+        logger.info("Waiting for ASD and Proxy Generation to complete...")
+        
+        # Await ASD
+        tracking_data_json = asd_call.get()
+        tracking_data = json.loads(tracking_data_json)
+        
+        # Await Proxy and Extract Audio
+        proxy_proc.wait()
+        if proxy_proc.returncode != 0:
+            raise Exception("Proxy generation failed")
+        
+        subprocess.run([
+            "/usr/bin/ffmpeg", "-y", "-i", str(proxy_path),
+            "-vn", "-acodec", "copy", str(rendering_audio_path)
+        ], check=True)
+
+        # ── Phase 4-7: GPU Rendering ──────────────────────────────────────────
+        try:
             logger.info(f"Starting GPU rendering ({len(words)} words, {len(clips)} clips)...")
             result = _render_clips_pipeline(
-                request.s3_key or f"uploads/{run_id}/input.mp4", words, clips, timer.phases,
+                request.s3_key, words, clips, timer.phases,
                 run_id=run_id, base_dir=base_dir,
-                video_path_override=video_path_override,
+                video_path_override=str(proxy_path),
                 tracking_data=tracking_data,
                 audio_path=str(rendering_audio_path),
                 font_family=request.font_family,
@@ -584,8 +626,8 @@ class ClippedAI:
                 caption_template=request.caption_template,
             )
         except Exception as e:
-            logger.error(f"Pipeline failed: {e}")
-            result = {"status": "failed", "clips": [], "error": f"Pipeline error: {str(e)}"}
+            logger.error(f"GPU rendering failed: {e}")
+            result = {"status": "failed", "clips": [], "error": f"Rendering error: {str(e)}"}
         finally:
             if base_dir.exists():
                 shutil.rmtree(base_dir, ignore_errors=True)
@@ -597,16 +639,29 @@ class ClippedAI:
                 result, video_title,
             )
 
-@app.cls(
-    secrets=[modal.Secret.from_name("clippedai-secret")]
-)
-class ClippedAIDownloader:
+    @modal.fastapi_endpoint(method="POST")
+    def warmup(self, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
+        """Wakes up the GPU container and all worker containers to eliminate cold starts."""
+        auth_token = os.environ.get("AUTH_TOKEN")
+        if not auth_token or not token.credentials or not hmac.compare_digest(token.credentials, auth_token):
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        logger.info("Warmup request received. Triggering all workers...")
+        
+        # Non-blocking triggers to speed up response
+        try: modal.Cls.from_name("whisperx-worker", "WhisperXWorker")().transcribe.spawn(b"", "")
+        except: pass
+
+        try: modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")().process_video.spawn(b"")
+        except: pass
+
+        return {"status": "warming_up"}
+
     @modal.method()
     def _download_and_trigger(self, request_dict: dict):
         """CPU task to handle external downloads before waking up the GPU."""
         import pathlib
         import uuid
-        import shutil
         
         request = ProcessVideoRequest(**request_dict)
         run_id = str(uuid.uuid4())
@@ -619,14 +674,12 @@ class ClippedAIDownloader:
             
             # Download on CPU
             if request.youtube_url:
-                logger.info(f"CPU Worker: Downloading from YouTube: {request.youtube_url}")
                 video_title = _download_youtube(request.youtube_url, video_path)
             
             # Upload to S3 so GPU can pick it up
             s3_client = _create_s3_client()
             bucket = os.environ.get("S3_BUCKET", "clipped-ai-storage")
             s3_key = f"uploads/{run_id}/input.mp4"
-            logger.info(f"CPU Worker: Uploading to S3: {s3_key}")
             s3_client.upload_file(str(video_path), bucket, s3_key)
             
             # Now trigger the GPU pipeline
@@ -634,8 +687,7 @@ class ClippedAIDownloader:
             new_request["s3_key"] = s3_key # Override with the S3 key we just uploaded
             new_request["youtube_url"] = None # Avoid re-downloading
             
-            gpu_cls = modal.Cls.from_name("clippedai", "ClippedAI")()
-            gpu_cls.run_pipeline.spawn(new_request)
+            self.run_pipeline.spawn(new_request)
             logger.info(f"CPU download complete. GPU pipeline triggered for {run_id}")
             
         except Exception as e:
@@ -643,49 +695,18 @@ class ClippedAIDownloader:
         finally:
             shutil.rmtree(base_dir, ignore_errors=True)
 
-@app.cls(
-    secrets=[modal.Secret.from_name("clippedai-secret")]
-)
-class ClippedAIWeb:
-    @modal.fastapi_endpoint(method="POST")
-    def warmup(self, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
-        """Wakes up the GPU container and all worker containers to eliminate cold starts."""
-        auth_token = os.environ.get("AUTH_TOKEN")
-        if not auth_token or not token.credentials or not hmac.compare_digest(token.credentials, auth_token):
-            raise HTTPException(status_code=401, detail="Invalid token")
-        
-        logger.info("Warmup request received. Triggering all workers...")
-        
-        # Non-blocking triggers to speed up response
-        try: modal.Cls.from_name("clippedai", "ClippedAI")().startup.spawn()
-        except: pass
-
-        try: modal.Cls.from_name("whisperx-worker", "WhisperXWorker")().transcribe.spawn(b"", "")
-        except: pass
-
-        try: modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")().process_video.spawn(b"")
-        except: pass
-
-        return {"status": "warming_up"}
-
     @modal.fastapi_endpoint(method="POST")
     def process_video(self, request: ProcessVideoRequest, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
         auth_token = os.environ.get("AUTH_TOKEN")
         if not auth_token or not token.credentials or not hmac.compare_digest(token.credentials, auth_token):
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        logger.info(f"API request received for URL: {request.youtube_url or 'S3/Local'}")
-        
         if request.youtube_url:
             # Save credits: Use CPU for the download phase
-            downloader = modal.Cls.from_name("clippedai", "ClippedAIDownloader")()
-            downloader._download_and_trigger.spawn(request.dict())
-            logger.info("Spawned CPU download task via ClippedAIDownloader.")
+            self._download_and_trigger.spawn(request.dict())
         else:
             # Local file or S3 key: Go straight to GPU
-            gpu_cls = modal.Cls.from_name("clippedai", "ClippedAI")()
-            gpu_cls.run_pipeline.spawn(request.dict())
-            logger.info("Spawned GPU pipeline task via ClippedAI.run_pipeline")
+            self.run_pipeline.spawn(request.dict())
             
         return {"status": "processing_started"}
 
