@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { signOut, useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, List, Settings, Plus, Shield, Tag } from "lucide-react";
+import { LogOut, List, Settings, Plus, Shield, Tag, Zap, Loader2, CheckCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "~/lib/utils";
 
