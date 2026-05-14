@@ -269,6 +269,8 @@ def _render_clips_pipeline(
     add_subtitles: bool = True,
     caption_template: str | None = None,
     tracking_data: list | None = None,
+    audio_path: str | None = None,
+    video_path_override: str | None = None,
 ) -> dict:
     """
     Shared video processing pipeline used by both CLI and HTTP endpoints.
@@ -300,40 +302,19 @@ def _render_clips_pipeline(
         has_nvenc = False
     logger.info(f"NVENC detection in pipeline: {has_nvenc}")
 
-    video_path = base_dir / "input.mp4"
+    video_path = pathlib.Path(video_path_override) if video_path_override else base_dir / "input.mp4"
     s3_client = _create_s3_client()
     bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
 
     timer.phases = previous_phases
     
-    # Phase 3.5: GPU S3 Download
-    timer.begin("gpu_s3_download")
-    logger.info("Downloading from S3 directly to GPU container")
-    s3_client.download_file(bucket, s3_key, str(video_path))
-    
-    # Phase 3.6: Create H.264 Proxy and Extract Audio
-    timer.begin("proxy_generation")
-    logger.info("Creating H.264 proxy and extracting global audio...")
-    proxy_path = base_dir / "proxy_1080p.mp4"
-    audio_path = base_dir / "global_audio.aac"
-    
-    # Convert to H.264 for fast decoding and extract audio in one pass
-    subprocess.run([
-        "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
-        "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "23",
-        "-c:a", "aac", "-b:a", "192k",
-        "-map", "0:v:0", "-map", "0:a:0?",
-        str(proxy_path)
-    ], check=True)
-    
-    subprocess.run([
-        "/usr/bin/ffmpeg", "-y", "-i", str(proxy_path),
-        "-vn", "-acodec", "copy", str(audio_path)
-    ], check=True)
-    
-    # Use proxy for rendering
-    video_path = proxy_path
-
+    # Phase 3.5: GPU S3 Download (Skip if we have a local proxy)
+    if not video_path_override:
+        timer.begin("gpu_s3_download")
+        logger.info("Downloading from S3 directly to GPU container")
+        s3_client.download_file(bucket, s3_key, str(video_path))
+    else:
+        logger.info("Using local proxy for rendering, skipping S3 download.")
     
     # Phase 4-7: Parallel Clip Processing
     try:
@@ -533,8 +514,36 @@ class ClippedAI:
                 video_bytes_lowres = f.read()
             
             Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+            # ── Phase 1.5: Triple Parallel Spawn ──────────────────────────────
+            timer.begin("parallel_spawn")
+            logger.info("Spawning parallel ASD, Transcription, and Proxy Generation...")
+            
+            # 1. 360p Downscale for ASD (Using NVENC for speed)
+            lowres_video_path = base_dir / "input_360p.mp4"
+            subprocess.run([
+                "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
+                "-vf", "scale=-2:360",
+                "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "28",
+                "-an", str(lowres_video_path)
+            ], check=True)
+
+            with open(lowres_video_path, "rb") as f:
+                video_bytes_lowres = f.read()
+            
+            Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
             asd_call = Tracker().process_video.spawn(video_bytes_lowres)
 
+            # 2. H.264 Proxy Generation Spawn (Background Process)
+            proxy_path = base_dir / "proxy_1080p.mp4"
+            audio_path = base_dir / "global_audio.aac"
+            proxy_proc = subprocess.Popen([
+                "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
+                "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "23",
+                "-c:a", "aac", "-b:a", "192k",
+                "-map", "0:v:0", "-map", "0:a:0?",
+                str(proxy_path)
+            ])
+            # (We will wait for proxy_proc later)
 
             if request.timeframe_start is not None and request.timeframe_end is not None:
                 if request.timeframe_end > request.timeframe_start:
@@ -584,11 +593,23 @@ class ClippedAI:
                 )
             return
             
-        # ── Phase 3.7: Wait for Global ASD Tracking ──────────────────────
-        timer.begin("global_asd_tracking_await")
-        logger.info("Waiting for parallel ASD tracking result...")
+        # ── Phase 3.7: Wait for Parallel Tasks ──────────────────────────
+        timer.begin("parallel_wait")
+        logger.info("Waiting for ASD and Proxy Generation to complete...")
+        
+        # Await ASD
         tracking_data_json = asd_call.get()
         tracking_data = json.loads(tracking_data_json)
+        
+        # Await Proxy and Extract Audio
+        proxy_proc.wait()
+        if proxy_proc.returncode != 0:
+            raise Exception("Proxy generation failed")
+        
+        subprocess.run([
+            "/usr/bin/ffmpeg", "-y", "-i", str(proxy_path),
+            "-vn", "-acodec", "copy", str(audio_path)
+        ], check=True)
 
         # ── Phase 4-7: GPU Rendering ──────────────────────────────────────────
         try:
@@ -596,7 +617,9 @@ class ClippedAI:
             result = _render_clips_pipeline(
                 request.s3_key, words, clips, timer.phases,
                 run_id=run_id, base_dir=base_dir,
+                video_path_override=str(proxy_path),
                 tracking_data=tracking_data,
+                audio_path=str(audio_path),
                 font_family=request.font_family,
                 font_color=request.font_color,
                 font_size=request.font_size,
