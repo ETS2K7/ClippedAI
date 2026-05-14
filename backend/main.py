@@ -317,7 +317,7 @@ def _render_clips_pipeline(
     Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
     tracking_data_json = Tracker().process_video.remote(video_bytes)
     tracking_data = json.loads(tracking_data_json)
-    timer.end("global_asd_tracking")
+
 
     try:
         s3_key_dir = os.path.dirname(s3_key)
