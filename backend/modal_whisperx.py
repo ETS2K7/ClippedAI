@@ -17,6 +17,7 @@ whisperx_image = (
         "pandas",
         "scipy",
         "setuptools",
+        "python-dotenv",
     )
     .run_commands("pip install git+https://github.com/m-bain/whisperX.git")
     .add_local_dir("src", remote_path="/root/src")
