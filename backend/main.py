@@ -317,6 +317,10 @@ def _render_clips_pipeline(
         logger.info("Using local proxy for rendering, skipping S3 download.")
     
     # Phase 4-7: Parallel Clip Processing
+    if not clips:
+        logger.info("No clips to process. Skipping rendering.")
+        return {"status": "success", "clips": [], "message": "No viral clips found."}
+
     try:
         s3_key_dir = os.path.dirname(s3_key)
 
