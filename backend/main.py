@@ -547,6 +547,7 @@ class ClippedAI:
 
             if request.timeframe_start is not None and request.timeframe_end is not None:
                 if request.timeframe_end > request.timeframe_start:
+                    logger.info(f"Trimming input video: {request.timeframe_start}s to {request.timeframe_end}s")
                     trimmed_path = base_dir / "trimmed_input.mp4"
                     duration = request.timeframe_end - request.timeframe_start
                     subprocess.run([

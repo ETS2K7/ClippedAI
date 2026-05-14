@@ -1,6 +1,6 @@
 """
 Module for LLM-powered viral clip selection.
-Primary: Gemini 1.5-pro via Google Cloud Vertex AI
+Primary: Gemini 2.0-flash via Google Cloud Vertex AI
 """
 
 import hashlib
@@ -22,7 +22,6 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
     if not words: return []
 
     # Auto-detect units (Seconds vs Milliseconds)
-    # If the last word's end time is < 5000 for a long video, it's definitely seconds.
     is_ms = words[-1]["end"] > 10000 or words[0]["end"] > 500
     unit_factor = 1.0 if is_ms else 1000.0
     logger.info(f"[LLM] Detected time units: {'Milliseconds' if is_ms else 'Seconds'} (Factor: {unit_factor})")
@@ -55,12 +54,7 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
         f"TRANSCRIPT:\n{transcript}"
     )
 
-    # ... [Cache Logic Omitted for brevity] ...
-    _cache_key = hashlib.sha256(prompt.encode()).hexdigest()
-    _cache_file = pathlib.Path.home() / ".clippedai" / "cache" / "llm" / f"llm_{_cache_key}.json"
-    _cache_file.parent.mkdir(parents=True, exist_ok=True)
-
-    logger.info(f"[LLM] Selection Pass calling Gemini... (Specific: {specific_moments})")
+    logger.info(f"[LLM] Selection Pass calling Gemini 2.0... (Specific: {specific_moments})")
     raw_clips = _call_gemini_selection(prompt, specific_moments)
 
     # ── SEMANTIC BOUNDARY SNAPPING ──
@@ -87,8 +81,10 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
             clip["end_time"] = snapped_end
             
             duration = snapped_end - snapped_start
-            if duration >= _MIN_CLIP_DURATION and duration <= 100:
+            if duration >= _MIN_CLIP_DURATION and duration <= 120: # Allow up to 120s
                 validated_clips.append(clip)
+            else:
+                logger.info(f"[LLM] Rejecting clip {clip.get('title')} - duration {duration:.1f}s outside limits.")
         except Exception as e:
             logger.warning(f"Failed to validate clip: {clip}. Error: {e}")
 
@@ -156,9 +152,8 @@ def _call_gemini_selection(prompt: str, specific_moments: str = None) -> list:
                     temperature=0.7,
                 ),
             )
-            data = json.loads(response.text)
-            logger.debug(f"[LLM] Gemini Raw Response: {response.text}")
-            return data.get("clips", [])
+            logger.info(f"[LLM] Gemini Selection Result: {response.text}")
+            return json.loads(response.text).get("clips", [])
         except Exception as e:
             logger.warning(f"Selection attempt {attempt+1} failed: {e}")
             time.sleep(1)
