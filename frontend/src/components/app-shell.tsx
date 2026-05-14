@@ -31,6 +31,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     ...(isSuperAdmin ? [{ name: "ADMIN", link: "/admin", icon: <Shield className="h-3.5 w-3.5" /> }] : []),
   ];
 
+  const [warmupStatus, setWarmupStatus] = useState<"idle" | "warming" | "ready">("idle");
+
+  const handleWarmup = async () => {
+    if (warmupStatus !== "idle") return;
+    setWarmupStatus("warming");
+    try {
+      const res = await fetch("/api/tasks/warmup", { method: "POST" });
+      if (res.ok) {
+        setWarmupStatus("ready");
+        setTimeout(() => setWarmupStatus("idle"), 2 * 60 * 1000); // 2 min sync
+      } else {
+        setWarmupStatus("idle");
+      }
+    } catch {
+      setWarmupStatus("idle");
+    }
+  };
+
   return (
     <div className="relative min-h-screen text-white selection:bg-white selection:text-black">
       {/* ── Ambient Depth Background ─────────────────────────── */}
@@ -70,24 +88,52 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               CLIPPEDAI
             </span>
           </Link>
+          
+          <div className="flex items-center gap-6">
+            {/* Nav Links */}
+            <div className="flex items-center justify-center gap-1 sm:gap-2">
+              {navItems.map((item) => (
+                <Link
+                  key={item.link}
+                  href={item.link}
+                    className={cn(
+                      "relative flex items-center gap-2 px-4 py-1.5 text-sm font-bold tracking-wider uppercase transition-all duration-200 whitespace-nowrap rounded-full",
+                      isActive(item.link)
+                        ? "text-white bg-white/[0.12] drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]"
+                        : "text-white/70 hover:text-white/90 hover:bg-white/[0.06]"
+                    )}
+                >
+                  {item.icon}
+                  {item.name}
+                </Link>
+              ))}
+            </div>
 
-          {/* Nav Links */}
-          <div className="flex items-center justify-center gap-1 sm:gap-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.link}
-                href={item.link}
-                  className={cn(
-                    "relative flex items-center gap-2 px-4 py-1.5 text-sm font-bold tracking-wider uppercase transition-all duration-200 whitespace-nowrap rounded-full",
-                    isActive(item.link)
-                      ? "text-white bg-white/[0.12] drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]"
-                      : "text-white/70 hover:text-white/90 hover:bg-white/[0.06]"
-                  )}
+            {/* 🔥 Warm Up Button (Admin Only) */}
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleWarmup}
+                disabled={warmupStatus !== "idle"}
+                className={cn(
+                  "hidden md:flex h-8 rounded-full border border-white/10 bg-white/[0.03] px-4 font-mono text-[10px] font-bold tracking-widest uppercase transition-all",
+                  warmupStatus === "ready" 
+                    ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10 shadow-[0_0_15px_rgba(16,185,129,0.1)]" 
+                    : "text-white/60 hover:text-white hover:bg-white/10"
+                )}
               >
-                {item.icon}
-                {item.name}
-              </Link>
-            ))}
+                {warmupStatus === "idle" && (
+                  <><Zap className="mr-2 h-3 w-3" /> Warm Up</>
+                )}
+                {warmupStatus === "warming" && (
+                  <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> Warming...</>
+                )}
+                {warmupStatus === "ready" && (
+                  <><CheckCircle className="mr-2 h-3 w-3" /> Ready</>
+                )}
+              </Button>
+            )}
           </div>
 
           {/* User Actions Section */}

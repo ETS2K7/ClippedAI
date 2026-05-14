@@ -131,7 +131,6 @@ export default function Home() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
-  const [warmupStatus, setWarmupStatus] = useState<"idle" | "warming" | "ready">("idle");
 
 
   // Format seconds to HH:MM:SS
@@ -211,23 +210,6 @@ export default function Home() {
 
 
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
-
-  const handleWarmup = async () => {
-    if (warmupStatus !== "idle") return;
-    setWarmupStatus("warming");
-    try {
-      const res = await fetch("/api/tasks/warmup", { method: "POST" });
-      if (res.ok) {
-        setWarmupStatus("ready");
-        // Keep "ready" for 2 minutes to match backend scaledown_window
-        setTimeout(() => setWarmupStatus("idle"), 2 * 60 * 1000);
-      } else {
-        setWarmupStatus("idle");
-      }
-    } catch {
-      setWarmupStatus("idle");
-    }
-  };
 
 
   // SWR: Global Data Fetching (only enabled if signed in)
@@ -598,33 +580,6 @@ export default function Home() {
               className="w-full max-w-2xl"
             >
               <div className="mb-5 text-center sm:mb-8 relative">
-                {isAdmin && (
-                  <div className="absolute right-0 top-0 hidden sm:block z-20">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleWarmup();
-                      }}
-                      disabled={warmupStatus !== "idle"}
-                      className={`rounded-full border-white/10 bg-white/5 font-mono text-[10px] font-bold tracking-widest uppercase transition-all hover:bg-white/10 ${
-                        warmupStatus === "ready" ? "text-emerald-400 border-emerald-500/30" : "text-white/60 hover:text-white"
-                      }`}
-                    >
-                      {warmupStatus === "idle" && (
-                        <><Zap className="mr-2 h-3 w-3" /> Warm Up</>
-                      )}
-                      {warmupStatus === "warming" && (
-                        <><Loader2 className="mr-2 h-3 w-3 animate-spin" /> Warming...</>
-                      )}
-                      {warmupStatus === "ready" && (
-                        <><CheckCircle className="mr-2 h-3 w-3" /> System Ready</>
-                      )}
-                    </Button>
-                  </div>
-                )}
                 <h1 className="font-syne mb-2 text-3xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-4xl md:text-5xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
                   New Clip.
                 </h1>
