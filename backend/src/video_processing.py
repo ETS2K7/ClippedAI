@@ -492,39 +492,18 @@ def track_speaker_and_frame(
     font_color: str = None,
     add_subtitles: bool = True,
     use_gpu: bool = False,
+    tracking_data: List[Dict[str, Any]] | None = None,
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
-
-    Supported layouts:
-      1 speaker  → full-frame 9:16 crop (CROP_W_1).
-      2 speakers → vertical split, each 1080×960 (CROP_W_2).
-      3 speakers → 1 featured top + 2 side-by-side bottom (CROP_W_3T / CROP_W_3S).
-      4 speakers → 2×2 grid, each 540×960 (CROP_W_4).
-
-    The 2-speaker path is pixel-identical to the previous implementation.
-    3/4-speaker modes use higher stabilisation thresholds so they only activate
-    in genuine panel/multi-host footage.
-
-    Args:
-        tracker: Optional pre-initialised LocalFastASDTracker. When None (default),
-                 the production Modal remote is used. Pass a LocalFastASDTracker
-                 instance for fully local processing without Modal.
     """
     logger.info(
         f"==================== PHASE 5: SPEAKER TRACKING & FRAMING (Clip {idx}) "
         f"===================="
     )
 
-    # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
-    import hashlib
-    with open(clip_file, "rb") as f:
-        _video_hash = hashlib.sha256(f.read()).hexdigest()
-
-    # FastASD caching disabled per user request
-    if False:
-        pass
-    else:
+    if tracking_data is None:
+        # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
         try:
             with open(clip_file, "rb") as f:
                 video_bytes = f.read()
@@ -541,12 +520,12 @@ def track_speaker_and_frame(
             
             import json
             tracking_data = json.loads(result_json)
-                
-            # FastASD cache writes disabled per user request
                     
         except Exception as e:
             logger.error(f"Fast-ASD tracker failed: {e}")
             raise RuntimeError(f"ASD tracking failed: {e}") from e
+    else:
+        logger.info(f"Using pre-computed global tracking data for clip {idx}")
 
     # ── 2. Video metadata ─────────────────────────────────────────────────────
     cap = cv2.VideoCapture(clip_file)
@@ -575,8 +554,12 @@ def track_speaker_and_frame(
         if not writer.isOpened():
             raise RuntimeError(f"cv2.VideoWriter failed to open for clip {idx} (codec: MJPG)")
 
+    # Calculate offset if we are using global tracking data
+    start_frame_offset = int(round(clip.get("start_time", 0) * fps)) if tracking_data is not None else 0
+    
     frame_faces: Dict[int, List[Dict]] = {
-        item["frame_number"]: item["faces"] for item in tracking_data
+        item["frame_number"] - start_frame_offset: item["faces"] for item in tracking_data
+        if (item["frame_number"] - start_frame_offset) >= 0 and (item["frame_number"] - start_frame_offset) < frames_count
     }
 
     # ── 3. Scene detection ────────────────────────────────────────────────────

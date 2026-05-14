@@ -192,6 +192,7 @@ def _process_single_clip(
     words: list,
     bucket: str,
     s3_key_dir: str,
+    tracking_data: list,
     font_family: str | None = None,
     font_color: str | None = None,
     font_size: int | None = None,
@@ -206,9 +207,8 @@ def _process_single_clip(
     Processes a single clip through the full sub-pipeline:
     extract -> track -> subtitle -> merge -> S3 upload.
     Returns a dict with {"s3Key": ..., "thumbnailKey": ...}.
-
-    Designed to run concurrently with other clip pipelines via ThreadPoolExecutor.
     """
+
     clip_out_path = f"{work_dir}/clip_{index}.mp4"
     logger.info(f"--- Processing Clip {index + 1} (parallel streaming) | caption_template={caption_template} ---")
     ext_vid = extract_segment(video_path, clip, index, work_dir, use_gpu=use_gpu)
@@ -216,6 +216,7 @@ def _process_single_clip(
     # Unified single-pass hardware streaming export bypasses CPU frame compression and disk bottlenecks
     trk_vid, chunk_meta = track_speaker_and_frame(
         ext_vid, index, clip, words, work_dir,
+        tracking_data=tracking_data,
         remote_cache=asd_cache,
         streaming_output_path=clip_out_path,
         font_family=font_family,
@@ -279,7 +280,7 @@ def _render_clips_pipeline(
       - S3 Transfer Acceleration (P2)
       - Structured pipeline tracing (P2)
     """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from concurrent.futures import ProcessPoolExecutor, as_completed
 
     run_id = str(uuid.uuid4())
     timer = PipelineTimer(run_id)
@@ -306,6 +307,17 @@ def _render_clips_pipeline(
     timer.begin("gpu_s3_download")
     logger.info("Downloading from S3 directly to GPU container")
     s3_client.download_file(bucket, s3_key, str(video_path))
+    
+    # Phase 3.7: Global ASD Tracking
+    timer.begin("global_asd_tracking")
+    logger.info("Running global ASD tracking for the entire video...")
+    with open(video_path, "rb") as f:
+        video_bytes = f.read()
+    
+    Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+    tracking_data_json = Tracker().process_video.remote(video_bytes)
+    tracking_data = json.loads(tracking_data_json)
+    timer.end("global_asd_tracking")
 
     try:
         s3_key_dir = os.path.dirname(s3_key)
@@ -319,12 +331,12 @@ def _render_clips_pipeline(
 
         # Remove max_workers cap to process all clips concurrently for speed
         max_workers = len(clips)
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
             future_to_idx = {
                 executor.submit(
                     _process_single_clip,
                     str(video_path), clip, index, words,
-                    bucket, s3_key_dir,
+                    bucket, s3_key_dir, tracking_data,
                     font_family, font_color, font_size, add_subtitles,
                     str(base_dir), has_nvenc, caption_template,
                 ): index
@@ -438,7 +450,7 @@ class ClippedAI:
     @modal.method()
     def run_pipeline(self, request_dict: dict):
         """
-        Merged GPU pipeline: download → WhisperX transcribe → Gemini select → render → webhook.
+        Merged GPU pipeline: download -> WhisperX transcribe -> Gemini select -> render -> webhook.
         Runs entirely on the warm L4 container. No inter-container handoff.
         """
         import shutil
