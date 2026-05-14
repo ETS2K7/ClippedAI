@@ -419,11 +419,11 @@ def _send_webhook(
 
 
 @app.cls(
-    gpu="L4",
-    timeout=1200,
-    scaledown_window=120,         # Keeps container warm for 2 minutes for 'Warm Up' feature
-    max_containers=10,            # Absolute upper bound on simultaneous tasks
-    retries=0,                    # Nullify automatic retries on failure (zero wastage)
+    gpu="A10G",
+    timeout=600,
+    scaledown_window=15,    # Kill GPU instantly if idle
+    max_containers=5,             # Conservative bound to protect credits
+    retries=0,
     secrets=[
         modal.Secret.from_name("clippedai-secret"),
         modal.Secret.from_name("my-gcp-secret"),
@@ -449,8 +449,9 @@ class ClippedAI:
         
         # Pre-resolve worker classes for instant access in run_pipeline
         self.whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
-        self.asd_cls = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-
+        # Pre-resolve self for distributed calls
+        self.this_cls = modal.Cls.from_name("clippedai", "ClippedAI")
+        
         logger.info("Container warm and ready.")
 
     @modal.method()
@@ -649,13 +650,56 @@ class ClippedAI:
 
         return {"status": "warming_up"}
 
+    @modal.method()
+    def _download_and_trigger(self, request_dict: dict):
+        """CPU task to handle external downloads before waking up the GPU."""
+        import pathlib
+        import uuid
+        
+        request = ProcessVideoRequest(**request_dict)
+        run_id = str(uuid.uuid4())
+        base_dir = pathlib.Path("/tmp") / run_id
+        base_dir.mkdir(parents=True, exist_ok=True)
+        
+        try:
+            video_path = base_dir / "input.mp4"
+            video_title = "Untitled Video"
+            
+            # Download on CPU
+            if request.youtube_url:
+                video_title = _download_youtube(request.youtube_url, video_path)
+            
+            # Upload to S3 so GPU can pick it up
+            s3_client = _create_s3_client()
+            bucket = os.environ.get("S3_BUCKET", "clipped-ai-storage")
+            s3_key = f"uploads/{run_id}/input.mp4"
+            s3_client.upload_file(str(video_path), bucket, s3_key)
+            
+            # Now trigger the GPU pipeline
+            new_request = request_dict.copy()
+            new_request["s3_key"] = s3_key # Override with the S3 key we just uploaded
+            new_request["youtube_url"] = None # Avoid re-downloading
+            
+            self.run_pipeline.spawn(new_request)
+            logger.info(f"CPU download complete. GPU pipeline triggered for {run_id}")
+            
+        except Exception as e:
+            logger.error(f"CPU download phase failed: {e}")
+        finally:
+            shutil.rmtree(base_dir, ignore_errors=True)
+
     @modal.fastapi_endpoint(method="POST")
     def process_video(self, request: ProcessVideoRequest, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
         auth_token = os.environ.get("AUTH_TOKEN")
         if not auth_token or not token.credentials or not hmac.compare_digest(token.credentials, auth_token):
             raise HTTPException(status_code=401, detail="Invalid token")
 
-        # Spawn merged pipeline on this GPU container
-        self.run_pipeline.spawn(request.dict())
+        if request.youtube_url:
+            # Save credits: Use CPU for the download phase
+            self._download_and_trigger.spawn(request.dict())
+        else:
+            # Local file or S3 key: Go straight to GPU
+            self.run_pipeline.spawn(request.dict())
+            
         return {"status": "processing_started"}
 
