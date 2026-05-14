@@ -43,7 +43,7 @@ def transcribe_whisperx(
     # 3. Diarization
     logger.info("Running speaker diarization...")
     from whisperx.diarize import DiarizationPipeline
-    diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=device)
+    diarize_model = DiarizationPipeline(token=hf_token, device=device)
     diarize_segments = diarize_model(audio)
     result = whisperx.assign_word_speakers(diarize_segments, result)
     
