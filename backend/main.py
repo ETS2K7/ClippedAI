@@ -193,6 +193,7 @@ def _process_single_clip(
     bucket: str,
     s3_key_dir: str,
     tracking_data: list,
+    audio_path: str,
     font_family: str | None = None,
     font_color: str | None = None,
     font_size: int | None = None,
@@ -217,6 +218,7 @@ def _process_single_clip(
     trk_vid, chunk_meta = track_speaker_and_frame(
         ext_vid, index, clip, words, work_dir,
         tracking_data=tracking_data,
+        audio_file=audio_path,
         remote_cache=asd_cache,
         streaming_output_path=clip_out_path,
         font_family=font_family,
@@ -309,6 +311,30 @@ def _render_clips_pipeline(
     logger.info("Downloading from S3 directly to GPU container")
     s3_client.download_file(bucket, s3_key, str(video_path))
     
+    # Phase 3.6: Create H.264 Proxy and Extract Audio
+    timer.begin("proxy_generation")
+    logger.info("Creating H.264 proxy and extracting global audio...")
+    proxy_path = base_dir / "proxy_1080p.mp4"
+    audio_path = base_dir / "global_audio.aac"
+    
+    # Convert to H.264 for fast decoding and extract audio in one pass
+    subprocess.run([
+        "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
+        "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "23",
+        "-c:a", "aac", "-b:a", "192k",
+        "-map", "0:v:0", "-map", "0:a:0?",
+        str(proxy_path)
+    ], check=True)
+    
+    subprocess.run([
+        "/usr/bin/ffmpeg", "-y", "-i", str(proxy_path),
+        "-vn", "-acodec", "copy", str(audio_path)
+    ], check=True)
+    
+    # Use proxy for rendering
+    video_path = proxy_path
+
+    
     # Phase 4-7: Parallel Clip Processing
     try:
         s3_key_dir = os.path.dirname(s3_key)
@@ -327,7 +353,7 @@ def _render_clips_pipeline(
                 executor.submit(
                     _process_single_clip,
                     str(video_path), clip, index, words,
-                    bucket, s3_key_dir, tracking_data,
+                    bucket, s3_key_dir, tracking_data, str(audio_path),
                     font_family, font_color, font_size, add_subtitles,
                     str(base_dir), has_nvenc, caption_template,
                 ): index

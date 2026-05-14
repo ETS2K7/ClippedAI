@@ -493,6 +493,7 @@ def track_speaker_and_frame(
     add_subtitles: bool = True,
     use_gpu: bool = False,
     tracking_data: List[Dict[str, Any]] | None = None,
+    audio_file: str | None = None,
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
@@ -1147,7 +1148,7 @@ def track_speaker_and_frame(
             "-s", f"{OUT_W}x{OUT_H}",
             "-r", str(fps),
             "-i", "pipe:0",
-            "-i", clip_file,
+            "-i", audio_file if audio_file else clip_file,
         ]
         if sub_file:
             safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
@@ -1237,8 +1238,8 @@ def track_speaker_and_frame(
                 
                 frame_buffer.append(out_frame.tobytes())
                 
-                # Flush every 30 frames (approx 1 second of video)
-                if len(frame_buffer) >= 30:
+                # Flush every 150 frames (approx 5 seconds of video) to reduce syscalls
+                if len(frame_buffer) >= 150:
                     ffmpeg_proc.stdin.write(b"".join(frame_buffer))
                     frame_buffer = []
             else:
