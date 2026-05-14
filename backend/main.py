@@ -535,7 +535,7 @@ class ClippedAI:
 
             # 2. H.264 Proxy Generation Spawn (Background Process)
             proxy_path = base_dir / "proxy_1080p.mp4"
-            audio_path = base_dir / "global_audio.aac"
+            rendering_audio_path = base_dir / "global_audio.aac"
             proxy_proc = subprocess.Popen([
                 "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
                 "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "23",
@@ -561,14 +561,14 @@ class ClippedAI:
             hf_token = os.environ.get("HF_TOKEN", "")
             
             # Extract audio first (WhisperX worker takes audio bytes)
-            audio_path = base_dir / "input_audio.wav"
+            transcription_audio_path = base_dir / "input_audio.wav"
             subprocess.run([
                 "/usr/bin/ffmpeg", "-y", "-i", str(video_path), 
                 "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", 
-                str(audio_path)
+                str(transcription_audio_path)
             ], check=True)
             
-            with open(audio_path, "rb") as f:
+            with open(transcription_audio_path, "rb") as f:
                 audio_bytes = f.read()
             
             logger.info("Calling isolated WhisperX worker...")
@@ -608,7 +608,7 @@ class ClippedAI:
         
         subprocess.run([
             "/usr/bin/ffmpeg", "-y", "-i", str(proxy_path),
-            "-vn", "-acodec", "copy", str(audio_path)
+            "-vn", "-acodec", "copy", str(rendering_audio_path)
         ], check=True)
 
         # ── Phase 4-7: GPU Rendering ──────────────────────────────────────────
@@ -619,7 +619,7 @@ class ClippedAI:
                 run_id=run_id, base_dir=base_dir,
                 video_path_override=str(proxy_path),
                 tracking_data=tracking_data,
-                audio_path=str(audio_path),
+                audio_path=str(rendering_audio_path),
                 font_family=request.font_family,
                 font_color=request.font_color,
                 font_size=request.font_size,
