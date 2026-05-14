@@ -94,8 +94,9 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
         else:
             clip["romanized_words"] = []
 
-    with ThreadPoolExecutor(max_workers=len(validated_clips)) as executor:
-        executor.map(_process_transliteration, validated_clips)
+    if validated_clips:
+        with ThreadPoolExecutor(max_workers=len(validated_clips)) as executor:
+            executor.map(_process_transliteration, validated_clips)
 
     # Cache writes disabled per user request
 
@@ -120,7 +121,7 @@ def _call_gemini_selection(prompt: str, specific_moments: str = None) -> list:
     for attempt in range(MAX_RETRIES):
         try:
             response = client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-1.5-flash-002",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
@@ -167,7 +168,7 @@ def _call_gemini_transliterate(text: str) -> list:
     for attempt in range(2):
         try:
             response = client.models.generate_content(
-                model="gemini-1.5-flash",
+                model="gemini-1.5-flash-002",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
