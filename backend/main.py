@@ -257,6 +257,8 @@ def _render_clips_pipeline(
     words: list,
     clips: list,
     previous_phases: list,
+    run_id: str,
+    base_dir: pathlib.Path,
     font_family: str | None = None,
     font_color: str | None = None,
     font_size: int | None = None,
