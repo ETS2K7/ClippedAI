@@ -190,7 +190,6 @@ def _process_single_clip(
     clip: dict,
     index: int,
     words: list,
-    s3_client,
     bucket: str,
     s3_key_dir: str,
     font_family: str | None = None,
@@ -201,6 +200,8 @@ def _process_single_clip(
     use_gpu: bool = False,
     caption_template: str | None = None,
 ) -> dict:
+    import boto3
+    s3_client = boto3.client("s3")
     """
     Processes a single clip through the full sub-pipeline:
     extract -> track -> subtitle -> merge -> S3 upload.
@@ -323,7 +324,7 @@ def _render_clips_pipeline(
                 executor.submit(
                     _process_single_clip,
                     str(video_path), clip, index, words,
-                    s3_client, bucket, s3_key_dir,
+                    bucket, s3_key_dir,
                     font_family, font_color, font_size, add_subtitles,
                     str(base_dir), has_nvenc, caption_template,
                 ): index
