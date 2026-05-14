@@ -19,6 +19,8 @@ whisperx_image = (
         "setuptools",
     )
     .run_commands("pip install git+https://github.com/m-bain/whisperX.git")
+    .add_local_dir("src", remote_path="/root/src")
+    .add_local_file("config.py", remote_path="/root/config.py")
 )
 
 app = modal.App("whisperx-worker", image=whisperx_image)

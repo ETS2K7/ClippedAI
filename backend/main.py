@@ -499,28 +499,24 @@ class ClippedAI:
 
             # ── Phase 2: Transcription (Remote WhisperX GPU Worker) ──────────
             timer.begin("transcription")
-            try:
-                hf_token = os.environ.get("HF_TOKEN", "")
-                
-                # Extract audio first (WhisperX worker takes audio bytes)
-                audio_path = base_dir / "input_audio.wav"
-                subprocess.run([
-                    "ffmpeg", "-y", "-i", str(video_path), 
-                    "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", 
-                    str(audio_path)
-                ], check=True)
-                
-                with open(audio_path, "rb") as f:
-                    audio_bytes = f.read()
-                
-                logger.info("Calling isolated WhisperX worker...")
-                whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
-                words_json = whisperx_cls().transcribe.remote(audio_bytes, hf_token)
-                words = json.loads(words_json)
-                logger.info(f"WhisperX worker returned {len(words)} words.")
-            except Exception as e:
-                logger.warning(f"WhisperX worker failed ({e}) — falling back to AssemblyAI")
-                words = transcribe(str(video_path), request.s3_key, remote_cache=transcript_cache)
+            hf_token = os.environ.get("HF_TOKEN", "")
+            
+            # Extract audio first (WhisperX worker takes audio bytes)
+            audio_path = base_dir / "input_audio.wav"
+            subprocess.run([
+                "ffmpeg", "-y", "-i", str(video_path), 
+                "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", 
+                str(audio_path)
+            ], check=True)
+            
+            with open(audio_path, "rb") as f:
+                audio_bytes = f.read()
+            
+            logger.info("Calling isolated WhisperX worker...")
+            whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
+            words_json = whisperx_cls().transcribe.remote(audio_bytes, hf_token)
+            words = json.loads(words_json)
+            logger.info(f"WhisperX worker returned {len(words)} words.")
 
             # ── Phase 3: Clip Selection (Gemini) ──────────────────────────────
             timer.begin("clip_selection")
