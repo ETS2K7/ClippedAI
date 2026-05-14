@@ -125,7 +125,7 @@ def _call_gemini_selection(prompt: str, specific_moments: str = None) -> list:
     for attempt in range(MAX_RETRIES):
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-1.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
@@ -168,7 +168,7 @@ def _call_gemini_transliterate(text: str) -> list:
     for attempt in range(2):
         try:
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-1.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
