@@ -499,21 +499,6 @@ class ClippedAI:
                     else:
                         raise
 
-            # ── Phase 1.5: Parallel ASD Tracking Spawn (360p downscaled) ──────────
-            timer.begin("asd_spawn")
-            logger.info("Spawning parallel ASD tracking (360p)...")
-            lowres_video_path = base_dir / "input_360p.mp4"
-            subprocess.run([
-                "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
-                "-vf", "scale=-2:360",
-                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
-                "-an", str(lowres_video_path)
-            ], check=True)
-
-            with open(lowres_video_path, "rb") as f:
-                video_bytes_lowres = f.read()
-            
-            Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
             # ── Phase 1.5: Triple Parallel Spawn ──────────────────────────────
             timer.begin("parallel_spawn")
             logger.info("Spawning parallel ASD, Transcription, and Proxy Generation...")
