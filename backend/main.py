@@ -279,7 +279,7 @@ def _render_clips_pipeline(
       - S3 Transfer Acceleration (P2)
       - Structured pipeline tracing (P2)
     """
-    from concurrent.futures import ProcessPoolExecutor, as_completed
+    from concurrent.futures import ThreadPoolExecutor, as_completed
 
     run_id = str(uuid.uuid4())
     timer = PipelineTimer(run_id)
@@ -319,7 +319,7 @@ def _render_clips_pipeline(
 
         # Remove max_workers cap to process all clips concurrently for speed
         max_workers = len(clips)
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_idx = {
                 executor.submit(
                     _process_single_clip,
