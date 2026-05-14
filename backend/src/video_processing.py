@@ -1164,7 +1164,7 @@ def track_speaker_and_frame(
                 "-pix_fmt", "yuv420p",
                 "-preset", "p4",
                 "-rc", "constqp",
-                "-qp", "28",
+                "-qp", "22",
             ])
         else:
             cmd.extend([

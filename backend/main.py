@@ -526,7 +526,7 @@ class ClippedAI:
             rendering_audio_path = base_dir / "global_audio.aac"
             proxy_proc = subprocess.Popen([
                 "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
-                "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "23",
+                "-c:v", "h264_nvenc", "-preset", "p1", "-qp", "19",
                 "-c:a", "aac", "-b:a", "192k",
                 "-map", "0:v:0", "-map", "0:a:0?",
                 str(proxy_path)
