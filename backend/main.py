@@ -276,7 +276,7 @@ def _render_clips_pipeline(
       - S3 Transfer Acceleration (P2)
       - Structured pipeline tracing (P2)
     """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from concurrent.futures import ProcessPoolExecutor, as_completed
 
     run_id = str(uuid.uuid4())
     timer = PipelineTimer(run_id)
@@ -316,7 +316,7 @@ def _render_clips_pipeline(
 
         # Remove max_workers cap to process all clips concurrently for speed
         max_workers = len(clips)
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        with ProcessPoolExecutor(max_workers=max_workers) as executor:
             future_to_idx = {
                 executor.submit(
                     _process_single_clip,
@@ -404,7 +404,7 @@ def _send_webhook(
 @app.cls(
     gpu="L4",
     timeout=1200,
-    scaledown_window=15,          # Aggressive idle shutdown to prevent credit leakage
+    scaledown_window=120,         # Keeps container warm for 2 minutes for 'Warm Up' feature
     max_containers=10,            # Absolute upper bound on simultaneous tasks
     retries=0,                    # Nullify automatic retries on failure (zero wastage)
     secrets=[
@@ -433,215 +433,154 @@ class ClippedAI:
         logger.info("Container warm and ready.")
 
     @modal.method()
-    def process_clips_gpu(self, request_dict: dict, words: list, clips: list, previous_phases: list):
+    def run_pipeline(self, request_dict: dict):
+        """
+        Merged GPU pipeline: download → WhisperX transcribe → Gemini select → render → webhook.
+        Runs entirely on the warm L4 container. No inter-container handoff.
+        """
+        import shutil
+        import pathlib
         request = ProcessVideoRequest(**request_dict)
-        # Run the pipeline
+        run_id = str(uuid.uuid4())
+        timer = PipelineTimer(run_id)
+        base_dir = pathlib.Path("/tmp") / run_id
+        base_dir.mkdir(parents=True, exist_ok=True)
+        video_path = base_dir / "input.mp4"
+        s3_client = _create_s3_client()
+        bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
+        video_title = None
+
         try:
+            # ── Phase 1: Ingest ───────────────────────────────────────────────
+            timer.begin("ingestion")
+            if request.youtube_url:
+                _already_in_s3 = False
+                try:
+                    s3_client.head_object(Bucket=bucket, Key=request.s3_key)
+                    _already_in_s3 = True
+                    logger.info(f"[S3 Cache] Hit — '{request.s3_key}' already exists. Skipping Apify.")
+                except Exception:
+                    logger.info("[S3 Cache] Miss — downloading via Apify.")
+
+                if _already_in_s3:
+                    s3_client.download_file(bucket, request.s3_key, str(video_path))
+                else:
+                    video_title = _download_youtube(request.youtube_url, video_path)
+                    s3_client.upload_file(str(video_path), bucket, request.s3_key)
+                request_dict["youtube_url"] = None
+            else:
+                logger.info("Downloading from S3 to GPU container...")
+                try:
+                    s3_client.download_file(bucket, request.s3_key, str(video_path))
+                except Exception as e:
+                    err_str = str(e)
+                    if "404" in err_str or "NoSuchKey" in err_str:
+                        parts = request.s3_key.split("/")
+                        if parts[0] == "youtube-downloads" and len(parts) >= 2:
+                            reconstructed_url = f"https://www.youtube.com/watch?v={parts[1]}"
+                            logger.warning(f"S3 404. Re-ingesting from YouTube: {reconstructed_url}")
+                            _download_youtube(reconstructed_url, video_path)
+                            s3_client.upload_file(str(video_path), bucket, request.s3_key)
+                        else:
+                            raise
+                    else:
+                        raise
+
+            if request.timeframe_start is not None and request.timeframe_end is not None:
+                if request.timeframe_end > request.timeframe_start:
+                    trimmed_path = base_dir / "trimmed_input.mp4"
+                    duration = request.timeframe_end - request.timeframe_start
+                    subprocess.run([
+                        "ffmpeg", "-y", "-ss", str(request.timeframe_start),
+                        "-i", str(video_path), "-t", str(duration),
+                        "-c", "copy", str(trimmed_path)
+                    ], check=True)
+                    video_path = trimmed_path
+
+            # ── Phase 2: Transcription (Remote WhisperX GPU Worker) ──────────
+            timer.begin("transcription")
+            try:
+                hf_token = os.environ.get("HF_TOKEN", "")
+                
+                # Extract audio first (WhisperX worker takes audio bytes)
+                audio_path = base_dir / "input_audio.wav"
+                subprocess.run([
+                    "ffmpeg", "-y", "-i", str(video_path), 
+                    "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", 
+                    str(audio_path)
+                ], check=True)
+                
+                with open(audio_path, "rb") as f:
+                    audio_bytes = f.read()
+                
+                logger.info("Calling isolated WhisperX worker...")
+                whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
+                words_json = whisperx_cls().transcribe.remote(audio_bytes, hf_token)
+                words = json.loads(words_json)
+                logger.info(f"WhisperX worker returned {len(words)} words.")
+            except Exception as e:
+                logger.warning(f"WhisperX worker failed ({e}) — falling back to AssemblyAI")
+                words = transcribe(str(video_path), request.s3_key, remote_cache=transcript_cache)
+
+            # ── Phase 3: Clip Selection (Gemini) ──────────────────────────────
+            timer.begin("clip_selection")
+            clips = select_clips(words, request.specific_moments)
+            timer._flush()
+
+        except Exception as e:
+            logger.error(f"Pipeline ingestion/transcription failed: {e}")
+            if request.webhook_url:
+                _send_webhook(
+                    request.webhook_url, request.webhook_secret,
+                    request.uploaded_file_id, request.user_id,
+                    {"status": "failed", "clips": [], "error": f"Pipeline error: {str(e)}"},
+                    video_title
+                )
+            return
+            
+        # ── Phase 4-7: GPU Rendering ──────────────────────────────────────────
+        try:
+            logger.info(f"Starting GPU rendering ({len(words)} words, {len(clips)} clips)...")
             result = _render_clips_pipeline(
-                request.s3_key,
-                words,
-                clips,
-                previous_phases,
+                request.s3_key, words, clips, timer.phases,
+                run_id=run_id, base_dir=base_dir,
                 font_family=request.font_family,
                 font_color=request.font_color,
                 font_size=request.font_size,
                 add_subtitles=request.add_subtitles,
                 caption_template=request.caption_template,
             )
-        except RuntimeError as e:
-            logger.error(f"Pipeline failed (RuntimeError): {e}")
-            result = {"status": "failed", "clips": [], "error": f"Runtime error: {str(e)}"}
-        except ValueError as e:
-            logger.error(f"Pipeline failed (ValueError): {e}")
-            result = {"status": "failed", "clips": [], "error": f"Invalid input: {str(e)}"}
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Pipeline failed (Network error): {e}")
-            result = {"status": "failed", "clips": [], "error": f"Network error: {str(e)}"}
         except Exception as e:
-            logger.error(f"Pipeline failed (Unexpected): {e}")
-            result = {"status": "failed", "clips": [], "error": f"Unexpected error: {str(e)}"}
+            logger.error(f"GPU rendering failed: {e}")
+            result = {"status": "failed", "clips": [], "error": f"Rendering error: {str(e)}"}
+        finally:
+            if base_dir.exists():
+                shutil.rmtree(base_dir, ignore_errors=True)
 
-        return result
+        if request.webhook_url and request.webhook_secret and request.uploaded_file_id and request.user_id:
+            _send_webhook(
+                request.webhook_url, request.webhook_secret,
+                request.uploaded_file_id, request.user_id,
+                result, video_title,
+            )
+
+    @modal.fastapi_endpoint(method="POST")
+    def warmup(self, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
+        """Wakes up the GPU container to eliminate cold start for the next job."""
+        auth_token = os.environ.get("AUTH_TOKEN")
+        if not auth_token or not token.credentials or not hmac.compare_digest(token.credentials, auth_token):
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        logger.info("Warmup request received. Container is now active.")
+        return {"status": "warming_up", "message": "GPU container is being provisioned."}
 
     @modal.fastapi_endpoint(method="POST")
     def process_video(self, request: ProcessVideoRequest, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
         auth_token = os.environ.get("AUTH_TOKEN")
-        # Validate token format before comparison
-        if not auth_token or not token.credentials or len(token.credentials) < 16:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid bearer token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        if not hmac.compare_digest(token.credentials, auth_token):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect bearer token",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+        if not auth_token or not token.credentials or not hmac.compare_digest(token.credentials, auth_token):
+            raise HTTPException(status_code=401, detail="Invalid token")
 
-        # Dispatch execution to CPU wrapper to prevent timeout and GPU locking
-        process_video_cpu_wrapper.spawn(request.dict())
+        # Spawn merged pipeline on this GPU container
+        self.run_pipeline.spawn(request.dict())
         return {"status": "processing_started"}
 
-
-@app.function(
-    timeout=1200, 
-    max_containers=20, 
-    retries=0, 
-    secrets=[
-        modal.Secret.from_name("clippedai-secret"),
-        modal.Secret.from_name("my-gcp-secret"),
-    ]
-)
-def process_video_cpu_wrapper(request_dict: dict):
-    """CPU-only ingestion wrapper. Performs Video Download, Transcription, and LLM selection locally before waking GPU."""
-    request = ProcessVideoRequest(**request_dict)
-    
-    import uuid
-    import shutil
-    import pathlib
-    
-    run_id = str(uuid.uuid4())
-    timer = PipelineTimer(run_id)
-    base_dir = pathlib.Path("/tmp") / run_id
-    base_dir.mkdir(parents=True, exist_ok=True)
-    video_path = base_dir / "input_ingestion.mp4"
-    
-    s3_client = _create_s3_client()
-    bucket = os.environ.get("S3_BUCKET_NAME", S3_BUCKET)
-    
-    video_title = None
-    try:
-        timer.begin("cpu_ingestion")
-        if request.youtube_url:
-            # ── S3 deduplication cache check ──────────────────────────────────
-            # Key is now youtube-downloads/{videoId}/original.mp4 (shared across users).
-            # If a previous run already downloaded this video, skip Apify entirely.
-            _already_in_s3 = False
-            try:
-                s3_client.head_object(Bucket=bucket, Key=request.s3_key)
-                _already_in_s3 = True
-                logger.info(
-                    f"[S3 Cache] 🟢 Hit — '{request.s3_key}' already exists. "
-                    "Skipping Apify download."
-                )
-            except Exception as _he:
-                # 404 / NoSuchKey means not cached yet — proceed with download
-                logger.info(f"[S3 Cache] 🔴 Miss — downloading via Apify.")
-
-            if _already_in_s3:
-                logger.info("Downloading cached video from S3 to CPU container...")
-                s3_client.download_file(bucket, request.s3_key, str(video_path))
-            else:
-                logger.info("Executing CPU-bound YouTube Apify download...")
-                video_title = _download_youtube(request.youtube_url, video_path)
-                if not video_title:
-                    logger.warning("Could not extract video title from Apify metadata.")
-                logger.info("Uploading ingestion artifact to S3...")
-                s3_client.upload_file(str(video_path), bucket, request.s3_key)
-
-            request_dict["youtube_url"] = None
-        else:
-            logger.info("Downloading from S3 to CPU container for transcription")
-            try:
-                s3_client.download_file(bucket, request.s3_key, str(video_path))
-            except Exception as e:
-                err_str = str(e)
-                if "404" in err_str or "Not Found" in err_str or "NoSuchKey" in err_str:
-                    parts = request.s3_key.split("/")
-                    # New flat key format: youtube-downloads/{videoId}/original.mp4 → parts[1] is videoId
-                    if parts[0] == "youtube-downloads" and len(parts) >= 2:
-                        video_id = parts[1]
-                        reconstructed_url = f"https://www.youtube.com/watch?v={video_id}"
-                        logger.warning(
-                            f"S3 key {request.s3_key} returned 404. "
-                            f"Re-ingesting from YouTube: {reconstructed_url}"
-                        )
-                        _download_youtube(reconstructed_url, video_path)
-                        logger.info("Re-uploading re-downloaded video to S3")
-                        s3_client.upload_file(str(video_path), bucket, request.s3_key)
-                    else:
-                        raise RuntimeError(
-                            f"S3 object not found ({request.s3_key}) and no YouTube URL to recover from. "
-                            "Please re-upload the file."
-                        ) from e
-                else:
-                    raise
-
-        # ── CREDIT SAVER: Timeframe Trimming ─────────────────────────────
-        if request.timeframe_start is not None and request.timeframe_end is not None:
-            if request.timeframe_end > request.timeframe_start:
-                timer.begin("timeframe_trimming")
-                trimmed_path = base_dir / "trimmed_input.mp4"
-                duration = request.timeframe_end - request.timeframe_start
-                logger.info(f"[Credit Saver] Trimming to {request.timeframe_start}s - {request.timeframe_end}s")
-                
-                # Use ffmpeg to trim the video before transcription/processing
-                trim_cmd = [
-                    "ffmpeg", "-y", 
-                    "-ss", str(request.timeframe_start), 
-                    "-i", str(video_path), 
-                    "-t", str(duration), 
-                    "-c", "copy", # Fast copy
-                    str(trimmed_path)
-                ]
-                subprocess.run(trim_cmd, check=True)
-                video_path = trimmed_path
-                logger.info("[Credit Saver] Trimming complete")
-            
-        timer.begin("transcription")
-        words = transcribe(str(video_path), request.s3_key, remote_cache=transcript_cache)
-        
-        timer.begin("clip_selection")
-        clips = select_clips(words, request.specific_moments)
-        
-        # Flush timer to get accurate timings for CPU phases
-        timer._flush()
-        
-    except Exception as e:
-        logger.error(f"CPU Wrapper failed: {e}")
-        if request.webhook_url:
-            _send_webhook(
-                request.webhook_url, request.webhook_secret,
-                request.uploaded_file_id, request.user_id,
-                {"status": "failed", "clips": [], "error": f"CPU Pipeline error: {str(e)}"},
-                video_title
-            )
-        return
-    finally:
-        if base_dir.exists():
-            shutil.rmtree(base_dir, ignore_errors=True)
-
-    # Trigger GPU pipeline
-    try:
-        logger.info(f"Delegating to GPU Pipeline (passing {len(words)} words, {len(clips)} clips)...")
-        result = ClippedAI().process_clips_gpu.remote(request_dict, words, clips, timer.phases)
-    except Exception as e:
-        logger.error(f"GPU pipeline delegation failed: {e}")
-        result = {"status": "failed", "clips": [], "error": f"GPU Wrapper error: {str(e)}"}
-
-    if request.webhook_url and request.webhook_secret and request.uploaded_file_id and request.user_id:
-        _send_webhook(
-            request.webhook_url,
-            request.webhook_secret,
-            request.uploaded_file_id,
-            request.user_id,
-            result,
-            video_title,
-        )
-
-
-@app.local_entrypoint()
-def run_cli_job(s3_key: str, youtube_url: str = None):
-    print(f"Submitting job to CPU wrapper for s3_key: {s3_key}")
-    request_dict = ProcessVideoRequest(
-        s3_key=s3_key, 
-        youtube_url=youtube_url, 
-        output_format="vertical"
-    ).model_dump()
-    process_video_cpu_wrapper.remote(request_dict)
-
-@app.local_entrypoint()
-def main():
-    pass

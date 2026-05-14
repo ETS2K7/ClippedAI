@@ -19,7 +19,7 @@ fast_asd_image = (
         "numpy==1.23.5",
         "gdown",
         "python_speech_features",
-        "scenedetect[opencv]",
+        "scenedetect[opencv]<0.6.0",
         "tqdm",
         "pandas",
     )
@@ -55,23 +55,45 @@ class FastASDTracker:
 
     @modal.method()
     def process_video(self, video_bytes: bytes) -> str:
-        os.chdir("/fast-asd/talknet")
-
-        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tf:
-            tf.write(video_bytes)
-            tf_path = tf.name
+        import shutil
+        import uuid
+        
+        request_id = str(uuid.uuid4())[:8]
+        req_cwd = f"/tmp/asd_cwd_{request_id}"
+        
+        # Create isolated structure for this specific request
+        os.makedirs(os.path.join(req_cwd, "save", "pycrop"), exist_ok=True)
+        
+        # Symlink the model folder needed by demoTalkNet instead of copying it
+        if os.path.exists("/fast-asd/talknet/model"):
+            os.symlink("/fast-asd/talknet/model", os.path.join(req_cwd, "model"))
+        
+        # Write input video to a path inside the isolated request directory
+        tf_path = os.path.join(req_cwd, "input.mp4")
+        with open(tf_path, "wb") as f:
+            f.write(video_bytes)
+        
+        prev_cwd = os.getcwd()
+        os.chdir(req_cwd)
 
         try:
             results = self.demoTalkNet.main(
                 s=self.s,
                 DET=self.DET,
-                video_path=tf_path,
+                video_path="input.mp4",
                 start_seconds=0,
                 end_seconds=-1,
                 return_visualization=False,
-                in_memory_threshold=0,  # Force disk processing for stability
+                in_memory_threshold=0,
             )
             return json.dumps(results)
+        except Exception as e:
+            # Handle edge cases where no speakers are found gracefully
+            if "broadcast" in str(e) or "pycrop" in str(e) or "negative values" in str(e):
+                print(f"Warning: Fast-ASD found no speakers in this segment: {e}")
+                return json.dumps([])
+            raise e
         finally:
-            if os.path.exists(tf_path):
-                os.remove(tf_path)
+            os.chdir(prev_cwd)
+            # Full cleanup of the isolated directory
+            shutil.rmtree(req_cwd, ignore_errors=True)

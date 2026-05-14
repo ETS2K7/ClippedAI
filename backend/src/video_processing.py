@@ -1247,10 +1247,23 @@ def track_speaker_and_frame(
             if n == 1:
                 out_frame = _cell_full(frame, cx[0] * w, cy[0] * h)
 
+            # ── Buffer frames to reduce syscall overhead (Phase 4) ───────────────────
             if streaming_output_path:
-                ffmpeg_proc.stdin.write(out_frame.tobytes())
+                if 'frame_buffer' not in locals():
+                    frame_buffer = []
+                
+                frame_buffer.append(out_frame.tobytes())
+                
+                # Flush every 30 frames (approx 1 second of video)
+                if len(frame_buffer) >= 30:
+                    ffmpeg_proc.stdin.write(b"".join(frame_buffer))
+                    frame_buffer = []
             else:
                 writer.write(out_frame)
+
+        # Final flush for any remaining frames in the buffer
+        if streaming_output_path and 'frame_buffer' in locals() and frame_buffer:
+            ffmpeg_proc.stdin.write(b"".join(frame_buffer))
     finally:
         if ffmpeg_proc:
             ffmpeg_proc.stdin.close()
