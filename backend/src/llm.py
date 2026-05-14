@@ -82,8 +82,10 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
         if duration >= _MIN_CLIP_DURATION and duration <= 100:
             validated_clips.append(clip)
 
-    # ... [Rest of logic: Transliteration & Caching] ...
-    for i, clip in enumerate(validated_clips):
+    # ── Parallel Transliteration ──
+    from concurrent.futures import ThreadPoolExecutor
+    
+    def _process_transliteration(clip):
         start, end = clip["start_time"], clip["end_time"]
         clip_words = [w["text"] for w in words if w["start"]/1000.0 >= start and w["end"]/1000.0 <= end]
         clip_text = " ".join(clip_words)
@@ -91,6 +93,9 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
             clip["romanized_words"] = _call_gemini_transliterate(clip_text)
         else:
             clip["romanized_words"] = []
+
+    with ThreadPoolExecutor(max_workers=len(validated_clips)) as executor:
+        executor.map(_process_transliteration, validated_clips)
 
     # Cache writes disabled per user request
 
@@ -115,7 +120,7 @@ def _call_gemini_selection(prompt: str, specific_moments: str = None) -> list:
     for attempt in range(MAX_RETRIES):
         try:
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-1.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
@@ -162,7 +167,7 @@ def _call_gemini_transliterate(text: str) -> list:
     for attempt in range(2):
         try:
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-1.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",

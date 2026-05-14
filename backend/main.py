@@ -442,6 +442,10 @@ class ClippedAI:
             logger.info(f"NVENC available: {self._has_nvenc}")
         except Exception:
             self._has_nvenc = False
+        
+        # Pre-resolve worker classes for instant access in run_pipeline
+        self.whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
+        self.asd_cls = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
 
         logger.info("Container warm and ready.")
 
@@ -515,8 +519,7 @@ class ClippedAI:
             with open(lowres_video_path, "rb") as f:
                 video_bytes_lowres = f.read()
             
-            Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-            asd_call = Tracker().process_video.spawn(video_bytes_lowres)
+            asd_call = self.asd_cls().process_video.spawn(video_bytes_lowres)
 
             # 2. H.264 Proxy Generation Spawn (Background Process)
             proxy_path = base_dir / "proxy_1080p.mp4"
@@ -557,8 +560,7 @@ class ClippedAI:
                 audio_bytes = f.read()
             
             logger.info("Calling isolated WhisperX worker...")
-            whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
-            words_json = whisperx_cls().transcribe.remote(audio_bytes, hf_token)
+            words_json = self.whisperx_cls().transcribe.remote(audio_bytes, hf_token)
             words = json.loads(words_json)
             logger.info(f"WhisperX worker returned {len(words)} words.")
 
