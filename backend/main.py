@@ -266,6 +266,7 @@ def _render_clips_pipeline(
     font_size: int | None = None,
     add_subtitles: bool = True,
     caption_template: str | None = None,
+    tracking_data: list | None = None,
 ) -> dict:
     """
     Shared video processing pipeline used by both CLI and HTTP endpoints.
@@ -308,17 +309,7 @@ def _render_clips_pipeline(
     logger.info("Downloading from S3 directly to GPU container")
     s3_client.download_file(bucket, s3_key, str(video_path))
     
-    # Phase 3.7: Global ASD Tracking
-    timer.begin("global_asd_tracking")
-    logger.info("Running global ASD tracking for the entire video...")
-    with open(video_path, "rb") as f:
-        video_bytes = f.read()
-    
-    Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-    tracking_data_json = Tracker().process_video.remote(video_bytes)
-    tracking_data = json.loads(tracking_data_json)
-
-
+    # Phase 4-7: Parallel Clip Processing
     try:
         s3_key_dir = os.path.dirname(s3_key)
 
@@ -501,6 +492,24 @@ class ClippedAI:
                     else:
                         raise
 
+            # ── Phase 1.5: Parallel ASD Tracking Spawn (360p downscaled) ──────────
+            timer.begin("asd_spawn")
+            logger.info("Spawning parallel ASD tracking (360p)...")
+            lowres_video_path = base_dir / "input_360p.mp4"
+            subprocess.run([
+                "/usr/bin/ffmpeg", "-y", "-i", str(video_path),
+                "-vf", "scale=-2:360",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+                "-an", str(lowres_video_path)
+            ], check=True)
+
+            with open(lowres_video_path, "rb") as f:
+                video_bytes_lowres = f.read()
+            
+            Tracker = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+            asd_call = Tracker().process_video.spawn(video_bytes_lowres)
+
+
             if request.timeframe_start is not None and request.timeframe_end is not None:
                 if request.timeframe_end > request.timeframe_start:
                     trimmed_path = base_dir / "trimmed_input.mp4"
@@ -549,12 +558,19 @@ class ClippedAI:
                 )
             return
             
+        # ── Phase 3.7: Wait for Global ASD Tracking ──────────────────────
+        timer.begin("global_asd_tracking_await")
+        logger.info("Waiting for parallel ASD tracking result...")
+        tracking_data_json = asd_call.get()
+        tracking_data = json.loads(tracking_data_json)
+
         # ── Phase 4-7: GPU Rendering ──────────────────────────────────────────
         try:
             logger.info(f"Starting GPU rendering ({len(words)} words, {len(clips)} clips)...")
             result = _render_clips_pipeline(
                 request.s3_key, words, clips, timer.phases,
                 run_id=run_id, base_dir=base_dir,
+                tracking_data=tracking_data,
                 font_family=request.font_family,
                 font_color=request.font_color,
                 font_size=request.font_size,
