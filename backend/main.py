@@ -593,13 +593,28 @@ class ClippedAI:
 
     @modal.fastapi_endpoint(method="POST")
     def warmup(self, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
-        """Wakes up the GPU container to eliminate cold start for the next job."""
+        """Wakes up the GPU container and all worker containers to eliminate cold starts."""
         auth_token = os.environ.get("AUTH_TOKEN")
         if not auth_token or not token.credentials or not hmac.compare_digest(token.credentials, auth_token):
             raise HTTPException(status_code=401, detail="Invalid token")
         
-        logger.info("Warmup request received. Container is now active.")
-        return {"status": "warming_up", "message": "GPU container is being provisioned."}
+        logger.info("Warmup request received. Triggering all workers...")
+        
+        # 1. Warm up WhisperX
+        try:
+            whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
+            # Using spawn with empty data just to trigger container provisioning
+            whisperx_cls().transcribe.spawn(b"", "")
+        except: pass
+
+        # 2. Warm up Fast-ASD
+        try:
+            tracker_cls = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+            tracker_cls().process_video.spawn(b"")
+        except: pass
+
+        logger.info("Warmup signals sent to all workers. Pipeline is now priming.")
+        return {"status": "warming_up", "message": "Full pipeline (Main + WhisperX + FastASD) is being provisioned."}
 
     @modal.fastapi_endpoint(method="POST")
     def process_video(self, request: ProcessVideoRequest, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
