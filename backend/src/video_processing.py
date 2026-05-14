@@ -356,7 +356,7 @@ def _stabilize_bool_state(
 
 def _cell_full(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     """Single-speaker: AR-safe crop → 1080×1920."""
-    return cv2.resize(_ar_safe_crop(frame, cx, cy, OUT_W, OUT_H), (OUT_W, OUT_H))
+    return cv2.resize(_ar_safe_crop(frame, cx, cy, OUT_W, OUT_H), (OUT_W, OUT_H), interpolation=cv2.INTER_CUBIC)
 
 
 def _cell_half(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
@@ -364,6 +364,7 @@ def _cell_half(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(
         _ar_safe_crop(frame, cx, cy, OUT_W, OUT_H // 2),
         (OUT_W, OUT_H // 2),
+        interpolation=cv2.INTER_CUBIC
     )
 
 
@@ -372,6 +373,7 @@ def _cell_3_top(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(
         _ar_safe_crop(frame, cx, cy, OUT_W, OUT_H // 2),
         (OUT_W, OUT_H // 2),
+        interpolation=cv2.INTER_CUBIC
     )
 
 
@@ -380,6 +382,7 @@ def _cell_3_side(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(
         _ar_safe_crop(frame, cx, cy, OUT_W // 2, OUT_H // 2),
         (OUT_W // 2, OUT_H // 2),
+        interpolation=cv2.INTER_CUBIC
     )
 
 
@@ -388,6 +391,7 @@ def _cell_quad(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(
         _ar_safe_crop(frame, cx, cy, OUT_W // 2, OUT_H // 2),
         (OUT_W // 2, OUT_H // 2),
+        interpolation=cv2.INTER_CUBIC
     )
 
 
