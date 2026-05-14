@@ -449,7 +449,7 @@ class ClippedAI:
         
         # Pre-resolve worker classes for instant access in run_pipeline
         self.whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
-        # Pre-resolve self for distributed calls
+        self.asd_cls = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
         self.this_cls = modal.Cls.from_name("clippedai", "ClippedAI")
         
         logger.info("Container warm and ready.")
@@ -458,10 +458,17 @@ class ClippedAI:
     def run_pipeline(self, request_dict: dict):
         """
         Merged GPU pipeline: download -> WhisperX transcribe -> Gemini select -> render -> webhook.
-        Runs entirely on the warm L4 container. No inter-container handoff.
+        Runs entirely on the warm GPU container. No inter-container handoff.
         """
         import shutil
         import pathlib
+        
+        # Ensure worker classes are resolved (fallback if startup failed)
+        if not hasattr(self, "asd_cls"):
+            self.asd_cls = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
+        if not hasattr(self, "whisperx_cls"):
+            self.whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
+        
         request = ProcessVideoRequest(**request_dict)
         run_id = str(uuid.uuid4())
         timer = PipelineTimer(run_id)
