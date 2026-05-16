@@ -2,7 +2,7 @@
 import { cn } from "~/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { loginSchema, type LoginFormValues } from "~/schemas/auth";
 import { signIn } from "next-auth/react";
@@ -28,7 +28,21 @@ export function AuthForm({
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
   const emailValue = watch("email");
-  const isDisposable = emailValue ? isDisposableEmailSync(emailValue) : false;
+
+  useEffect(() => {
+    // Basic format check to avoid spamming the API
+    if (!emailValue || !/^\S+@\S+\.\S+$/.test(emailValue)) return;
+
+    const timer = setTimeout(() => {
+      fetch("/api/auth/validate-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailValue }),
+      }).catch(() => {});
+    }, 600); // 600ms debounce
+
+    return () => clearTimeout(timer);
+  }, [emailValue]);
 
   const onContinue = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -142,12 +156,6 @@ export function AuthForm({
                   {...register("code")}
                 />
               </div>
-            )}
-
-            {step === "email" && isDisposable && (
-              <p className="px-1 text-[13px] font-medium text-orange-400/90">
-                Use a non-disposable email to get login code & free credits.
-              </p>
             )}
 
             {error && (
