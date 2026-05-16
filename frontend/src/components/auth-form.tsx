@@ -139,6 +139,12 @@ export function AuthForm({
               </div>
             )}
 
+            {step === "email" && (
+              <p className="px-1 text-[13px] font-medium text-orange-400/90">
+                Use a non-disposable email to get login code & free credits.
+              </p>
+            )}
+
             {error && (
               <p className="px-1 text-xs font-medium text-red-400">
                 {error}
@@ -152,7 +158,7 @@ export function AuthForm({
                 disabled={isSubmitting}
                 className="mt-1 h-[48px] rounded-[10px] bg-white text-[15px] font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                {isSubmitting ? "Sending..." : "Continue with email"}
+                Continue with email
               </button>
             ) : (
               <button
@@ -160,7 +166,7 @@ export function AuthForm({
                 disabled={isSubmitting}
                 className="mt-1 h-[48px] rounded-[10px] bg-white text-[15px] font-bold text-black transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                {isSubmitting ? "Verifying..." : "Verify and Continue"}
+                Verify and Continue
               </button>
             )}
 
