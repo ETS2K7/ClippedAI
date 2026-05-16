@@ -7,6 +7,7 @@ import hmac
 import hashlib
 import time
 import pathlib
+import logging
 import boto3
 from typing import List, Dict, Any, Optional
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -16,13 +17,28 @@ from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
-from config import get_logger
-from src.llm import select_clips
+# ─── Inline Logging Logic (Self-Contained) ────────────────────────────────────
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[logging.StreamHandler()],
+)
+for _noisy in ("hpack", "httpx", "httpcore", "botocore", "s3transfer", "urllib3"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
+
+def get_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    logger.setLevel(LOG_LEVEL)
+    return logger
 
 logger = get_logger(__name__)
 
 # ─── Modal App Configuration ──────────────────────────────────────────────────
 app = modal.App("clippedai")
+
+# Define project base path for local file inclusion
+PROJECT_DIR = pathlib.Path(__file__).parent.resolve()
 
 # Shared GPU Image with all required system dependencies
 image = (
@@ -33,10 +49,9 @@ image = (
         "boto3", "pydantic", "requests", "opencv-python", "numpy", 
         "scenedetect", "apify-client", "python-dotenv"
     )
+    # Modern Modal 1.0+ File Inclusion
+    .add_local_dir(PROJECT_DIR / "src", remote_path="/root/src")
 )
-
-# ─── Global Constants ─────────────────────────────────────────────────────────
-S3_BUCKET = os.environ.get("S3_BUCKET_NAME", "clippedai-7137")
 
 # ─── Data Models ──────────────────────────────────────────────────────────────
 class ProcessVideoRequest(BaseModel):
@@ -178,15 +193,6 @@ class ClippedAI:
         # Pre-resolve worker classes for instant access
         self.whisperx_cls = modal.Cls.from_name("whisperx-worker", "WhisperXWorker")
         self.asd_cls = modal.Cls.from_name("fast-asd-tracker", "FastASDTracker")
-        self.this_cls = modal.Cls.from_name("clippedai", "ClippedAI")
-        
-        # Verify GPU availability for NVENC
-        try:
-            result = subprocess.run(["ffmpeg", "-encoders"], capture_output=True, text=True, timeout=10)
-            self._has_nvenc = "h264_nvenc" in result.stdout
-            logger.info(f"NVENC available: {self._has_nvenc}")
-        except Exception:
-            self._has_nvenc = False
         
         logger.info("Container warm and ready.")
 
@@ -408,7 +414,6 @@ class ClippedAI:
         else:
             self.run_pipeline.spawn(request.dict())
         return {"status": "processing_started"}
-
 
 def _process_single_clip(
     video_path, clip, index, words,
