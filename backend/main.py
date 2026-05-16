@@ -166,7 +166,7 @@ class PipelineTimer:
         if self.current_step:
             duration = time.time() - self.start_time
             self.steps[self.current_step] = duration
-            logger.info(f"[{self.run_id}] ✓ {self.current_step} ({duration:.1fs})")
+            logger.info(f"[{self.run_id}] ✓ {self.current_step} ({duration:.1f}s)")
             self.current_step = None
 
 # ─── Modal App Classes ───────────────────────────────────────────────────────
