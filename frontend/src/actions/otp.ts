@@ -10,30 +10,26 @@ const resend = new Resend(env.RESEND_API_KEY);
 const emailSchema = z.string().email();
 
 export async function sendOTP(email: string) {
-  const validation = emailSchema.safeParse(email);
-  if (!validation.success) {
-    return { success: false, error: "Invalid email address" };
-  }
-
-  const { valid, reason } = await validateEmailRobust(email);
-  if (!valid) {
-    let errorMsg = "Please use a permanent email address (like Gmail, Outlook, etc.).";
-    if (reason === "disposable") errorMsg = "Temporary or disposable emails are not allowed.";
-    if (reason === "invalid_domain") errorMsg = "This email domain does not seem to exist.";
-    if (reason === "invalid_mailbox") errorMsg = "This email address is invalid or unreachable.";
-    
-    return { success: false, error: errorMsg };
-  }
-
-  // Generate a 6-digit numeric code
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-
   try {
+    const validation = emailSchema.safeParse(email);
+    if (!validation.success) {
+      return { success: false, error: "Invalid email address" };
+    }
+
+    const { valid, reason } = await validateEmailRobust(email);
+    if (!valid) {
+      // Align all suspicious activity to the orange "non-disposable" hint
+      return { success: false, error: "Use a non-disposable email to get login code & free credits." };
+    }
+
+    // Generate a 6-digit numeric code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expires = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
     // 1. Delete all expired tokens in the DB (Global Cleanup)
     await db.verificationToken.deleteMany({
       where: { expires: { lt: new Date() } },
-    });
+    }).catch(e => console.error("Prisma Cleanup Error:", e));
 
     // 2. Delete any existing tokens for THIS email (User Cleanup)
     await db.verificationToken.deleteMany({
@@ -82,7 +78,7 @@ export async function sendOTP(email: string) {
       // Fallback for development if API key is missing
       if (process.env.NODE_ENV === "development") {
         console.log("DEV: Verification code for", email, "is", code);
-        return { success: true, dev: true, code }; // Return code in dev for easier testing
+        return { success: true, dev: true, code };
       }
       return { success: false, error: "Failed to send verification email" };
     }
@@ -90,6 +86,6 @@ export async function sendOTP(email: string) {
     return { success: true };
   } catch (err) {
     console.error("OTP Error:", err);
-    return { success: false, error: "An unexpected error occurred" };
+    return { success: false, error: "An unexpected error occurred. Please try again later." };
   }
 }

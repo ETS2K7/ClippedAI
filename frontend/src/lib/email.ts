@@ -13,7 +13,7 @@ const LEGIT_DOMAINS = new Set([
 
 // High-priority manual blocklist for domains that occasionally bypass the community list
 const MANUAL_BLOCKLIST = new Set([
-  "acanok.com", "temp-mail.org", "guerrillamail.com", "sharklasers.com",
+  "acanok.com", "mfxis.com", "temp-mail.org", "guerrillamail.com", "sharklasers.com",
   "mailinator.com", "10minutemail.com", "yopmail.com"
 ]);
 

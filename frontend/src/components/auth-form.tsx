@@ -43,8 +43,8 @@ export function AuthForm({
         } else {
           setError(result.error ?? "Failed to send verification code");
         }
-      } catch {
-        setError("An error occurred");
+      } catch (err: any) {
+        setError(err?.message || "An error occurred. Please check your connection.");
       } finally {
         setIsSubmitting(false);
       }
@@ -151,7 +151,10 @@ export function AuthForm({
             )}
 
             {error && (
-              <p className="px-1 text-xs font-medium text-red-400">
+              <p className={cn(
+                "px-1 text-xs font-medium",
+                error.includes("non-disposable") ? "text-orange-400/90" : "text-red-400"
+              )}>
                 {error}
               </p>
             )}
