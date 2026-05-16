@@ -46,7 +46,7 @@ image = (
     .apt_install("ffmpeg", "wget")
     .pip_install(
         "fastapi[standard]", "openai", "anthropic", "google-cloud-aiplatform", "google-genai",
-        "boto3", "pydantic", "requests", "opencv-python", "numpy", 
+        "boto3", "pydantic", "requests", "opencv-python", "numpy", "scipy",
         "scenedetect", "apify-client", "python-dotenv"
     )
     # Modern Modal 1.0+ File Inclusion
