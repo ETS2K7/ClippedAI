@@ -1,0 +1,15 @@
+                                            Apps                                
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━━┳━━
+┃ App ID                    ┃ Description  ┃ State    ┃ Tasks ┃ Created at   ┃ S
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━╇━━
+│ ap-uiyc0bRmol7wwOERAkCi1y │ fast-asd-tr… │ deployed │ 0     │ 2026-05-14   │  
+│                           │              │          │       │ 19:36 IST    │  
+│ ap-pzs58cSdq6b99JOZG35gon │ clippedai    │ deployed │ 2     │ 2026-05-16   │  
+│                           │              │          │       │ 23:19 IST    │  
+│ ap-CydsANOp38rWu7d0X9fypw │ whisperx-wo… │ stopped  │ 0     │ 2026-05-14   │ 2
+│                           │              │          │       │ 20:29 IST    │ 2
+│ ap-VR98staGQ7yG4QM5cdBYX8 │ clippedai    │ stopped  │ 0     │ 2026-05-16   │ 2
+│                           │              │          │       │ 23:19 IST    │ 2
+│ ap-JPuEfhADgz45t4vYY31iSA │ clippedai    │ stopped  │ 0     │ 2026-05-14   │ 2
+│                           │              │          │       │ 19:39 IST    │ 2
+└───────────────────────────┴──────────────┴──────────┴───────┴──────────────┴──

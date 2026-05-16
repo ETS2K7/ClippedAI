@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { signOut, useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, List, Settings, Plus, Shield, Tag, Zap, Loader2, CheckCircle } from "lucide-react";
+import { LogOut, List, Settings, Plus, Shield, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "~/lib/utils";
 
@@ -70,27 +70,24 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               CLIPPEDAI
             </span>
           </Link>
-          
-          <div className="flex items-center gap-6">
-            {/* Nav Links */}
-            <div className="flex items-center justify-center gap-1 sm:gap-2">
-              {navItems.map((item) => (
-                <Link
-                  key={item.link}
-                  href={item.link}
-                    className={cn(
-                      "relative flex items-center gap-2 px-4 py-1.5 text-sm font-bold tracking-wider uppercase transition-all duration-200 whitespace-nowrap rounded-full",
-                      isActive(item.link)
-                        ? "text-white bg-white/[0.12] drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]"
-                        : "text-white/70 hover:text-white/90 hover:bg-white/[0.06]"
-                    )}
-                >
-                  {item.icon}
-                  {item.name}
-                </Link>
-              ))}
-            </div>
 
+          {/* Nav Links */}
+          <div className="flex items-center justify-center gap-1 sm:gap-2">
+            {navItems.map((item) => (
+              <Link
+                key={item.link}
+                href={item.link}
+                  className={cn(
+                    "relative flex items-center gap-2 px-4 py-1.5 text-sm font-bold tracking-wider uppercase transition-all duration-200 whitespace-nowrap rounded-full",
+                    isActive(item.link)
+                      ? "text-white bg-white/[0.12] drop-shadow-[0_0_8px_rgba(255,255,255,0.15)]"
+                      : "text-white/70 hover:text-white/90 hover:bg-white/[0.06]"
+                  )}
+              >
+                {item.icon}
+                {item.name}
+              </Link>
+            ))}
           </div>
 
           {/* User Actions Section */}

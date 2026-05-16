@@ -48,6 +48,8 @@
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "deep-email-validator": "^0.1.27",
+    "disposable-email-domains": "^1.0.62",
     "dodopayments": "^2.28.2",
     "framer-motion": "^12.38.0",
     "hls.js": "^1.6.16",

@@ -1,6 +1,6 @@
 """
 Module for LLM-powered viral clip selection.
-Primary: Gemini 2.0-flash via Google Cloud Vertex AI
+Primary: Gemini 1.5-pro via Google Cloud Vertex AI
 """
 
 import hashlib
@@ -20,16 +20,6 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
     """Groups words and selects viral segments using Two-Pass architecture."""
     logger.info("==================== PHASE 3: VIRAL CLIP SELECTION ====================")
     if not words: return []
-
-    # Auto-detect units (Seconds vs Milliseconds)
-    is_ms = words[-1]["end"] > 10000 or words[0]["end"] > 500
-    unit_factor = 1.0 if is_ms else 1000.0
-    logger.info(f"[LLM] Detected time units: {'Milliseconds' if is_ms else 'Seconds'} (Factor: {unit_factor})")
-    
-    # Normalize ALL words to milliseconds for consistent internal math
-    for w in words:
-        w["start"] = w["start"] * unit_factor
-        w["end"] = w["end"] * unit_factor
 
     # Pre-process into sentences with timestamps for the LLM
     sentences = []
@@ -54,44 +44,46 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
         f"TRANSCRIPT:\n{transcript}"
     )
 
-    logger.info(f"[LLM] Selection Pass calling Gemini 2.0... (Specific: {specific_moments})")
+    # ... [Cache Logic Omitted for brevity] ...
+    _cache_key = hashlib.sha256(prompt.encode()).hexdigest()
+    _cache_file = pathlib.Path.home() / ".clippedai" / "cache" / "llm" / f"llm_{_cache_key}.json"
+    _cache_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Cache reads disabled per user request
+
+    logger.info(f"[LLM] Selection Pass calling Gemini... (Specific: {specific_moments})")
     raw_clips = _call_gemini_selection(prompt, specific_moments)
 
     # ── SEMANTIC BOUNDARY SNAPPING ──
+    # This ensures that even if the LLM rounds a timestamp, we snap it to the 
+    # nearest actual word boundary in the transcript.
     validated_clips = []
     for clip in raw_clips:
-        try:
-            start_s = float(clip["start_time"])
-            end_s = float(clip["end_time"])
+        start_s = float(clip["start_time"])
+        end_s = float(clip["end_time"])
 
-            # Find the actual word closest to this start time (in milliseconds)
-            start_ms = start_s * 1000
-            end_ms = end_s * 1000
-            
-            # Snap to nearest word start
-            snapped_start = min(words, key=lambda x: abs(x["start"] - start_ms))["start"] / 1000.0
-            # Snap to nearest word end
-            snapped_end = min(words, key=lambda x: abs(x["end"] - end_ms))["end"] / 1000.0
+        # Find the actual word closest to this start time
+        start_ms = start_s * 1000
+        end_ms = end_s * 1000
+        
+        # Snap to nearest word start
+        snapped_start = min(words, key=lambda x: abs(x["start"] - start_ms))["start"] / 1000.0
+        # Snap to nearest word end
+        snapped_end = min(words, key=lambda x: abs(x["end"] - end_ms))["end"] / 1000.0
 
-            # Adjust for 'breath buffer' (0.2s start padding, 0.3s end padding)
-            snapped_start = max(0, snapped_start - 0.2)
-            snapped_end = snapped_end + 0.3
+        # Adjust for 'breath buffer' (0.2s start padding, 0.3s end padding)
+        snapped_start = max(0, snapped_start - 0.2)
+        snapped_end = snapped_end + 0.3
 
-            clip["start_time"] = snapped_start
-            clip["end_time"] = snapped_end
-            
-            duration = snapped_end - snapped_start
-            if duration >= _MIN_CLIP_DURATION and duration <= 120: # Allow up to 120s
-                validated_clips.append(clip)
-            else:
-                logger.info(f"[LLM] Rejecting clip {clip.get('title')} - duration {duration:.1f}s outside limits.")
-        except Exception as e:
-            logger.warning(f"Failed to validate clip: {clip}. Error: {e}")
+        clip["start_time"] = snapped_start
+        clip["end_time"] = snapped_end
+        
+        duration = snapped_end - snapped_start
+        if duration >= _MIN_CLIP_DURATION and duration <= 100:
+            validated_clips.append(clip)
 
-    # ── Parallel Transliteration ──
-    from concurrent.futures import ThreadPoolExecutor
-    
-    def _process_transliteration(clip):
+    # ... [Rest of logic: Transliteration & Caching] ...
+    for i, clip in enumerate(validated_clips):
         start, end = clip["start_time"], clip["end_time"]
         clip_words = [w["text"] for w in words if w["start"]/1000.0 >= start and w["end"]/1000.0 <= end]
         clip_text = " ".join(clip_words)
@@ -100,9 +92,7 @@ def select_clips(words: List[Dict[str, Any]], specific_moments: str = None) -> L
         else:
             clip["romanized_words"] = []
 
-    if validated_clips:
-        with ThreadPoolExecutor(max_workers=len(validated_clips)) as executor:
-            executor.map(_process_transliteration, validated_clips)
+    # Cache writes disabled per user request
 
     return validated_clips
 
@@ -138,12 +128,13 @@ def _call_gemini_selection(prompt: str, specific_moments: str = None) -> list:
                                 "items": {
                                     "type": "OBJECT",
                                     "properties": {
+                                        "reasoning": {"type": "STRING"},
+                                        "title": {"type": "STRING"},
                                         "start_time": {"type": "NUMBER"},
                                         "end_time": {"type": "NUMBER"},
-                                        "title": {"type": "STRING"},
-                                        "viral_reason": {"type": "STRING"}
+                                        "virality_score": {"type": "NUMBER"}
                                     },
-                                    "required": ["start_time", "end_time", "title", "viral_reason"]
+                                    "required": ["reasoning", "title", "start_time", "end_time", "virality_score"]
                                 }
                             }
                         },
@@ -152,19 +143,22 @@ def _call_gemini_selection(prompt: str, specific_moments: str = None) -> list:
                     temperature=0.7,
                 ),
             )
-            logger.info(f"[LLM] Gemini Selection Result: {response.text}")
-            return json.loads(response.text).get("clips", [])
+            data = json.loads(response.text)
+            return data.get("clips", [])
         except Exception as e:
             logger.warning(f"Selection attempt {attempt+1} failed: {e}")
-            time.sleep(1)
+            time.sleep(2)
     return []
 
 def _call_gemini_transliterate(text: str) -> list:
     from google.genai import types
     client = _get_genai_client()
-    
-    prompt = f"Convert this Hindi text into Romanized Hinglish words (transliteration). Return a JSON list of strings.\n\nTEXT: {text}"
-    
+    prompt = (
+        "Transliterate Hindi (Devanagari) to Roman Hindi (Latin Script).\n"
+        "Format: Return an array of strings, each containing piped pairs 'Roman:Original'.\n"
+        "Example: ['Namaste:नमस्ते|kaise:कैसे']\n\n"
+        f"TEXT:\n{text}"
+    )
     for attempt in range(2):
         try:
             response = client.models.generate_content(
@@ -187,6 +181,7 @@ def _call_gemini_transliterate(text: str) -> list:
     return []
 
 def _get_genai_client():
+    """Initializes and returns the Vertex AI GenAI client."""
     from google import genai
     import os
     import json

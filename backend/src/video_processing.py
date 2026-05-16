@@ -41,7 +41,7 @@ CROP_H_HALF = int(round(CROP_W_1 * (OUT_H // 2) / OUT_W))  # = 541
 # Gaussian smoothing frames for TRACKING mode speakers (~0.5 s at 25 fps).
 # Stationary speakers are handled by the cluster-lock in smooth_segment and
 # never reach the Gaussian step. Moving speakers need this to suppress jitter.
-SIGMA = 5
+SIGMA = 12
 
 # Stabilisation thresholds (entry = min frames before mode activates,
 # gap = min gap frames before mode drops — prevents rapid re-entry)
@@ -108,7 +108,7 @@ def extract_segment(input_file: str, clip: Dict[str, Any], idx: int, work_dir: s
     
     # Base command
     cmd = [
-        "/usr/bin/ffmpeg", "-y",
+        "ffmpeg", "-y",
         "-i", input_file,
         "-ss", str(start),
         "-t", str(dur),
@@ -356,7 +356,7 @@ def _stabilize_bool_state(
 
 def _cell_full(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     """Single-speaker: AR-safe crop → 1080×1920."""
-    return cv2.resize(_ar_safe_crop(frame, cx, cy, OUT_W, OUT_H), (OUT_W, OUT_H), interpolation=cv2.INTER_CUBIC)
+    return cv2.resize(_ar_safe_crop(frame, cx, cy, OUT_W, OUT_H), (OUT_W, OUT_H))
 
 
 def _cell_half(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
@@ -364,7 +364,6 @@ def _cell_half(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(
         _ar_safe_crop(frame, cx, cy, OUT_W, OUT_H // 2),
         (OUT_W, OUT_H // 2),
-        interpolation=cv2.INTER_CUBIC
     )
 
 
@@ -373,7 +372,6 @@ def _cell_3_top(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(
         _ar_safe_crop(frame, cx, cy, OUT_W, OUT_H // 2),
         (OUT_W, OUT_H // 2),
-        interpolation=cv2.INTER_CUBIC
     )
 
 
@@ -382,7 +380,6 @@ def _cell_3_side(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(
         _ar_safe_crop(frame, cx, cy, OUT_W // 2, OUT_H // 2),
         (OUT_W // 2, OUT_H // 2),
-        interpolation=cv2.INTER_CUBIC
     )
 
 
@@ -391,7 +388,6 @@ def _cell_quad(frame: np.ndarray, cx: float, cy: float) -> np.ndarray:
     return cv2.resize(
         _ar_safe_crop(frame, cx, cy, OUT_W // 2, OUT_H // 2),
         (OUT_W // 2, OUT_H // 2),
-        interpolation=cv2.INTER_CUBIC
     )
 
 
@@ -496,20 +492,39 @@ def track_speaker_and_frame(
     font_color: str = None,
     add_subtitles: bool = True,
     use_gpu: bool = False,
-    tracking_data: List[Dict[str, Any]] | None = None,
-    audio_file: str | None = None,
-    caption_template: str = "karaoke"
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
+
+    Supported layouts:
+      1 speaker  → full-frame 9:16 crop (CROP_W_1).
+      2 speakers → vertical split, each 1080×960 (CROP_W_2).
+      3 speakers → 1 featured top + 2 side-by-side bottom (CROP_W_3T / CROP_W_3S).
+      4 speakers → 2×2 grid, each 540×960 (CROP_W_4).
+
+    The 2-speaker path is pixel-identical to the previous implementation.
+    3/4-speaker modes use higher stabilisation thresholds so they only activate
+    in genuine panel/multi-host footage.
+
+    Args:
+        tracker: Optional pre-initialised LocalFastASDTracker. When None (default),
+                 the production Modal remote is used. Pass a LocalFastASDTracker
+                 instance for fully local processing without Modal.
     """
     logger.info(
         f"==================== PHASE 5: SPEAKER TRACKING & FRAMING (Clip {idx}) "
         f"===================="
     )
 
-    if tracking_data is None:
-        # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
+    # ── 1. Fast-ASD ──────────────────────────────────────────────────────────
+    import hashlib
+    with open(clip_file, "rb") as f:
+        _video_hash = hashlib.sha256(f.read()).hexdigest()
+
+    # FastASD caching disabled per user request
+    if False:
+        pass
+    else:
         try:
             with open(clip_file, "rb") as f:
                 video_bytes = f.read()
@@ -526,12 +541,12 @@ def track_speaker_and_frame(
             
             import json
             tracking_data = json.loads(result_json)
+                
+            # FastASD cache writes disabled per user request
                     
         except Exception as e:
             logger.error(f"Fast-ASD tracker failed: {e}")
             raise RuntimeError(f"ASD tracking failed: {e}") from e
-    else:
-        logger.info(f"Using pre-computed global tracking data for clip {idx}")
 
     # ── 2. Video metadata ─────────────────────────────────────────────────────
     cap = cv2.VideoCapture(clip_file)
@@ -560,12 +575,8 @@ def track_speaker_and_frame(
         if not writer.isOpened():
             raise RuntimeError(f"cv2.VideoWriter failed to open for clip {idx} (codec: MJPG)")
 
-    # Calculate offset if we are using global tracking data
-    start_frame_offset = int(round(clip.get("start_time", 0) * fps)) if tracking_data is not None else 0
-    
     frame_faces: Dict[int, List[Dict]] = {
-        item["frame_number"] - start_frame_offset: item["faces"] for item in tracking_data
-        if (item["frame_number"] - start_frame_offset) >= 0 and (item["frame_number"] - start_frame_offset) < frames_count
+        item["frame_number"]: item["faces"] for item in tracking_data
     }
 
     # ── 3. Scene detection ────────────────────────────────────────────────────
@@ -710,8 +721,8 @@ def track_speaker_and_frame(
     raw_spk_cx = np.full((frames_count, 4), -1.0)
     raw_spk_cy = np.full((frames_count, 4), -1.0) 
 
-    def _norm_x(f): return (f["x1"] + (f["x2"] - f["x1"]) * 0.50) / w
-    def _norm_y(f): return (f["y1"] + (f["y2"] - f["y1"]) * 0.45) / h
+    def _norm_x(f): return (f["x1"] + (f["x2"] - f["x1"]) * 0.52) / w
+    def _norm_y(f): return (f["y1"] + (f["y2"] - f["y1"]) * 0.42) / h
 
     # Per-path frame counters — logged per scene to diagnose framing issues
     path_counts = {"A": 0, "B": 0, "C": 0, "C5": 0, "D": 0, "NOFACE": 0}
@@ -1133,7 +1144,6 @@ def track_speaker_and_frame(
             font_size=font_size,
             font_color=font_color,
             work_dir=work_dir,
-            template=caption_template
         )
 
     # ── 10. Render ─────────────────────────────────────────────────────────────
@@ -1154,9 +1164,7 @@ def track_speaker_and_frame(
             "-s", f"{OUT_W}x{OUT_H}",
             "-r", str(fps),
             "-i", "pipe:0",
-            "-ss", str(clip.get("start", 0)),
-            "-t", str(clip.get("end", 0) - clip.get("start", 0)),
-            "-i", audio_file if audio_file else clip_file,
+            "-i", clip_file,
         ]
         if sub_file:
             safe_sub = sub_file.replace("\\", "/").replace(":", "\\:")
@@ -1170,7 +1178,7 @@ def track_speaker_and_frame(
                 "-pix_fmt", "yuv420p",
                 "-preset", "p4",
                 "-rc", "constqp",
-                "-qp", "22",
+                "-qp", "28",
             ])
         else:
             cmd.extend([
@@ -1239,23 +1247,10 @@ def track_speaker_and_frame(
             if n == 1:
                 out_frame = _cell_full(frame, cx[0] * w, cy[0] * h)
 
-            # ── Buffer frames to reduce syscall overhead (Phase 4) ───────────────────
             if streaming_output_path:
-                if 'frame_buffer' not in locals():
-                    frame_buffer = []
-                
-                frame_buffer.append(out_frame.tobytes())
-                
-                # Flush every 150 frames (approx 5 seconds of video) to reduce syscalls
-                if len(frame_buffer) >= 150:
-                    ffmpeg_proc.stdin.write(b"".join(frame_buffer))
-                    frame_buffer = []
+                ffmpeg_proc.stdin.write(out_frame.tobytes())
             else:
                 writer.write(out_frame)
-
-        # Final flush for any remaining frames in the buffer
-        if streaming_output_path and 'frame_buffer' in locals() and frame_buffer:
-            ffmpeg_proc.stdin.write(b"".join(frame_buffer))
     finally:
         if ffmpeg_proc:
             ffmpeg_proc.stdin.close()

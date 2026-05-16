@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       where: { email },
     });
 
-    if (!user || !user.password) {
+    if (!user?.password) {
       // Don't leak whether an account exists or not
       return NextResponse.json({ success: true });
     }

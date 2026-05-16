@@ -23,10 +23,10 @@ export async function storePendingFile(file: File): Promise<void> {
       const putRequest = store.put(file, "current_file");
       
       putRequest.onsuccess = () => resolve();
-      putRequest.onerror = () => reject(putRequest.error);
+      putRequest.onerror = () => reject(new Error(putRequest.error?.message || "Failed to store file"));
     };
 
-    request.onerror = () => reject(request.error);
+    request.onerror = () => reject(new Error(request.error?.message || "Failed to open indexedDB"));
   });
 }
 
@@ -48,10 +48,10 @@ export async function getPendingFile(): Promise<File | null> {
       const getRequest = store.get("current_file");
 
       getRequest.onsuccess = () => resolve(getRequest.result || null);
-      getRequest.onerror = () => reject(getRequest.error);
+      getRequest.onerror = () => reject(new Error(getRequest.error?.message || "Failed to get file"));
     };
 
-    request.onerror = () => reject(request.error);
+    request.onerror = () => reject(new Error(request.error?.message || "Failed to open indexedDB"));
   });
 }
 
@@ -64,6 +64,6 @@ export async function clearPendingFile(): Promise<void> {
       transaction.objectStore(STORE_NAME).clear();
       resolve();
     };
-    request.onerror = () => reject(request.error);
+    request.onerror = () => reject(new Error(request.error?.message || "Failed to open indexedDB"));
   });
 }

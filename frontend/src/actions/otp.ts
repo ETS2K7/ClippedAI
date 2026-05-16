@@ -4,15 +4,25 @@ import { Resend } from "resend";
 import { db } from "~/server/db";
 import { env } from "~/env";
 import { z } from "zod";
+import { validateEmailRobust } from "~/lib/email";
 
 const resend = new Resend(env.RESEND_API_KEY);
-
 const emailSchema = z.string().email();
 
 export async function sendOTP(email: string) {
   const validation = emailSchema.safeParse(email);
   if (!validation.success) {
     return { success: false, error: "Invalid email address" };
+  }
+
+  const { valid, reason } = await validateEmailRobust(email);
+  if (!valid) {
+    let errorMsg = "Please use a permanent email address (like Gmail, Outlook, etc.).";
+    if (reason === "disposable") errorMsg = "Temporary or disposable emails are not allowed.";
+    if (reason === "invalid_domain") errorMsg = "This email domain does not seem to exist.";
+    if (reason === "invalid_mailbox") errorMsg = "This email address is invalid or unreachable.";
+    
+    return { success: false, error: errorMsg };
   }
 
   // Generate a 6-digit numeric code

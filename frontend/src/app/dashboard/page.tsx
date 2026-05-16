@@ -132,7 +132,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [sourceTitle, setSourceTitle] = useState<string | null>(null);
 
-
   // Format seconds to HH:MM:SS
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -210,7 +209,6 @@ export default function Home() {
 
 
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
-
 
   // SWR: Global Data Fetching (only enabled if signed in)
   const swrOptions = { revalidateOnFocus: false };
@@ -579,7 +577,7 @@ export default function Home() {
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="w-full max-w-2xl"
             >
-              <div className="mb-5 text-center sm:mb-8 relative">
+              <div className="mb-5 text-center sm:mb-8">
                 <h1 className="font-syne mb-2 text-3xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-4xl md:text-5xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
                   New Clip.
                 </h1>
@@ -815,7 +813,7 @@ export default function Home() {
                       <Switch
                         checked={false}
                         disabled={true}
-                        onCheckedChange={() => {}}
+                        onCheckedChange={() => void 0}
                         aria-label="Wide format is currently disabled"
                       />
                     </div>
