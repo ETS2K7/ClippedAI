@@ -41,7 +41,7 @@ CROP_H_HALF = int(round(CROP_W_1 * (OUT_H // 2) / OUT_W))  # = 541
 # Gaussian smoothing frames for TRACKING mode speakers (~0.5 s at 25 fps).
 # Stationary speakers are handled by the cluster-lock in smooth_segment and
 # never reach the Gaussian step. Moving speakers need this to suppress jitter.
-SIGMA = 12
+SIGMA = 5
 
 # Stabilisation thresholds (entry = min frames before mode activates,
 # gap = min gap frames before mode drops — prevents rapid re-entry)
@@ -709,8 +709,8 @@ def track_speaker_and_frame(
     raw_spk_cx = np.full((frames_count, 4), -1.0)
     raw_spk_cy = np.full((frames_count, 4), -1.0) 
 
-    def _norm_x(f): return (f["x1"] + (f["x2"] - f["x1"]) * 0.52) / w
-    def _norm_y(f): return (f["y1"] + (f["y2"] - f["y1"]) * 0.42) / h
+    def _norm_x(f): return (f["x1"] + (f["x2"] - f["x1"]) * 0.50) / w
+    def _norm_y(f): return (f["y1"] + (f["y2"] - f["y1"]) * 0.45) / h
 
     # Per-path frame counters — logged per scene to diagnose framing issues
     path_counts = {"A": 0, "B": 0, "C": 0, "C5": 0, "D": 0, "NOFACE": 0}
