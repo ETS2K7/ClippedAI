@@ -51,6 +51,7 @@ image = (
     )
     # Modern Modal 1.0+ File Inclusion
     .add_local_dir(PROJECT_DIR / "src", remote_path="/root/src")
+    .add_local_file(PROJECT_DIR / "config.py", remote_path="/root/config.py")
 )
 
 # ─── Data Models ──────────────────────────────────────────────────────────────
