@@ -11,9 +11,15 @@ const LEGIT_DOMAINS = new Set([
   "zoho.com", "yandex.com", "gmx.com", "mail.com", "t-online.de"
 ]);
 
+// High-priority manual blocklist for domains that occasionally bypass the community list
+const MANUAL_BLOCKLIST = new Set([
+  "acanok.com", "temp-mail.org", "guerrillamail.com", "sharklasers.com",
+  "mailinator.com", "10minutemail.com", "yopmail.com"
+]);
+
 /**
  * Validates if an email address is from a known disposable/temp mail provider.
- * Optimized for speed with caching and timeouts.
+ * Hardened for "100% block" rate while maintaining usability.
  */
 export async function validateEmailRobust(email: string): Promise<{
   valid: boolean;
@@ -33,17 +39,17 @@ export async function validateEmailRobust(email: string): Promise<{
     return { valid: cached.valid, reason: cached.reason };
   }
 
-  // 3. Fast Static Blocklist check
-  if (disposableDomains.includes(domain)) {
+  // 3. Fast Static & Manual Blocklist check
+  if (disposableDomains.includes(domain) || MANUAL_BLOCKLIST.has(domain)) {
     return { valid: false, reason: "disposable" };
   }
 
-  // 4. Deep Infrastructure Validation (SERVER ONLY) with Timeout
+  // 4. Deep Infrastructure Validation (SERVER ONLY)
   if (typeof window === "undefined") {
     try {
       const validate = (await import("deep-email-validator")).default;
       
-      // Use Promise.race to enforce a timeout on the deep check
+      // Increased timeout to 4.5s to ensure slow temp-mail SMTP servers are caught
       const validationPromise = validate({
         email,
         validateRegex: true,
@@ -54,15 +60,16 @@ export async function validateEmailRobust(email: string): Promise<{
       });
 
       const timeoutPromise = new Promise<null>((resolve) => 
-        setTimeout(() => resolve(null), 1800) // 1.8s timeout
+        setTimeout(() => resolve(null), 4500) 
       );
 
       const res = await Promise.race([validationPromise, timeoutPromise]);
 
       if (res === null) {
-        // Timeout reached - fallback to basic success if static check passed
-        console.warn(`Validation timeout for ${email}. Falling back to basic check.`);
-        return { valid: true };
+        // Timeout reached - for security, if it's an unknown domain taking >4.5s, 
+        // we treat it as suspicious (invalid_domain) to ensure 100% blocking.
+        console.warn(`Validation timeout for suspicious domain ${email}. Blocking.`);
+        return { valid: false, reason: "invalid_domain" };
       }
 
       if (!res.valid) {
@@ -83,5 +90,5 @@ export async function validateEmailRobust(email: string): Promise<{
 export function isDisposableEmailSync(email: string): boolean {
   const domain = email.split("@")[1]?.toLowerCase();
   if (!domain) return false;
-  return disposableDomains.includes(domain);
+  return disposableDomains.includes(domain) || MANUAL_BLOCKLIST.has(domain);
 }

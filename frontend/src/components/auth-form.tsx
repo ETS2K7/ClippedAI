@@ -7,6 +7,7 @@ import Link from "next/link";
 import { loginSchema, type LoginFormValues } from "~/schemas/auth";
 import { signIn } from "next-auth/react";
 import { sendOTP } from "~/actions/otp";
+import { isDisposableEmailSync } from "~/lib/email";
 import { AuthBackground } from "./auth-background";
 
 export function AuthForm({
@@ -22,8 +23,12 @@ export function AuthForm({
     handleSubmit,
     trigger,
     getValues,
+    watch,
     formState: { errors },
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
+
+  const emailValue = watch("email");
+  const isDisposable = emailValue ? isDisposableEmailSync(emailValue) : false;
 
   const onContinue = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -139,7 +144,7 @@ export function AuthForm({
               </div>
             )}
 
-            {step === "email" && (
+            {step === "email" && isDisposable && (
               <p className="px-1 text-[13px] font-medium text-orange-400/90">
                 Use a non-disposable email to get login code & free credits.
               </p>
