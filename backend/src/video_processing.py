@@ -498,6 +498,7 @@ def track_speaker_and_frame(
     use_gpu: bool = False,
     tracking_data: List[Dict[str, Any]] | None = None,
     audio_file: str | None = None,
+    caption_template: str = "karaoke"
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
     Phase 5: Multi-speaker tracking and adaptive 9:16 reframing.
@@ -1132,6 +1133,7 @@ def track_speaker_and_frame(
             font_size=font_size,
             font_color=font_color,
             work_dir=work_dir,
+            template=caption_template
         )
 
     # ── 10. Render ─────────────────────────────────────────────────────────────
