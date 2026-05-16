@@ -73,7 +73,7 @@ class ProcessVideoRequest(BaseModel):
 # ─── Utility Functions ────────────────────────────────────────────────────────
 def validate_required_env_vars():
     """Fail fast if critical environment variables are missing."""
-    required = ["S3_BUCKET_NAME", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "GOOGLE_CLOUD_PROJECT", "GCP_SERVICE_ACCOUNT_JSON"]
+    required = ["S3_BUCKET_NAME", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "GCP_SERVICE_ACCOUNT_JSON"]
     missing = [var for var in required if not os.environ.get(var)]
     if missing:
         raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
