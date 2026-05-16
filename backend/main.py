@@ -409,14 +409,6 @@ class ClippedAI:
             self.run_pipeline.spawn(request.dict())
         return {"status": "processing_started"}
 
-    @modal.fastapi_endpoint(method="POST")
-    def warmup(self, token: HTTPAuthorizationCredentials = Depends(auth_scheme)):
-        auth_token = os.environ.get("AUTH_TOKEN")
-        if not auth_token or not token.credentials or not hmac.compare_digest(token.credentials, auth_token):
-            raise HTTPException(status_code=401, detail="Invalid token")
-        
-        logger.info("Warmup request received...")
-        return {"status": "warming_up"}
 
 def _process_single_clip(
     video_path, clip, index, words,
