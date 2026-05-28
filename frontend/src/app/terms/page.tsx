@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FloatingNav } from "~/components/landing-v2/floating-nav";
-import { Home, Zap } from "lucide-react";
+import { Home } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Terms of Service — ClippedAI",
@@ -17,11 +17,6 @@ export default function TermsOfService() {
       name: "Home",
       link: "/",
       icon: <Home className="h-4 w-4 text-white" />,
-    },
-    {
-      name: "Dashboard",
-      link: "/dashboard",
-      icon: <Zap className="h-4 w-4 text-white" />,
     },
   ];
 
