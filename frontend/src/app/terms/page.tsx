@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function TermsOfService() {
-  const lastUpdated = "April 2026";
+  const lastUpdated = "April 28, 2026";
   const contactEmail = "support@clippedai.app";
 
   const navItems = [
@@ -30,32 +30,37 @@ export default function TermsOfService() {
       <FloatingNav navItems={navItems} />
 
       {/* Dot-grid ambient texture */}
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(#222_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_20%,transparent_100%)] [background-size:24px_24px] opacity-30" />
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_30%,transparent_100%)] [background-size:24px_24px] opacity-40" />
 
       {/* Ambient orb */}
-      <div className="pointer-events-none fixed left-[-10%] top-[-10%] h-[50vh] w-[50vw] rounded-full bg-white/[0.03] blur-[120px]" />
+      <div className="pointer-events-none fixed left-[-10%] top-[-10%] h-[50vh] w-[50vw] rounded-full bg-white/[0.02] blur-[120px]" />
 
-      <div className="relative z-10 mx-auto max-w-3xl px-6 py-24 sm:py-32">
+      <div className="relative z-10 mx-auto max-w-3xl px-6 pt-32 pb-24">
         {/* Header */}
-        <div className="mb-12 border-b border-white/[0.06] pb-10">
-          <h1 className="font-syne mb-4 text-5xl font-black tracking-tighter text-white uppercase md:text-6xl">
-            TERMS OF SERVICE.
+        <div className="mb-12 border-b border-white/10 pb-8">
+          <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
+            Terms and Conditions
           </h1>
-          <p className="font-mono text-xs tracking-widest text-white/30 uppercase">
-            Last Updated: {lastUpdated}
+          <p className="mt-4 text-sm text-neutral-400">
+            <strong>Effective Date:</strong> {lastUpdated}
           </p>
         </div>
 
-        {/* Sections */}
-        <div className="space-y-10">
+        {/* Content sections */}
+        <div className="space-y-12">
           {[
             {
               title: "1. Agreement to Terms",
-              body: "By accessing our application, ClippedAI, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this site.",
+              body: [
+                "By accessing our application, ClippedAI, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this site.",
+                "We may modify these Terms at any time. Updated versions will be posted on the website. Continued use constitutes acceptance of revised Terms. Material changes will be notified via email or platform notice."
+              ],
             },
             {
               title: "2. Use License",
-              body: "Permission is granted to temporarily use the materials and services on ClippedAI's website for personal or commercial video processing, subject to the following restrictions. You may not:",
+              body: [
+                "Permission is granted to temporarily use the materials and services on ClippedAI's website for personal or commercial video processing, subject to the following restrictions. You may not:"
+              ],
               bullets: [
                 "Modify or copy the underlying software code or algorithms.",
                 "Use the materials for any illegal purpose or violation of platform guidelines (e.g., uploading highly sensitive, illegal, or copyrighted material you do not own).",
@@ -64,31 +69,42 @@ export default function TermsOfService() {
             },
             {
               title: "3. User Uploads and Media",
-              body: "By uploading media to ClippedAI, you represent and warrant that you own or have the necessary licenses, rights, consents, and permissions to use and authorize us to use all patent, trademark, trade secret, copyright or other proprietary rights in and to any and all of your uploads.",
+              body: [
+                "By uploading media to ClippedAI, you represent and warrant that you own or have the necessary licenses, rights, consents, and permissions to use and authorize us to use all patent, trademark, trade secret, copyright or other proprietary rights in and to any and all of your uploads."
+              ],
             },
             {
               title: "4. Disclaimer",
-              body: "The materials on ClippedAI's website are provided on an 'as is' basis. ClippedAI makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.",
+              body: [
+                "The materials on ClippedAI's website are provided on an 'as is' basis. ClippedAI makes no warranties, expressed or implied, and hereby disclaims and negates all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights."
+              ],
             },
             {
               title: "5. Limitations",
-              body: "In no event shall ClippedAI or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on ClippedAI's website.",
+              body: [
+                "In no event shall ClippedAI or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on ClippedAI's website."
+              ],
             },
             {
               title: "6. Modifications",
-              body: "ClippedAI may revise these terms of service for its website at any time without notice. By using this website you are agreeing to be bound by the then current version of these terms of service.",
+              body: [
+                "ClippedAI may revise these terms of service for its website at any time without notice. By using this website you are agreeing to be bound by the then current version of these terms of service."
+              ],
             },
           ].map(({ title, body, bullets }) => (
-            <div key={title} className="brutal-card p-6 sm:p-8">
-              <h2 className="font-syne mb-4 text-lg font-black tracking-widest text-white uppercase">
+            <div key={title} className="space-y-4">
+              <h2 className="text-xl font-bold text-white tracking-tight">
                 {title}
               </h2>
-              <p className="mb-4 text-sm leading-relaxed text-white/60">{body}</p>
+              {body.map((paragraph, index) => (
+                <p key={index} className="text-[15px] leading-relaxed text-neutral-300">
+                  {paragraph}
+                </p>
+              ))}
               {bullets && (
-                <ul className="space-y-2">
+                <ul className="list-disc pl-6 space-y-2 text-[15px] text-neutral-400">
                   {bullets.map((b) => (
-                    <li key={b} className="flex items-start gap-3 text-sm text-white/50">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-white/30" />
+                    <li key={b} className="pl-1 leading-relaxed">
                       {b}
                     </li>
                   ))}
@@ -98,15 +114,15 @@ export default function TermsOfService() {
           ))}
 
           {/* Contact */}
-          <div className="brutal-card p-6 sm:p-8">
-            <h2 className="font-syne mb-4 text-lg font-black tracking-widest text-white uppercase">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight">
               7. Contact Us
             </h2>
-            <p className="text-sm leading-relaxed text-white/60">
+            <p className="text-[15px] leading-relaxed text-neutral-300">
               If you have any questions about these Terms, please contact us at{" "}
               <a
                 href={`mailto:${contactEmail}`}
-                className="font-mono text-white/80 underline underline-offset-4 transition-colors hover:text-white"
+                className="text-white underline underline-offset-4 hover:text-neutral-200 transition-colors"
               >
                 {contactEmail}
               </a>
@@ -116,10 +132,12 @@ export default function TermsOfService() {
         </div>
 
         {/* Footer nav */}
-        <div className="mt-16 border-t border-white/[0.06] pt-8 flex items-center justify-between font-mono text-[10px] tracking-widest text-white/20 uppercase">
+        <div className="mt-20 border-t border-white/10 pt-8 flex items-center justify-between text-xs text-neutral-500">
           <span>© 2026 ClippedAI</span>
           <div className="flex gap-6">
-            <Link href="/privacy" className="transition-colors hover:text-white/50">Privacy</Link>
+            <Link href="/privacy" className="transition-colors hover:text-neutral-300">
+              Privacy
+            </Link>
           </div>
         </div>
       </div>
