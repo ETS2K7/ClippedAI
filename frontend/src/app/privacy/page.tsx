@@ -32,7 +32,7 @@ export default function PrivacyPolicy() {
 
       <div className="relative z-10 mx-auto max-w-3xl px-6 pt-32 pb-24">
         {/* Header */}
-        <div className="mb-12 border-b border-white/10 pb-8">
+        <div className="mb-12">
           <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl">
             Privacy Policy
           </h1>
@@ -130,7 +130,7 @@ export default function PrivacyPolicy() {
         </div>
 
         {/* Footer nav */}
-        <div className="mt-20 border-t border-white/10 pt-8 flex items-center justify-between text-xs text-neutral-500">
+        <div className="mt-20 flex items-center justify-between text-xs text-neutral-500">
           <span>© 2026 ClippedAI</span>
           <div className="flex gap-6">
             <Link href="/terms" className="transition-colors hover:text-neutral-300">
