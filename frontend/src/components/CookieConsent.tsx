@@ -44,59 +44,56 @@ export function CookieConsent() {
     <AnimatePresence>
       {isVisible && (
         <motion.div
-          initial={{ opacity: 0, y: 40, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          className="fixed bottom-6 right-6 z-50 w-[calc(100vw-3rem)] max-w-[420px] p-0.5 rounded-2xl bg-gradient-to-br from-violet-500/20 via-transparent to-indigo-500/20 shadow-[0_20px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl"
+          initial={{ opacity: 0, y: 50, x: "-50%" }}
+          animate={{ opacity: 1, y: 0, x: "-50%" }}
+          exit={{ opacity: 0, y: 30, x: "-50%" }}
+          transition={{ type: "spring", stiffness: 260, damping: 22 }}
+          className="fixed bottom-8 left-1/2 z-50 w-[calc(100vw-3rem)] max-w-[640px] rounded-[20px] bg-[#0c0c0e] border border-white/10 p-6 shadow-[0_24px_64px_rgba(0,0,0,0.8)]"
         >
-          {/* Glass background container */}
-          <div className="relative p-6 rounded-[14px] bg-[#09090b]/92 border border-white/[0.05] overflow-hidden">
-            {/* Ambient Background Glows */}
-            <div className="absolute -right-20 -top-20 w-42 h-42 rounded-full bg-violet-600/10 blur-3xl pointer-events-none" />
-            <div className="absolute -left-20 -bottom-20 w-42 h-42 rounded-full bg-indigo-600/10 blur-3xl pointer-events-none" />
-
+          {/* Header row */}
+          <div className="flex items-center justify-between border-b border-white/5 pb-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-full border border-orange-500/20 bg-orange-950/30 text-orange-400">
+                <Cookie size={18} />
+              </div>
+              <div className="space-y-0.5">
+                <h3 className="text-sm font-bold tracking-wider text-white">
+                  COOKIE <span className="text-[#ff5a1f]">PREFERENCES</span>
+                </h3>
+                <p className="text-[9px] font-bold tracking-widest text-neutral-500 uppercase">
+                  YOUR PRIVACY, YOUR CHOICE
+                </p>
+              </div>
+            </div>
             <button 
               onClick={declineCookies}
-              className="absolute top-4 right-4 text-white/30 hover:text-white/70 transition-colors"
+              className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
               aria-label="Close"
             >
               <X size={16} />
             </button>
+          </div>
 
-            <div className="flex gap-4 items-start">
-              {/* Animated Cookie Icon with pulsing glow aura */}
-              <div className="relative flex-shrink-0 mt-0.5">
-                <div className="absolute inset-0 rounded-xl bg-violet-500/15 blur-md animate-pulse" />
-                <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-violet-950/30 border border-violet-500/20 text-violet-400">
-                  <Cookie size={18} className="animate-[spin_160s_linear_infinite]" />
-                </div>
-              </div>
+          {/* Description content */}
+          <p className="text-xs leading-relaxed text-neutral-400 mb-6">
+            We use cookies to power your video clipping experience, save your dashboard preferences, and optimize neural processing. Choose what you're comfortable with.
+          </p>
 
-              <div className="flex-1 space-y-2">
-                <h3 className="text-sm font-semibold tracking-tight text-white flex items-center gap-1.5">
-                  Cookie Preferences
-                </h3>
-                <p className="text-xs leading-relaxed text-neutral-400">
-                  We use cookies to analyze site traffic, optimize your neural pipeline metrics, and personalize your clipping experience. Read our{" "}
-                  <Link href="/privacy" className="font-medium text-violet-400 hover:text-violet-300 underline underline-offset-2 transition-colors">
-                    Privacy Policy
-                  </Link>
-                  .
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2.5 items-center justify-end mt-5">
+          {/* Action Footer */}
+          <div className="flex items-center justify-between">
+            <button className="text-[11px] font-bold tracking-wider text-neutral-400 hover:text-white transition-colors uppercase flex items-center gap-1 cursor-pointer">
+              CUSTOMIZE <span className="text-[9px]">↓</span>
+            </button>
+            <div className="flex gap-2">
               <button
                 onClick={declineCookies}
-                className="px-4 py-2 text-xs font-medium rounded-lg text-neutral-300 bg-white/[0.03] border border-white/[0.07] hover:bg-white/[0.07] hover:border-white/[0.12] active:scale-95 transition-all duration-150 cursor-pointer"
+                className="px-5 py-2.5 text-xs font-bold tracking-wider text-white bg-transparent border border-white/10 hover:bg-white/[0.04] active:scale-95 transition-all rounded-lg cursor-pointer uppercase"
               >
-                Decline
+                Reject All
               </button>
               <button
                 onClick={acceptCookies}
-                className="px-4.5 py-2 text-xs font-semibold rounded-lg text-white bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 active:scale-95 transition-all duration-150 shadow-[0_0_15px_rgba(124,58,237,0.25)] hover:shadow-[0_0_20px_rgba(124,58,237,0.45)] cursor-pointer"
+                className="px-5 py-2.5 text-xs font-bold tracking-wider text-black bg-[#ff5a1f] hover:bg-[#e04e1b] active:scale-95 transition-all rounded-lg shadow-[0_0_20px_rgba(255,90,31,0.2)] cursor-pointer uppercase"
               >
                 Accept All
               </button>
