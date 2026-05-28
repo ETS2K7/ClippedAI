@@ -322,7 +322,7 @@ export const StickyNarrative = () => {
               <span className="mb-4 font-mono text-xs font-bold tracking-widest text-[#999] uppercase">
                 Phase 03
               </span>
-              <h2 className="font-syne mb-4 text-4xl leading-none font-black tracking-tighter text-black uppercase lg:text-5xl">
+              <h2 className="font-syne mb-4 text-4xl leading-none font-black tracking-tighter uppercase lg:text-5xl">
                 A month of output.
                 <br />
                 <span className="text-[#999]">In 5 minutes.</span>

@@ -38,7 +38,9 @@ export function AuthForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: emailValue }),
-      }).catch(() => {});
+      }).catch(() => {
+        // Ignore validation errors
+      });
     }, 600); // 600ms debounce
 
     return () => clearTimeout(timer);
