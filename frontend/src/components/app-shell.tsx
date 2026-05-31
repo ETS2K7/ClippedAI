@@ -16,7 +16,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const isSuperAdmin = session?.user?.email === "ebelthomasseiko@gmail.com";
   const pathname = usePathname();
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (path === "/") return pathname === "/";
+    return pathname === path || pathname?.startsWith(`${path}/`);
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -26,9 +29,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = [
     { name: "NEW CLIP", link: "/dashboard", icon: <Plus className="h-3.5 w-3.5" /> },
     { name: "GENERATIONS", link: "/list", icon: <List className="h-3.5 w-3.5" /> },
-    { name: "PRICING", link: "/pricing", icon: <Tag className="h-3.5 w-3.5" /> },
-    { name: "SETTINGS", link: "/settings", icon: <Settings className="h-3.5 w-3.5" /> },
+    { name: "UPGRADE", link: "/upgrade", icon: <Tag className="h-3.5 w-3.5" /> },
     ...(isSuperAdmin ? [{ name: "ADMIN", link: "/admin", icon: <Shield className="h-3.5 w-3.5" /> }] : []),
+    { name: "SETTINGS", link: "/settings", icon: <Settings className="h-3.5 w-3.5" /> },
   ];
 
   return (
@@ -53,8 +56,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       {/* ── Floating Navigation Pill ────────────────────────── */}
       <div className="fixed inset-x-0 top-6 z-50 flex justify-center px-4">
         <motion.nav 
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
           className="flex max-w-fit py-3 items-center justify-between gap-6 rounded-full border border-white/[0.08] bg-black/80 px-6 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.7)] backdrop-blur-xl"
         >
           {/* Logo Section */}
@@ -110,7 +111,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* ── Main Content Area ──────────────────────────────── */}
       <div className="relative z-10 flex min-h-screen flex-col bg-transparent">
-        <main className="flex-1 bg-transparent pb-10 pt-16">
+        <main className="flex-1 bg-transparent pb-10 pt-28">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             {children}
           </div>

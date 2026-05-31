@@ -10,7 +10,6 @@ import { Separator } from "~/components/ui/separator";
 import { useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import { CheckCircle, AlertCircle, ArrowLeft, Mail } from "lucide-react";
-import AppShell from "~/components/app-shell";
 import useSWR from "swr";
 import { fetcher } from "~/lib/fetcher";
 
@@ -95,11 +94,11 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="min-h-screen">
         {/* ── Page header ── */}
         <div className="border-b border-white/[0.1]">
-          <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+          <div className="w-full pb-8">
             <div className="mb-2 flex items-center gap-3">
               <h1 className="font-syne text-3xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-4xl md:text-5xl">
                 Settings.
@@ -112,7 +111,7 @@ export default function SettingsPage() {
         </div>
 
         {/* ── Main content ── */}
-        <div className="relative mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        <div className="relative mx-auto max-w-3xl py-8">
           <div className="mx-auto max-w-xl space-y-6 sm:space-y-8">
 
             {/* ── Notifications ── */}
@@ -180,6 +179,6 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

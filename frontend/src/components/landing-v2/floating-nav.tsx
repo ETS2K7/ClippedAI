@@ -7,7 +7,6 @@ import {
 import { cn } from "~/lib/utils";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
-import { useSession } from "~/lib/auth-client";
 
 export const FloatingNav = ({
   navItems,
@@ -20,15 +19,11 @@ export const FloatingNav = ({
   }[];
   className?: string;
 }) => {
-  const { data: session } = useSession();
   const visible = true;
 
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        initial={{ opacity: 1, y: -100 }}
-        animate={{ y: visible ? 0 : -100, opacity: visible ? 1 : 0 }}
-        transition={{ duration: 0.2 }}
         className={cn(
           "fixed inset-x-0 top-6 z-[5000] mx-auto flex max-w-fit items-center justify-center gap-6 rounded-full border border-white/10 bg-black/80 px-6 py-3 shadow-[0px_4px_10px_-1px_rgba(0,0,0,0.5)] backdrop-blur-xl",
           className,
@@ -62,7 +57,7 @@ export const FloatingNav = ({
             className="ml-2 h-9 rounded-full bg-white px-6 text-xs font-black tracking-wider text-black uppercase transition-all hover:bg-white/90 hover:scale-[1.05]"
             asChild
           >
-            <Link href="/auth/oauth/login">Login</Link>
+            <Link href="/auth/oauth/login">LOGIN</Link>
           </Button>
         </div>
       </motion.div>

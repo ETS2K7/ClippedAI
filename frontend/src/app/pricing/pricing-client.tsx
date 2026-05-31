@@ -132,11 +132,6 @@ export default function PricingClient() {
   const navItems = [
     { name: "Home", link: "/", icon: <Home className="h-4 w-4 text-white" /> },
     { name: "Pricing", link: "/pricing", icon: <Zap className="h-4 w-4 text-white" /> },
-    {
-      name: session ? "Dashboard" : "Sign in",
-      link: session ? "/dashboard" : "/auth/oauth/login",
-      icon: <Zap className="h-4 w-4 text-white" />,
-    },
   ];
 
   async function handleCheckout(planId: string, type: "subscription" | "credits") {
@@ -179,39 +174,10 @@ export default function PricingClient() {
       {/* ── Nav ────────────────────────────────────────────── */}
       <FloatingNav navItems={navItems} />
 
-      {/* ── Compact hero (badge + subtitle only) ───────────── */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pb-4 pt-28 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="flex flex-col items-center gap-3"
-        >
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.03] px-5 py-2 backdrop-blur-md">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-60" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
-            </span>
-            <span className="font-mono text-[10px] font-bold tracking-widest text-white/50 uppercase">
-              Simple, transparent pricing
-            </span>
-          </div>
-          <h1 className="font-syne mt-3 whitespace-nowrap text-[clamp(2rem,5vw,4rem)] font-black uppercase tracking-tighter">
-            <span className="relative inline-block">
-              <span className="absolute -inset-2 rounded-full bg-white/10 blur-xl"></span>
-              <span className="relative bg-gradient-to-r from-white via-white to-zinc-400 bg-clip-text text-transparent">
-                SCALE WHEN YOU&apos;RE READY.
-              </span>
-            </span>
-          </h1>
-          <p className="mt-2 font-mono text-[10px] tracking-widest text-white/25 uppercase">
-            No credit card required &middot; Cancel anytime
-          </p>
-        </motion.div>
-      </section>
+
 
       {/* ── Plans ─────────────────────────────────────────── */}
-      <section className="relative z-10 mx-auto max-w-6xl px-4 pb-8">
+      <section className="relative z-10 mx-auto max-w-6xl px-4 pt-32 pb-8">
         <div className="grid gap-4 md:grid-cols-3">
           {PLANS.map((plan, i) => {
             const Icon = plan.icon;

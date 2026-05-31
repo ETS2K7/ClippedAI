@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { auth } from "~/server/auth";
 import { SessionProvider } from "~/components/providers/session-provider";
 
-export default async function SettingsLayout({
+export default async function ListLayout({
   children,
 }: {
   children: ReactNode;
@@ -14,5 +14,5 @@ export default async function SettingsLayout({
   if (!session?.user?.id) {
     redirect("/auth/oauth/login");
   }
-  return <SessionProvider session={session}>{children}</SessionProvider>;
+  return <>{children}</>;
 }

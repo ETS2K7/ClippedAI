@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "~/lib/auth-client";
 import Link from "next/link";
 import { Check, ArrowRight, Loader2, Coins, Zap, Star, Building2, ArrowLeft, Users } from "lucide-react";
-import AppShell from "~/components/app-shell";
 import { Button } from "~/components/ui/button";
 import useSWR from "swr";
 
@@ -142,18 +141,20 @@ export default function UpgradeClient() {
 
   if (isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-black p-4">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-      </div>
+      <>
+        <div className="flex min-h-screen items-center justify-center bg-transparent p-4">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+        </div>
+      </>
     );
   }
 
   return (
-    <AppShell>
+    <>
       <div className="min-h-screen">
         {/* ── Page header ─────────────────────────────────────── */}
         <div className="border-b border-white/[0.06]">
-          <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+          <div className="w-full pb-8">
             <h1 className="font-syne text-4xl font-black leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-5xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
               {hasPro ? "Manage Plan." : "Upgrade."}
             </h1>
@@ -359,13 +360,13 @@ export default function UpgradeClient() {
 
         {/* ── Reassurance footer ───────────────────────────────── */}
         <div className="border-t border-white/[0.06]">
-          <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+          <div className="w-full py-8">
             <p className="font-mono text-[10px] font-medium tracking-[0.08em] text-white/45 uppercase">
               Secure checkout via Dodo Payments · Cancel anytime · 7-day money-back on subscriptions
             </p>
           </div>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

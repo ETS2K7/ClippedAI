@@ -39,7 +39,6 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import AppShell from "~/components/app-shell";
 import useSWR from "swr";
 import { fetcher } from "~/lib/fetcher";
 
@@ -402,11 +401,11 @@ export default function ListPage() {
   /* ── Main render ──────────────────────────────────────────── */
 
   return (
-    <AppShell>
+    <>
       <div className="min-h-screen">
         {/* ── Page header ──────────────────────────────────────── */}
         <div className="border-b border-white/[0.06]">
-          <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+          <div className="w-full pb-5">
 
             <div className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -447,7 +446,7 @@ export default function ListPage() {
         {/* ── Content ──────────────────────────────────────────── */}
         <div
           className={cn(
-            "mx-auto max-w-5xl px-4 py-6 sm:px-6",
+            "w-full pb-6",
             selectedCount > 0 && "pb-28",
           )}
         >
@@ -817,6 +816,6 @@ export default function ListPage() {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </AppShell>
+    </>
   );
 }

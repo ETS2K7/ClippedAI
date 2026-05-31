@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import { fetcher } from "~/lib/fetcher";
-import AppShell from "~/components/app-shell";
 import {
   Users,
   Video,
@@ -148,16 +147,16 @@ export default function AdminPage() {
   };
 
   return (
-    <AppShell>
+    <>
       <div className="min-h-screen pb-20">
-        <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="w-full space-y-8 pb-8">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-white/10 pb-6">
-            <div className="space-y-1">
-              <h1 className="font-syne text-3xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase">
-                System Admin
+            <div className="space-y-1 sm:space-y-2">
+              <h1 className="font-syne text-3xl font-black leading-none tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60 uppercase sm:text-4xl md:text-5xl drop-shadow-[0_0_12px_rgba(255,255,255,0.08)]">
+                System Admin.
               </h1>
-              <p className="font-mono text-xs tracking-widest text-white/40 uppercase">
+              <p className="font-mono text-[10px] tracking-widest text-white/40 uppercase sm:text-xs">
                 Platform Statistics & User Management
               </p>
             </div>
@@ -326,6 +325,6 @@ export default function AdminPage() {
           </Card>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

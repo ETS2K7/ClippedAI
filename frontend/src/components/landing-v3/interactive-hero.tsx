@@ -335,21 +335,6 @@ export const InteractiveHero = () => {
         >
           {/* Left — Text & Input */}
           <div className="flex max-w-2xl flex-col items-center text-center lg:items-start lg:text-left">
-            {/* Status badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.6 }}
-              className="mb-10 flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.03] px-5 py-2 backdrop-blur-md"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-white" />
-              </span>
-              <span className="text-xs font-bold tracking-[0.2em] text-white/60 uppercase">
-                Engine v2.0 Online
-              </span>
-            </motion.div>
 
             {/* Main heading */}
             <h1 className="font-syne mb-8 flex flex-col text-6xl leading-[0.88] font-black tracking-[-0.04em] text-white uppercase md:text-8xl lg:text-[120px] xl:text-[140px]">

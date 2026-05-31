@@ -45,7 +45,6 @@ import {
 } from "lucide-react";
 import { Switch } from "~/components/ui/switch";
 import { Textarea } from "~/components/ui/textarea";
-import AppShell from "~/components/app-shell";
 import { motion, AnimatePresence } from "framer-motion";
 import useSWR from "swr";
 import { fetcher } from "~/lib/fetcher";
@@ -433,7 +432,7 @@ export default function Home() {
   }
 
   return (
-    <AppShell>
+    <>
       <AnimatePresence>
 
         {/* ── Beta modal ──────────────────────────────────────── */}
@@ -565,7 +564,7 @@ export default function Home() {
       </AnimatePresence>
       <div className="min-h-screen">
         {/* ── Main Content ── */}
-        <div className="relative mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+        <div className="relative w-full pb-6 sm:pb-10">
           {/* Latest Generation Banner */}
 
           {/* Centered Single Column Layout */}
@@ -967,6 +966,6 @@ export default function Home() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

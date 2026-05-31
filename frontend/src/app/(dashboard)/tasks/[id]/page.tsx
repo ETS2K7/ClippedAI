@@ -37,7 +37,6 @@ import {
 } from "~/components/ui/tooltip";
 import Link from "next/link";
 import DynamicVideoPlayer from "~/components/dynamic-video-player";
-import AppShell from "~/components/app-shell";
 import { useIntersectionObserver } from "~/hooks/use-intersection-observer";
 
 /** Clip as returned by GET /api/tasks/[id] */
@@ -394,18 +393,18 @@ export default function TaskPage() {
 
   if (isLoading) {
     return (
-      <AppShell>
+      <>
         <div className="mx-auto max-w-6xl space-y-6 px-4 py-8">
           <Skeleton className="h-12 w-64" />
           <Skeleton className="h-[400px] w-full" />
         </div>
-      </AppShell>
+      </>
     );
   }
 
   if (error) {
     return (
-      <AppShell>
+      <>
         <div className="mx-auto max-w-6xl px-4 py-8">
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -418,12 +417,12 @@ export default function TaskPage() {
             </Button>
           </Link>
         </div>
-      </AppShell>
+      </>
     );
   }
 
   return (
-    <AppShell>
+    <>
       <div className="min-h-screen">
         <div className="mx-auto max-w-6xl px-4 py-8">
           {/* Header */}
@@ -747,6 +746,6 @@ export default function TaskPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AppShell>
+    </>
   );
 }
