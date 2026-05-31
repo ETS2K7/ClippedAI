@@ -26,6 +26,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const navItems = [
     { name: "NEW CLIP", link: "/dashboard", icon: <Plus className="h-3.5 w-3.5" /> },
     { name: "GENERATIONS", link: "/list", icon: <List className="h-3.5 w-3.5" /> },
+    { name: "PRICING", link: "/pricing", icon: <Tag className="h-3.5 w-3.5" /> },
     { name: "SETTINGS", link: "/settings", icon: <Settings className="h-3.5 w-3.5" /> },
     ...(isSuperAdmin ? [{ name: "ADMIN", link: "/admin", icon: <Shield className="h-3.5 w-3.5" /> }] : []),
   ];
