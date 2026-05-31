@@ -445,8 +445,7 @@ export default function PricingClient() {
       {/* ── Footer ───────────────────────────────────────────── */}
       <footer className="relative z-10 border-t border-white/[0.06] py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 sm:flex-row">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="ClippedAI" width={18} height={18} className="rounded-md" />
+          <Link href="/" className="flex items-center">
             <span className="font-syne text-sm font-black tracking-tight text-white/50 uppercase">CLIPPEDAI</span>
           </Link>
           <div className="flex gap-6 font-mono text-[10px] tracking-widest text-white/20 uppercase">

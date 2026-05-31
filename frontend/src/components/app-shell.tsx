@@ -6,7 +6,6 @@ import { Button } from "~/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { signOut, useSession } from "~/lib/auth-client";
 import Link from "next/link";
-import Image from "next/image";
 import { LogOut, List, Settings, Plus, Shield, Tag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "~/lib/utils";
@@ -55,18 +54,11 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <motion.nav 
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="flex h-12 w-auto items-center justify-between gap-6 rounded-full border border-white/[0.08] bg-black/80 px-6 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+          className="flex max-w-fit py-3 items-center justify-between gap-6 rounded-full border border-white/[0.08] bg-black/80 px-6 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.7)] backdrop-blur-xl"
         >
           {/* Logo Section */}
-          <Link href="/dashboard" className="group flex items-center gap-2.5">
-            <Image
-              src="/logo.png?v=6"
-              alt="Logo"
-              width={20}
-              height={20}
-              className="rounded-sm"
-            />
-            <span className="font-syne hidden text-lg leading-none font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500 uppercase sm:block">
+          <Link href="/dashboard" className="group flex items-center">
+            <span className="font-syne hidden text-lg leading-none font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-300 uppercase sm:block">
               CLIPPEDAI
             </span>
           </Link>
@@ -127,8 +119,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         <footer className="bg-transparent py-12">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="flex flex-col items-center justify-between gap-6 border-t border-white/[0.06] pt-10 sm:flex-row">
-              <div className="flex items-center gap-2.5 opacity-60">
-                <Image src="/logo.png?v=6" alt="Logo" width={18} height={18} />
+              <div className="flex items-center opacity-60">
                 <span className="font-syne text-sm font-black tracking-tight text-white uppercase">CLIPPEDAI</span>
               </div>
               <p className="font-mono text-[10px] tracking-widest text-white/45 uppercase">

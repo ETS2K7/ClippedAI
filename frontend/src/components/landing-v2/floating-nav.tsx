@@ -6,9 +6,8 @@ import {
 } from "framer-motion";
 import { cn } from "~/lib/utils";
 import Link from "next/link";
-import Image from "next/image";
 import { Button } from "~/components/ui/button";
-import { useSession } from "next-auth/react";
+import { useSession } from "~/lib/auth-client";
 
 export const FloatingNav = ({
   navItems,
@@ -21,7 +20,7 @@ export const FloatingNav = ({
   }[];
   className?: string;
 }) => {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const visible = true;
 
   return (
@@ -37,16 +36,9 @@ export const FloatingNav = ({
       >
         <Link
           href="/"
-          className="group flex items-center gap-2.5"
+          className="group flex items-center"
         >
-          <Image
-            src="/logo.png?v=6"
-            alt="ClippedAI"
-            width={20}
-            height={20}
-            className="rounded-sm"
-          />
-          <span className="font-syne text-xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-500 uppercase">
+          <span className="font-syne text-xl leading-none font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-neutral-300 uppercase">
             CLIPPEDAI
           </span>
         </Link>
@@ -70,7 +62,7 @@ export const FloatingNav = ({
             className="ml-2 h-9 rounded-full bg-white px-6 text-xs font-black tracking-wider text-black uppercase transition-all hover:bg-white/90 hover:scale-[1.05]"
             asChild
           >
-            <Link href="/dashboard">Dashboard</Link>
+            <Link href="/auth/oauth/login">Login</Link>
           </Button>
         </div>
       </motion.div>
